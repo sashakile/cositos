@@ -86,3 +86,36 @@ def test_inbound_custom_invokes_callback():
     w.open()
     t.deliver({"method": "custom", "content": {"kind": "pong"}}, buffers=[b"x"])
     assert received == [({"kind": "pong"}, [b"x"])]
+
+
+def test_inbound_update_without_set_state_is_ignored():
+    t = FakeTransport()
+    w = Widget(t, get_state=lambda: {"value": 0})  # no set_state
+    w.open()
+    t.deliver({"method": "update", "state": {"value": 1}, "buffer_paths": []})
+    # no crash, nothing to assert on state; the None-callback custom path is also a no-op
+    t.deliver({"method": "custom", "content": 1})
+
+
+def test_send_state_with_include_filters_keys():
+    w, t, _ = make_widget({"a": 1, "b": 2, "_esm": "x"})
+    w.open()
+    w.send_state(include={"a"})
+    _mt, content, _b, _m = t.sent[-1]
+    assert content["state"] == {"a": 1}
+
+
+def test_mimebundle_includes_repr_text():
+    w, _t, _ = make_widget({"value": 0})
+    bundle = w.mimebundle("Counter(value=0)")
+    assert bundle["text/plain"] == "Counter(value=0)"
+
+
+def test_close_sends_comm_close_once():
+    w, t, _ = make_widget({"value": 0})
+    w.open()
+    w.close()
+    assert t.sent[-1][0] == "comm_close"
+    n = len(t.sent)
+    w.close()  # idempotent — no second comm_close
+    assert len(t.sent) == n

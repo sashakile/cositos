@@ -8,16 +8,17 @@ the state; a path ending in a list index is replaced by ``None`` so positions ar
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 BinaryType = (bytes, bytearray, memoryview)
 
 
-def _items(substate: Any):
+def _items(substate: Any) -> Iterable[tuple[Any, Any]]:
     """Yield ``(key, value)`` pairs for a list (index keys) or dict (str keys)."""
     if isinstance(substate, (list, tuple)):
         return enumerate(substate)
-    return substate.items()
+    return substate.items()  # type: ignore[no-any-return]
 
 
 def _clone(substate: Any) -> Any:
@@ -33,7 +34,13 @@ def _extract_binary(clone: Any, key: Any) -> None:
 
 
 def _handle_item(
-    substate: Any, clone: Any, key: Any, value: Any, path: list, buffer_paths: list, buffers: list
+    substate: Any,
+    clone: Any,
+    key: Any,
+    value: Any,
+    path: list[Any],
+    buffer_paths: list[list[Any]],
+    buffers: list[Any],
 ) -> Any:
     """Process one ``(key, value)``; return the (possibly newly created) clone."""
     if isinstance(value, BinaryType):
@@ -49,7 +56,9 @@ def _handle_item(
     return clone
 
 
-def _separate(substate: Any, path: list, buffer_paths: list, buffers: list) -> Any:
+def _separate(
+    substate: Any, path: list[Any], buffer_paths: list[list[Any]], buffers: list[Any]
+) -> Any:
     """Recurse into dicts/lists, extracting binary values. Returns a cloned substate.
 
     Clones a container only when it actually changes, mirroring the ipywidgets
@@ -64,15 +73,15 @@ def _separate(substate: Any, path: list, buffer_paths: list, buffers: list) -> A
     return clone if clone is not None else substate
 
 
-def remove_buffers(state: Any) -> tuple[Any, list[list], list[Any]]:
+def remove_buffers(state: Any) -> tuple[Any, list[list[Any]], list[Any]]:
     """Return ``(state_without_buffers, buffer_paths, buffers)``."""
-    buffer_paths: list[list] = []
+    buffer_paths: list[list[Any]] = []
     buffers: list[Any] = []
     stripped = _separate(state, [], buffer_paths, buffers)
     return stripped, buffer_paths, buffers
 
 
-def put_buffers(state: Any, buffer_paths: list[list], buffers: list[Any]) -> None:
+def put_buffers(state: Any, buffer_paths: list[list[Any]], buffers: list[Any]) -> None:
     """Inverse of :func:`remove_buffers`; mutates ``state`` in place."""
     for path, buffer in zip(buffer_paths, buffers):
         obj = state

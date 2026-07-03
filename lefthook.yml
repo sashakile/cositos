@@ -1,0 +1,34 @@
+# cositos git hooks (lefthook).
+#
+# NOTE: beads owns `core.hooksPath` (-> .beads/hooks) for its jsonl sync + typos/vale.
+# The beads-managed pre-commit/pre-push delegate to `lefthook run <hook>` so both run.
+# See docs/hooks.md.
+
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.py"
+      run: uv run --extra dev ruff check src tests
+    format:
+      glob: "*.py"
+      run: uv run --extra dev ruff format --check src tests
+    typecheck-py:
+      glob: "src/**/*.py"
+      run: uv run --extra dev mypy
+    typecheck-js:
+      glob: "front/src/**/*.js"
+      run: bash -c "cd front && npx tsc --noEmit"
+    complexity:
+      glob: "*.{py,js}"
+      run: pretender check src front/src
+
+pre-push:
+  parallel: false
+  commands:
+    coverage-py:
+      run: uv run --extra dev --extra oracle pytest
+    coverage-js:
+      run: bash -c "cd front && npm run coverage"
+    specs:
+      run: ah check

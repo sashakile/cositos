@@ -10,6 +10,7 @@
  * (state stays purely client-side).
  */
 export class LocalChannel {
+  /** @type {((msg: any, buffers: any[]) => void) | null} */
   #inbound = null;
   #handler;
 
@@ -38,6 +39,7 @@ export class LocalChannel {
  * inbound. Useful for tests and for co-locating a JS "kernel" with a JS "frontend".
  */
 export class MemoryChannel {
+  /** @type {((msg: any, buffers: any[]) => void) | null} */
   #inbound = null;
   /** @type {MemoryChannel|null} */
   peer = null;
@@ -52,7 +54,9 @@ export class MemoryChannel {
 
   send(msg, buffers = []) {
     // Deliver asynchronously to mimic real transports and avoid re-entrancy.
-    queueMicrotask(() => this.peer?.#deliver(msg, buffers));
+    queueMicrotask(() => {
+      if (this.peer) this.peer.#deliver(msg, buffers);
+    });
   }
 
   onMessage(cb) {

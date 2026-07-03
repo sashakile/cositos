@@ -41,3 +41,9 @@ def test_round_trip_merge_is_inverse_of_split():
     # stripped is a shallow-cloned structure; rebuild it and merge buffers back.
     put_buffers(stripped, paths, buffers)
     assert stripped == original
+
+
+def test_put_buffers_deeply_nested_path():
+    state = {"a": {"b": [{}, {"c": None}]}}
+    put_buffers(state, [["a", "b", 1, "c"]], [b"deep"])
+    assert state["a"]["b"][1]["c"] == b"deep"

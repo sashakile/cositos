@@ -33,8 +33,8 @@ class Widget:
     def __init__(
         self,
         transport: Transport,
-        get_state: Callable[[], dict],
-        set_state: Callable[[dict], None] | None = None,
+        get_state: Callable[[], dict[str, Any]],
+        set_state: Callable[[dict[str, Any]], None] | None = None,
         model_id: str = "",
         on_custom: Callable[[Any, list[Any]], None] | None = None,
     ) -> None:
@@ -65,7 +65,7 @@ class Widget:
         """Send a ``custom`` message to the frontend (``model.on('msg:custom')``)."""
         self._transport.send("comm_msg", protocol.build_custom(content), buffers=buffers or [])
 
-    def _handle(self, data: dict, buffers: list[Any]) -> None:
+    def _handle(self, data: dict[str, Any], buffers: list[Any]) -> None:
         """Dispatch an inbound message from the frontend."""
         message = protocol.parse_message(data)
         if isinstance(message, protocol.Update):
@@ -78,7 +78,7 @@ class Widget:
         elif isinstance(message, protocol.Custom) and self._on_custom is not None:
             self._on_custom(message.content, buffers)
 
-    def mimebundle(self, repr_text: str = "") -> dict:
+    def mimebundle(self, repr_text: str = "") -> dict[str, Any]:
         """Return the widget-view mimebundle for display."""
         return protocol.mimebundle(self.model_id, repr_text)
 

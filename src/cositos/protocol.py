@@ -26,7 +26,7 @@ ESM_KEY = "_esm"
 CSS_KEY = "_css"
 
 
-def _immutable_fields(version: str) -> dict:
+def _immutable_fields(version: str) -> dict[str, Any]:
     return {
         "_model_module": "anywidget",
         "_model_name": "AnyModel",
@@ -39,8 +39,8 @@ def _immutable_fields(version: str) -> dict:
 
 
 def build_comm_open(
-    state: dict, anywidget_version: str = ANYWIDGET_MODULE_VERSION
-) -> tuple[dict, list[Any], dict]:
+    state: dict[str, Any], anywidget_version: str = ANYWIDGET_MODULE_VERSION
+) -> tuple[dict[str, Any], list[Any], dict[str, Any]]:
     """Build the ``comm_open`` payload.
 
     Returns ``(data, buffers, metadata)`` where ``data`` has ``state`` (with the
@@ -53,19 +53,19 @@ def build_comm_open(
     return data, buffers, metadata
 
 
-def build_update(state: dict) -> tuple[dict, list[Any]]:
+def build_update(state: dict[str, Any]) -> tuple[dict[str, Any], list[Any]]:
     """Build an ``update`` (``comm_msg``) payload. Returns ``(data, buffers)``."""
     stripped, buffer_paths, buffers = remove_buffers(state)
     data = {"method": "update", "state": stripped, "buffer_paths": buffer_paths}
     return data, buffers
 
 
-def build_custom(content: Any) -> dict:
+def build_custom(content: Any) -> dict[str, Any]:
     """Build a ``custom`` message payload (``comm_msg`` data)."""
     return {"method": "custom", "content": content}
 
 
-def mimebundle(model_id: str, repr_text: str = "") -> dict:
+def mimebundle(model_id: str, repr_text: str = "") -> dict[str, Any]:
     """Build the widget-view mimebundle used for display."""
     bundle: dict[str, Any] = {
         WIDGET_VIEW_MIMETYPE: {
@@ -83,8 +83,8 @@ def mimebundle(model_id: str, repr_text: str = "") -> dict:
 class Update:
     """Inbound state update from the frontend."""
 
-    state: dict
-    buffer_paths: list
+    state: dict[str, Any]
+    buffer_paths: list[Any]
 
 
 @dataclass(frozen=True)
@@ -99,7 +99,7 @@ class Custom:
     content: Any
 
 
-def parse_message(data: dict) -> Update | RequestState | Custom:
+def parse_message(data: dict[str, Any]) -> Update | RequestState | Custom:
     """Parse an inbound ``comm_msg`` ``data`` dict into a typed event.
 
     Raises

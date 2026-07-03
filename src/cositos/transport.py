@@ -23,13 +23,13 @@ class Transport(Protocol):
     def send(
         self,
         msg_type: str,
-        content: dict,
+        content: dict[str, Any],
         buffers: list[Any] | None = None,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Send a Jupyter comm message (``comm_open`` / ``comm_msg`` / ``comm_close``)."""
         ...
 
-    def on_message(self, callback: Callable[[dict, list[Any]], None]) -> None:
+    def on_message(self, callback: Callable[[dict[str, Any], list[Any]], None]) -> None:
         """Register a callback invoked with ``(data, buffers)`` for inbound messages."""
         ...
