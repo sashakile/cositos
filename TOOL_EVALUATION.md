@@ -83,6 +83,28 @@ binaries/bottles exist; I had to install rustup and `cargo build --release` all 
 crates (~9 min) before any tool could run. A `brew` bottle, a `cargo install`
 one-liner in each README's top, or a bootstrap script would help first contact.
 
+**F10 · `wai way` doesn't recognise `mise` as a task runner.** With a full `mise.toml`
+(12 tasks) present, `wai way` still reports "Command standardization: No task runner
+detected" — it only looks for justfile/Makefile/Taskfile. mise is a mainstream runner;
+the detector should include `mise.toml` / `.mise.toml`.
+
+**F11 · `wai way` pre-commit detection misses delegated lefthook installs.** It reports
+"lefthook.yml found but hooks not installed — run: lefthook install" even though the
+gates provably run on commit. Because beads owns `core.hooksPath` and we delegate via
+`lefthook run`, there's no lefthook marker in `.git/hooks` for wai to find.
+
+**F12 · `mise` default Python backend compiles from source and fails without build
+deps.** `mise install` with `python = "3.12"` invoked pyenv's `python-build` (source
+compile), which failed (exit 2). Precompiled python-build-standalone should be the
+default, or the failure should point at `MISE_PYTHON_COMPILE=0`. Worked around by
+letting `uv` own Python via `.python-version`.
+
+**F13 · `mise` cannot fetch `uv` here (GitHub release-assets 403).** `mise install uv`
+→ 403 Forbidden from `release-assets.githubusercontent.com`. node (from nodejs.org)
+installed fine, so GitHub-release-asset downloads specifically are proxy-blocked. Not a
+mise bug, but aqua-backed tools are unusable here; cositos pins node via mise and takes
+uv from the system.
+
 ### 👍 What worked well (kept for balance)
 
 - **`wai way`** is an excellent, actionable repo-hygiene checklist; it drove most of the
