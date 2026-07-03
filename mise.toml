@@ -15,7 +15,7 @@ _.path = ["~/.local/bin"]
 # --- Python (core) ---
 [tasks.test]
 description = "Run the Python test suite"
-run = "uv run --extra dev --extra oracle pytest"
+run = "uv run --extra dev --extra oracle pytest -m 'not e2e'"
 
 [tasks.lint]
 description = "Lint Python with ruff"
@@ -31,7 +31,11 @@ run = "uv run --extra dev mypy"
 
 [tasks.coverage]
 description = "Python tests with enforced coverage threshold"
-run = "uv run --extra dev --extra oracle pytest --cov=cositos --cov-report=term-missing --cov-fail-under=95"
+run = "uv run --extra dev --extra oracle pytest -m 'not e2e' --cov=cositos --cov-report=term-missing --cov-fail-under=95"
+
+[tasks.e2e]
+description = "End-to-end test against a real Jupyter kernel (slow, opt-in)"
+run = "uv run --extra dev --extra oracle --extra e2e pytest -m e2e -v"
 
 # --- JS (front) ---
 [tasks.front-test]

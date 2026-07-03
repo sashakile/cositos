@@ -20,6 +20,10 @@ oracle = [
     "comm>=0.2.3",
     "ipywidgets>=8.1.8",
 ]
+e2e = [
+    "ipykernel>=6.31.0",
+    "jupyter-client>=8.6.3",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -37,6 +41,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["e2e: end-to-end tests that launch a real Jupyter kernel (slow, opt-in)"]
 
 [tool.coverage.run]
 source = ["cositos"]
