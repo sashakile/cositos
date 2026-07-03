@@ -3,10 +3,10 @@
     "state": {
       "_model_module": "anywidget",
       "_model_name": "AnyModel",
-      "_model_module_version": "~0.9.*",
+      "_model_module_version": "~0.11.*",
       "_view_module": "anywidget",
       "_view_name": "AnyView",
-      "_view_module_version": "~0.9.*",
+      "_view_module_version": "~0.11.*",
       "_view_count": null,
       "_esm": "export default { render() {} }",
       "value": 0

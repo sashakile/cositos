@@ -36,11 +36,13 @@ class Widget:
         get_state: Callable[[], dict],
         set_state: Callable[[dict], None] | None = None,
         model_id: str = "",
+        on_custom: Callable[[Any, list[Any]], None] | None = None,
     ) -> None:
         self._transport = transport
         self._get_state = get_state
         self._set_state = set_state
         self.model_id = model_id
+        self._on_custom = on_custom
         self._opened = False
 
     def open(self) -> None:
@@ -59,6 +61,10 @@ class Widget:
         data, buffers = protocol.build_update(state)
         self._transport.send("comm_msg", data, buffers=buffers)
 
+    def send_custom(self, content: Any, buffers: list[Any] | None = None) -> None:
+        """Send a ``custom`` message to the frontend (``model.on('msg:custom')``)."""
+        self._transport.send("comm_msg", protocol.build_custom(content), buffers=buffers or [])
+
     def _handle(self, data: dict, buffers: list[Any]) -> None:
         """Dispatch an inbound message from the frontend."""
         message = protocol.parse_message(data)
@@ -69,7 +75,8 @@ class Widget:
                 self._set_state(state)
         elif isinstance(message, protocol.RequestState):
             self.send_state()
-        # Custom messages are surfaced by hosts that need them (out of v0 scope).
+        elif isinstance(message, protocol.Custom) and self._on_custom is not None:
+            self._on_custom(message.content, buffers)
 
     def mimebundle(self, repr_text: str = "") -> dict:
         """Return the widget-view mimebundle for display."""

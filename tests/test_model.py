@@ -68,3 +68,21 @@ def test_inbound_update_merges_buffers():
     w.open()
     t.deliver({"method": "update", "state": {}, "buffer_paths": [["img"]]}, buffers=[b"PNG"])
     assert store["img"] == b"PNG"
+
+
+def test_send_custom_emits_custom_message():
+    w, t, _ = make_widget({"value": 0})
+    w.open()
+    w.send_custom({"kind": "ping"})
+    msg_type, content, _b, _m = t.sent[-1]
+    assert msg_type == "comm_msg"
+    assert content == {"method": "custom", "content": {"kind": "ping"}}
+
+
+def test_inbound_custom_invokes_callback():
+    received = []
+    t = FakeTransport()
+    w = Widget(t, get_state=lambda: {}, on_custom=lambda c, b: received.append((c, b)))
+    w.open()
+    t.deliver({"method": "custom", "content": {"kind": "pong"}}, buffers=[b"x"])
+    assert received == [({"kind": "pong"}, [b"x"])]
