@@ -1,0 +1,10 @@
+{
+  "data": {
+    "method": "update",
+    "state": {
+      "value": 42
+    },
+    "buffer_paths": []
+  },
+  "buffers_b64": []
+}

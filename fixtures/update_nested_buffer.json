@@ -1,0 +1,21 @@
+{
+  "data": {
+    "method": "update",
+    "state": {
+      "img": {},
+      "shape": [
+        1,
+        1
+      ]
+    },
+    "buffer_paths": [
+      [
+        "img",
+        "bytes"
+      ]
+    ]
+  },
+  "buffers_b64": [
+    "UE5HREFUQQ=="
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "data": {
+    "method": "custom",
+    "content": {
+      "event": "click",
+      "n": 3
+    }
+  }
+}

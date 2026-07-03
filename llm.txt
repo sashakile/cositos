@@ -1,0 +1,34 @@
+# cositos
+
+> Binding-free anywidget-style backend core. Speaks the ipywidgets comm protocol
+> (v2.1.0), reuses anywidget's AnyModel/AnyView frontend, and exposes a Transport seam
+> so any Jupyter-kernel language can supply its own comm adapter.
+
+## What it does
+- Builds `comm_open` / `update` / `custom` Jupyter widget messages.
+- Splits/merges binary buffers per protocol v2 (nested buffer_paths).
+- Parses inbound messages (update | request_state | custom).
+- Emits the widget-view mimebundle for display.
+
+## What it does NOT do (by design)
+- No kernel/transport code in core — hosts supply a `Transport` adapter.
+- No observer autodetection (traitlets/psygnal) — host ergonomics live per host.
+
+## Layout
+```
+src/cositos/
+  protocol.py    constants + message builders + inbound parser
+  buffers.py     remove_buffers / put_buffers (v2 nested rules)
+  model.py       Widget façade: open/send_state/handle/close over a Transport
+  transport.py   Transport protocol (send, on_message, supports_receive)
+fixtures/        golden JSON messages — the cross-language contract
+docs/porting.md  how to certify a new-language backend
+```
+
+## Key facts
+- Protocol version: `2.1.0`. Frontend module: `anywidget` (`AnyModel`/`AnyView`).
+- Reference language: Python (uv). Other backends are downstream ports.
+
+## Links
+- anywidget: https://anywidget.dev
+- Protocol: https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md
