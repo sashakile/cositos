@@ -1,0 +1,10 @@
+id = "nested-binary-values-are-split-and-merged-losslessly"
+description = "Buffer split/merge round-trips losslessly."
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"
+
+[[tests.pytest]]
+flags = "tests/test_buffers.py::test_round_trip_merge_is_inverse_of_split"
+timeout_seconds = 60

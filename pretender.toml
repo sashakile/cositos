@@ -1,0 +1,14 @@
+[pretender]
+mode = "tiered"
+languages = ["python"]
+excludes = ["tests/**", ".venv/**"]
+
+[thresholds]
+cyclomatic = 10
+cognitive = 15
+nesting = 4
+parameters = 5
+
+[thresholds.test]
+cyclomatic = 15
+cognitive = 20
