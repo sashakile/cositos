@@ -28,3 +28,9 @@ node_modules/
 # mise local state
 mise.local.toml
 .mise.local.toml
+
+# Julia
+julia/Manifest.toml
+
+# JS coverage output
+front/coverage/

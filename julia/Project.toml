@@ -1,0 +1,17 @@
+name = "Cositos"
+uuid = "01e4b146-d225-4b8c-b033-d37308b9b41a"
+authors = ["cositos contributors"]
+version = "0.0.1"
+
+[deps]
+
+[compat]
+julia = "1.10"
+
+[extras]
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "JSON", "Base64"]

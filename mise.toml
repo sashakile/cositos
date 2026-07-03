@@ -2,6 +2,7 @@
 # Docs: https://mise.jdx.dev
 
 [tools]
+julia = { version = "1.11", checksum_expr = '"sha256:" + filter(fromJSON(body)[version + ""].files, { #.url == url })[0].sha256', checksum_url = "https://julialang-s3.julialang.org/bin/versions.json", platforms = { linux-arm64 = { url = """{% if version == "nightly" %}https://julialangnightlies-s3.julialang.org/bin/linux/aarch64/julia-latest-linuxaarch64.tar.gz{% else %}https://julialang-s3.julialang.org/bin/linux/aarch64/{{ version | split(pat='.') | slice(start=0, end=2) | join(sep='.') }}/julia-{{ version }}-linux-aarch64.tar.gz{% endif %}""" }, linux-x64 = { url = """{% if version == "nightly" %}https://julialangnightlies-s3.julialang.org/bin/linux/x64/julia-latest-linux64.tar.gz{% else %}https://julialang-s3.julialang.org/bin/linux/x64/{{ version | split(pat='.') | slice(start=0, end=2) | join(sep='.') }}/julia-{{ version }}-linux-x86_64.tar.gz{% endif %}""" }, macos-arm64 = { url = """{% if version == "nightly" %}https://julialangnightlies-s3.julialang.org/bin/mac/aarch64/julia-latest-macaarch64.tar.gz{% else %}https://julialang-s3.julialang.org/bin/mac/aarch64/{{ version | split(pat='.') | slice(start=0, end=2) | join(sep='.') }}/julia-{{ version }}-macaarch64.tar.gz{% endif %}""" }, macos-x64 = { url = """{% if version == "nightly" %}https://julialangnightlies-s3.julialang.org/bin/mac/x64/julia-latest-mac64.tar.gz{% else %}https://julialang-s3.julialang.org/bin/mac/x64/{{ version | split(pat='.') | slice(start=0, end=2) | join(sep='.') }}/julia-{{ version }}-mac64.tar.gz{% endif %}""" }, windows-x64 = { format = "zip", url = """{% if version == "nightly" %}https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.zip{% else %}https://julialang-s3.julialang.org/bin/winnt/x64/{{ version | split(pat='.') | slice(start=0, end=2) | join(sep='.') }}/julia-{{ version }}-win64.zip{% endif %}""" } }, version_expr = 'sortVersions(filter(keys(fromJSON(body)), { # matches "^\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z\\.-]+)?$" }))', version_list_url = "https://julialang-s3.julialang.org/bin/versions.json" }
 # Python is managed by uv (.python-version); uv itself is provided by the system
 # (Homebrew) because its GitHub release assets are blocked in this environment.
 # mise pins node only.
@@ -48,6 +49,11 @@ description = "Frontend tests with enforced coverage threshold"
 dir = "front"
 run = "npm run coverage"
 
+# --- Julia (backend port) ---
+[tasks.julia-test]
+description = "Run the Julia backend test suite (incl. fixture conformance)"
+run = "julia --project=julia -e 'import Pkg; Pkg.test()'"
+
 # --- Cross-cutting ---
 [tasks.complexity]
 description = "Structural complexity gate (pretender)"
@@ -69,6 +75,7 @@ depends = [
     "coverage",
     "front-typecheck",
     "front-coverage",
+    "julia-test",
     "complexity",
     "specs",
 ]
