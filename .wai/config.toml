@@ -1,0 +1,9 @@
+plugins = []
+
+[project]
+name = "cositos"
+version = "2026.5.0"
+description = ""
+tool_commit = "a2acbf6"
+
+[llm]
