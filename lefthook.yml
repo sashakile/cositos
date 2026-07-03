@@ -1,5 +1,8 @@
 # cositos git hooks (lefthook).
 #
+# Gate commands are defined once as mise tasks (see mise.toml); lefthook just invokes
+# them so there is a single source of truth.
+#
 # NOTE: beads owns `core.hooksPath` (-> .beads/hooks) for its jsonl sync + typos/vale.
 # The beads-managed pre-commit/pre-push delegate to `lefthook run <hook>` so both run.
 # See docs/hooks.md.
@@ -9,26 +12,26 @@ pre-commit:
   commands:
     lint:
       glob: "*.py"
-      run: uv run --extra dev ruff check src tests
+      run: mise run lint
     format:
       glob: "*.py"
       run: uv run --extra dev ruff format --check src tests
     typecheck-py:
       glob: "src/**/*.py"
-      run: uv run --extra dev mypy
+      run: mise run typecheck
     typecheck-js:
       glob: "front/src/**/*.js"
-      run: bash -c "cd front && npx tsc --noEmit"
+      run: mise run front-typecheck
     complexity:
       glob: "*.{py,js}"
-      run: pretender check src front/src
+      run: mise run complexity
 
 pre-push:
   parallel: false
   commands:
     coverage-py:
-      run: uv run --extra dev --extra oracle pytest --cov=cositos --cov-report=term-missing --cov-fail-under=95
+      run: mise run coverage
     coverage-js:
-      run: bash -c "cd front && npm run coverage"
+      run: mise run front-coverage
     specs:
-      run: ah check
+      run: mise run specs

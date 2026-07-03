@@ -1,0 +1,74 @@
+# mise: pinned dev tools + task runner for cositos.
+# Docs: https://mise.jdx.dev
+
+[tools]
+# Python is managed by uv (.python-version); uv itself is provided by the system
+# (Homebrew) because its GitHub release assets are blocked in this environment.
+# mise pins node only.
+node = "26"
+
+[env]
+# Keep locally-built suite tools (wai/dont/pretender/ah/lefthook) discoverable.
+_.path = ["~/.local/bin"]
+
+# --- Python (core) ---
+[tasks.test]
+description = "Run the Python test suite"
+run = "uv run --extra dev --extra oracle pytest"
+
+[tasks.lint]
+description = "Lint Python with ruff"
+run = "uv run --extra dev ruff check src tests"
+
+[tasks.fmt]
+description = "Format Python with ruff"
+run = "uv run --extra dev ruff format src tests"
+
+[tasks.typecheck]
+description = "Type-check Python with mypy --strict"
+run = "uv run --extra dev mypy"
+
+[tasks.coverage]
+description = "Python tests with enforced coverage threshold"
+run = "uv run --extra dev --extra oracle pytest --cov=cositos --cov-report=term-missing --cov-fail-under=95"
+
+# --- JS (front) ---
+[tasks.front-test]
+description = "Run the frontend test suite"
+dir = "front"
+run = "node --test"
+
+[tasks.front-typecheck]
+description = "Type-check the frontend with tsc --checkJs"
+dir = "front"
+run = "npx tsc --noEmit"
+
+[tasks.front-coverage]
+description = "Frontend tests with enforced coverage threshold"
+dir = "front"
+run = "npm run coverage"
+
+# --- Cross-cutting ---
+[tasks.complexity]
+description = "Structural complexity gate (pretender)"
+run = "pretender check src front/src"
+
+[tasks.specs]
+description = "Behavioural spec contracts (espectacular)"
+run = "ah check"
+
+[tasks.setup]
+description = "Install all Python + JS dependencies"
+run = ["uv sync --extra dev --extra oracle", "npm --prefix front install"]
+
+[tasks.verify]
+description = "Full local quality gate"
+depends = [
+    "lint",
+    "typecheck",
+    "coverage",
+    "front-typecheck",
+    "front-coverage",
+    "complexity",
+    "specs",
+]

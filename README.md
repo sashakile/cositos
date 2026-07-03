@@ -38,11 +38,16 @@ See `.wai/projects/cositos-core/` for the research → design → plan trail and
 
 ## Development
 
+Tooling is managed with [mise](https://mise.jdx.dev) (task runner + pinned node).
+
 ```bash
-just test      # pytest
-just lint      # ruff
-just check     # pretender complexity gate
+mise install     # pinned node
+mise run setup   # install Python (uv) + JS (npm) deps
+mise run verify  # lint + typecheck + coverage (py & js) + complexity + specs
+mise tasks       # list all tasks
 ```
+
+Quality gates run on every commit/push via lefthook — see [docs/hooks.md](docs/hooks.md).
 
 ## License
 

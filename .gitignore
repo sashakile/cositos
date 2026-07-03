@@ -24,3 +24,7 @@ node_modules/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# mise local state
+mise.local.toml
+.mise.local.toml

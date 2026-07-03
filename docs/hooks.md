@@ -16,9 +16,13 @@ cositos enforces three gate families **on every commit/push** and in CI:
 Run everything manually at any time:
 
 ```bash
-just verify          # lint + typecheck + coverage (py & js) + complexity + specs
+mise run verify       # lint + typecheck + coverage (py & js) + complexity + specs
+mise tasks            # list all available tasks
 lefthook run pre-commit --all-files
 ```
+
+Gate commands live once in `mise.toml` as tasks; `lefthook.yml` invokes `mise run <task>`
+so there is a single source of truth.
 
 ## How hook installation works here
 
@@ -36,8 +40,8 @@ the canonical, committed source of truth. On this machine the beads-managed
 ### Fresh-clone bootstrap
 
 ```bash
-uv sync --extra dev --extra oracle     # Python deps
-(cd front && npm install)              # JS deps
+mise install                           # pinned node (uv + python come from system/uv)
+mise run setup                         # uv sync + npm install
 bd init                                # re-establishes .beads/hooks + hooksPath
 # then append the two delegation lines (see .beads/hooks/{pre-commit,pre-push})
 #   if command -v lefthook >/dev/null 2>&1; then lefthook run pre-commit || FAILED=1; fi
