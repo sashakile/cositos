@@ -17,7 +17,8 @@ module Cositos
 export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     build_comm_open, build_update, build_custom, mimebundle,
     parse_message, Update, RequestState, Custom,
-    remove_buffers, put_buffers!
+    remove_buffers, put_buffers!,
+    PlutoWidget
 
 const PROTOCOL_VERSION_MAJOR = 2
 const PROTOCOL_VERSION_MINOR = 1
@@ -183,6 +184,41 @@ function parse_message(data)
     method == "request_state" && return RequestState()
     method == "custom" && return Custom(get(data, "content", nothing))
     error("Unrecognized comm message method: $(repr(method))")
+end
+
+# ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----
+
+"""Default ESM URL for `@cositos/front` used by [`PlutoWidget`](@ref) rendering."""
+const DEFAULT_RUNTIME_URL = "https://cdn.jsdelivr.net/npm/@cositos/front/src/index.js"
+
+"""
+    PlutoWidget(; esm, state=Dict(), css="", runtime_url=DEFAULT_RUNTIME_URL)
+
+A Pluto.jl-displayable anywidget: renders `esm` via `@cositos/front` and acts as an
+`@bind` target. `Base.show(::MIME"text/html")` and the `AbstractPlutoDingetjes.Bonds`
+methods live in the package extension `CositosPlutoExt`, which loads automatically when
+`AbstractPlutoDingetjes` and `JSON` are available.
+
+```julia
+using Cositos, AbstractPlutoDingetjes   # extension activates
+@bind s PlutoWidget(esm=SLIDER_ESM, state=Dict("value" => 0, "min" => 0, "max" => 100))
+# `s` becomes the widget's full state Dict, updated reactively on interaction.
+```
+"""
+struct PlutoWidget
+    esm::String
+    state::Dict{String,Any}
+    css::String
+    runtime_url::String
+end
+
+function PlutoWidget(;
+    esm::AbstractString,
+    state=Dict{String,Any}(),
+    css::AbstractString="",
+    runtime_url::AbstractString=DEFAULT_RUNTIME_URL,
+)
+    return PlutoWidget(String(esm), Dict{String,Any}(state), String(css), String(runtime_url))
 end
 
 end # module

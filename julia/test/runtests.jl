@@ -1,6 +1,7 @@
 using Test
 using Base64
 using JSON
+using AbstractPlutoDingetjes
 using Cositos
 
 const FIXTURES = joinpath(@__DIR__, "..", "..", "fixtures")
@@ -95,5 +96,25 @@ b64(buffers) = [base64encode(b) for b in buffers]
     @testset "conformance: custom" begin
         fx = JSON.parsefile(joinpath(FIXTURES, "custom.json"))
         @test jsonequal(build_custom(Dict{String,Any}("event" => "click", "n" => 3)), fx["data"])
+    end
+
+    @testset "Pluto extension: Bonds + HTML render contract" begin
+        esm = "export default { render({model, el}) {} }"
+        w = PlutoWidget(; esm=esm, state=Dict{String,Any}("value" => 0, "min" => 0, "max" => 100))
+
+        # Bonds: the bound variable is the full state Dict; JS values pass through.
+        @test AbstractPlutoDingetjes.Bonds.initial_value(w) == w.state
+        @test AbstractPlutoDingetjes.Bonds.transform_value(w, Dict("value" => 55)) ==
+            Dict("value" => 55)
+
+        # HTML render upholds the @bind contract: imports the runtime, embeds ESM +
+        # state, wires a PlutoChannel to the container element.
+        html = sprint(show, MIME("text/html"), w)
+        @test occursin("document.currentScript.parentElement", html)
+        @test occursin("PlutoChannel", html)
+        @test occursin("loadWidget", html)
+        @test occursin(w.runtime_url, html)
+        @test occursin("\"value\":0", replace(html, " " => ""))  # state embedded
+        @test occursin("render({model, el})", html)                # esm embedded
     end
 end
