@@ -15,7 +15,8 @@ fmt:
 typecheck:
     uv run --extra dev mypy
 
-coverage: test   # pytest config enforces --cov-fail-under
+coverage:
+    uv run --extra dev --extra oracle pytest --cov=cositos --cov-report=term-missing --cov-fail-under=95
 
 # --- JS (front) ---
 front-test:

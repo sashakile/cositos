@@ -37,7 +37,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=cositos --cov-report=term-missing --cov-fail-under=95"
 
 [tool.coverage.run]
 source = ["cositos"]

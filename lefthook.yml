@@ -27,7 +27,7 @@ pre-push:
   parallel: false
   commands:
     coverage-py:
-      run: uv run --extra dev --extra oracle pytest
+      run: uv run --extra dev --extra oracle pytest --cov=cositos --cov-report=term-missing --cov-fail-under=95
     coverage-js:
       run: bash -c "cd front && npm run coverage"
     specs:
