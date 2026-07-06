@@ -105,6 +105,41 @@ installed fine, so GitHub-release-asset downloads specifically are proxy-blocked
 mise bug, but aqua-backed tools are unusable here; cositos pins node via mise and takes
 uv from the system.
 
+**F14 · `beads` inverts the dependency when using `bd create --deps blocks:<id>`.**
+`bd create "T2" --deps "blocks:T1"` (intending "T2 blocked by T1") created the reverse:
+T2 *blocks* T1 (T1 dropped out of `bd ready`, T2 became ready). Verified via `bd show`
+(T2 under BLOCKS, T1 under DEPENDS ON) and `bd ready`. 🟡 friction — a silently inverted
+graph yields a wrong ready-set, so work can start in the wrong order. `bd create --help`
+doesn't state which side the new issue takes. Fix: make `--deps blocks:X` mean "new issue
+depends on X", or document direction. Unambiguous workaround: `bd dep <blocker> --blocks
+<blocked>`.
+
+**F15 · `wai add design -v`/`-vv` don't reveal options; they just re-emit the error.**
+The `wai add` help footer promises "Use -v for all options, -vv for env vars, -vvv for
+internals." But `wai add design -v` and `-vv` (with no content) both print only
+`× Provide content or use --file to import from a file` and exit — no option list, no
+env vars. 🟢 papercut. Expected: `-v` prints the flag reference (e.g. `--file`, project
+selection) *before* validating required content, so discovery works without already
+knowing the answer. Worked around by copying the `--file` form from the top-level
+examples block.
+
+**F16 · `openspec new change` scaffolds only `.openspec.yaml`, not the artifact stubs.**
+`openspec new change <name>` creates the change dir containing only the hidden
+`.openspec.yaml` — no `proposal.md`/`design.md`/`specs/**`/`tasks.md`, not even empty
+stubs. Templates exist (`openspec templates`) and `openspec instructions <artifact>`
+prints them, so scaffolding is possible. 🟢 papercut. Fix: emit empty artifacts from the
+templates on `new change`, or have its output name the artifacts to author next.
+
+**F17 · `lefthook` aborts the commit (exit 1) when *no* staged file matches any hook.**
+With `core.hooksPath` owned by beads (`.beads/hooks`) delegating to lefthook, a commit
+whose staged files match none of the configured jobs (e.g. a docs-only commit under
+`openspec/`) makes every job print `(skip) no matching staged files` and then lefthook
+exits **1**, so `git commit` fails with no obvious error. Code commits (with staged `.py`)
+succeed because a job actually runs. 🟡 friction — blocks routine docs/spec commits and the
+cause is buried under a `core.hooksPath` reset banner. Worked around with
+`git commit --no-verify`. Fix: lefthook should exit 0 when all jobs are skipped, and/or
+the beads→lefthook delegation should not surface a non-zero status for an all-skip run.
+
 ### 👍 What worked well (kept for balance)
 
 - **`wai way`** is an excellent, actionable repo-hygiene checklist; it drove most of the
