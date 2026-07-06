@@ -1,0 +1,23 @@
+# Binder-ready environment for cositos live widgets.
+#
+# myBinder builds this repo into a Docker image with a running Jupyter kernel, so widgets
+# render LIVE (real comm), unlike the static export in ../static-export/. Voila can then
+# serve any notebook as a standalone app.
+#
+# Point Binder at the repository root; this file (or a copy at repo-root ./binder/)
+# declares the environment. cositos is installed from the repo itself (postBuild).
+
+name: cositos-binder
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      # cositos is not on PyPI; install it from the repository being built.
+      - -e ..
+      - anywidget>=0.9.21   # provides the AnyModel/AnyView frontend cositos targets
+      - comm>=0.2.3
+      - jupyterlab>=4
+      - voila>=0.5          # serve a notebook as a live standalone app
+      - ipykernel>=6
