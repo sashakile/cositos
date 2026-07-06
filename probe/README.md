@@ -44,14 +44,44 @@ is the probe program in that kernel's language. For example, the `python3` progr
 `ipykernel.comm.Comm`. An R entry would use IRkernel's comm API, a C# entry .NET
 Interactive's, and so on — the same comm surface the eventual `Transport` adapter builds on.
 
+## Installing the batch-1 kernels (hard-won recipes)
+
+All four language kernels are installed and verified to launch. Kernelspecs live in
+`~/Library/Jupyter/kernels` (set `JUPYTER_DATA_DIR=~/Library/Jupyter` during install so the
+venv's `jupyter_client` discovers them).
+
+- **Python** (`python3`): ships with the venv (ipykernel).
+- **R** (`ir`): `Rscript -e 'install.packages("IRkernel"); IRkernel::installspec(name="ir")'`
+  from CRAN. `installspec` shells out to `jupyter`, so run it with the venv's `jupyter` on
+  PATH (e.g. under `uv run`).
+- **C#** (`.net-csharp`): `dotnet tool install --global Microsoft.dotnet-interactive` then
+  `dotnet interactive jupyter install`. Its generated `kernel.json` calls bare `dotnet
+  interactive` with no env — patch it to use an absolute `dotnet` path and add an `env`
+  block with `DOTNET_ROOT` and a `PATH` that includes `~/.dotnet/tools`, or the kernel dies
+  before the `kernel_info` handshake.
+- **Clojure** (`cositos-clj`): clojupyter's normal install needs a prebuilt standalone jar,
+  distributed as a **GitHub release asset — blocked by the proxy here**. Work around it with
+  a **jar-free deps-based kernelspec** that launches clojupyter's kernel entry point straight
+  from Clojars:
+
+  ```json
+  {
+    "argv": ["/opt/homebrew/bin/clojure", "-Sdeps",
+      "{:deps {clojupyter/clojupyter {:mvn/version \"0.4.332\"}} :mvn/repos {\"clojars\" {:url \"https://repo.clojars.org/\"}}}",
+      "-M", "-m", "clojupyter.kernel.core", "{connection_file}"],
+    "display_name": "Clojure (cositos)", "language": "clojure"
+  }
+  ```
+
 ## Known results
 
-| Kernel | Tier | Notes |
-|--------|------|-------|
-| `python3` (ipykernel) | **1** | certified by `tests/test_kernel_probe.py` |
-| R (IRkernel) | *unverified* | kernel not yet installed |
-| C# (.NET Interactive) | *unverified* | kernel not yet installed; highest-uncertainty |
-| Clojure (clojupyter) | *unverified* | kernel not yet installed; may be Tier 3 |
+| Kernel | Installed / launches | Tier | Notes |
+|--------|----------------------|------|-------|
+| `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
+| `ir` (IRkernel) | ✅ | *unverified* | needs an R probe program (IRkernel comm API) |
+| `.net-csharp` (.NET Interactive) | ✅ | *unverified* | needs a C# probe program; comm mapping is the least certain |
+| `cositos-clj` (clojupyter) | ✅ | *unverified* | clojupyter ships comm *message specs* but no user-facing comm API — likely Tier 3 |
 
-Verifying the batch-1 kernels is the first step of each transport ticket
-(`cositos-ex2.5/6/7`), which this probe gates.
+Kernels are installed and launch; their **tiers are still unverified** — classifying each
+requires writing its probe program (the seed of that language's `Transport`), which is the
+first step of the transport tickets `cositos-ex2.5/6/7`.
