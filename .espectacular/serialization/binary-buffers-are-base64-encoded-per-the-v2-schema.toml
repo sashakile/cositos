@@ -1,0 +1,10 @@
+id = "binary-buffers-are-base64-encoded-per-the-v2-schema"
+description = "Binary buffers are base64-encoded per the v2 schema."
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"
+
+[[tests.pytest]]
+flags = "tests/test_serialize.py::test_dump_model_includes_buffers_when_present"
+timeout_seconds = 60

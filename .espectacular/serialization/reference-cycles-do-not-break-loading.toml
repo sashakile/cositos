@@ -1,0 +1,10 @@
+id = "reference-cycles-do-not-break-loading"
+description = "Reference cycles do not break loading."
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"
+
+[[tests.pytest]]
+flags = "tests/test_serialize.py::test_reference_cycle_loads_without_recursion"
+timeout_seconds = 60

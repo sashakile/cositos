@@ -1,0 +1,10 @@
+id = "a-single-model-round-trips-losslessly"
+description = "A single model round-trips losslessly."
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"
+
+[[tests.pytest]]
+flags = "tests/test_serialize.py::test_round_trip_binary_by_raw_bytes"
+timeout_seconds = 60
