@@ -78,6 +78,38 @@ run = [
 description = "Live-preview the Quarto docs site"
 run = '''QUARTO_PYTHON="$PWD/.venv/bin/python" quarto preview docs/'''
 
+# --- Manual QA (human eyeball; the rendered paths tests can't fully judge) ---
+[tasks.qa]
+description = "Print the manual-QA checklist (which qa-* task exercises what)"
+run = '''
+echo "Manual QA — run each, then look for the described behaviour:"
+echo "  mise run qa-export    open the checked-in static export (serialized state -> widget, no kernel; needs internet for CDN)"
+echo "  mise run qa-web        serve the backend-less browser demo (LocalChannel; interact -> live state, no kernel)"
+echo "  mise run qa-docs       build + open the Quarto docs site (tutorials render; embedded widget shows statically)"
+echo "  mise run qa-notebook   launch JupyterLab on the counter notebook (run cells, click increment, read state['count'] back)"
+'''
+
+[tasks.qa-export]
+description = "QA: open the checked-in static-HTML export (serialized Document -> widget, no kernel)"
+run = "open examples/web/exported-widget-state.html"
+
+[tasks.qa-web]
+description = "QA: serve the backend-less browser demo (LocalChannel, no kernel)"
+dir = "examples"
+run = [
+    "echo 'Open http://localhost:8000/web/  (Ctrl-C to stop)'",
+    "python3 -m http.server 8000",
+]
+
+[tasks.qa-docs]
+description = "QA: build + open the Quarto docs site"
+depends = ["docs"]
+run = "open docs/_site/index.html"
+
+[tasks.qa-notebook]
+description = "QA: launch JupyterLab on the live counter notebook (needs a kernel)"
+run = "uv run --extra oracle --with jupyterlab jupyter lab examples/notebooks/python_counter.ipynb"
+
 [tasks.setup]
 description = "Install all Python + JS dependencies"
 run = ["uv sync --extra dev --extra oracle", "npm --prefix front install"]
