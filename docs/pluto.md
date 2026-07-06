@@ -1,4 +1,7 @@
-# Using cositos widgets in Pluto.jl
+---
+title: "Using cositos widgets in Pluto.jl"
+---
+
 
 Pluto is **not** Jupyter — there is no comm protocol. Pluto is reactive-cell-based:
 widgets render via `Base.show(::MIME"text/html")`, two-way binding happens through

@@ -1,4 +1,7 @@
-# Widgets: covering the ipywidgets surface without cloning the zoo
+---
+title: "Widgets: covering the ipywidgets surface without cloning the zoo"
+---
+
 
 **cositos does not reimplement `@jupyter-widgets/controls`.** ipywidgets ships ~30
 frontend widget classes (`IntSlider`, `Button`, `Dropdown`, …); cloning them verbatim

@@ -1,4 +1,7 @@
-# Porting a `cositos` backend to a new Jupyter kernel language
+---
+title: "Porting a cositos backend to a new Jupyter kernel language"
+---
+
 
 This guide is for someone who knows a language ecosystem (Julia, C#, R, …) and wants a
 `cositos`/anywidget-style backend there. You do **not** write any JavaScript — you reuse

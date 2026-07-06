@@ -1,0 +1,57 @@
+---
+title: "Export widgets to static HTML"
+---
+
+A saved widget [document](save-restore.qmd) can be rendered to a **self-contained HTML
+page** — no running kernel. cositos reuses the stock ipywidgets embed format: the state is
+embedded as a `widget-state+json` block and the frontend (anywidget's `AnyModel`) loads
+from a CDN.
+
+## A live widget, rendered statically
+
+The button below is a real cositos widget. Its state was serialized in Python; the
+frontend ESM runs in your browser against that embedded state. There is **no kernel** —
+interaction is client-side.
+
+```{python}
+# | output: asis
+from IPython.display import HTML
+
+from cositos import dump_document, embed_snippet
+
+ESM = """
+export default {
+  render({ model, el }) {
+    const btn = document.createElement("button");
+    const out = document.createElement("span");
+    const paint = () => { out.textContent = " count = " + model.get("n"); };
+    btn.textContent = "increment";
+    btn.addEventListener("click", () => { model.set("n", model.get("n") + 1); model.save_changes(); });
+    model.on("change:n", paint);
+    paint();
+    el.appendChild(btn); el.appendChild(out);
+  }
+}
+"""
+
+doc = dump_document([("counter", {"_esm": ESM, "n": 5})])
+HTML(embed_snippet(doc))
+```
+
+## Writing a standalone file
+
+`embed_html` returns a complete page; `write_html` writes it to disk:
+
+```python
+from cositos import dump_document, write_html
+
+doc = dump_document([("counter", {"_esm": ESM, "n": 0})])
+write_html("counter.html", doc)   # open in any browser (needs internet for the CDN)
+```
+
+- **`embed_snippet(doc)`** — just the loader + state + view scripts, to drop into an
+  existing page (this is what the widget above uses, and what Quarto embeds).
+- **`embed_html(doc)`** — a full standalone HTML document.
+
+The same mechanism underlies the Quarto/JupyterBook/nbconvert recipes in the repo's
+`examples/static-export/`.

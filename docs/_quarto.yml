@@ -1,10 +1,14 @@
 project:
   type: website
   output-dir: _site
-  # Pages are migrated into the site incrementally (Phase 2). Legacy docs/*.md are not
-  # yet Quarto pages, so scope the render list to what's ready.
   render:
     - index.qmd
+    - tutorials/save-restore.qmd
+    - tutorials/static-export.qmd
+    - widgets.md
+    - pluto.md
+    - porting.md
+    - hooks.md
 
 website:
   title: "cositos"
@@ -13,11 +17,20 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - text: Tutorials
+        menu:
+          - tutorials/save-restore.qmd
+          - tutorials/static-export.qmd
+      - text: Guides
+        menu:
+          - widgets.md
+          - pluto.md
+          - porting.md
+          - hooks.md
 
 format:
   html:
     theme: cosmo
     toc: true
 
-# Python cells execute via the project's jupyter kernel. Point Quarto at the uv venv
-# (which has ipykernel/jupyter) with:  QUARTO_PYTHON=.venv/bin/python quarto render docs/
+# Render:  mise run docs   (sets QUARTO_PYTHON to the uv venv with the `docs` extra)

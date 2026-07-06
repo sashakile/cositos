@@ -1,4 +1,7 @@
-# Git hooks & local quality gates
+---
+title: "Git hooks & local quality gates"
+---
+
 
 cositos enforces three gate families **on every commit/push** and in CI:
 

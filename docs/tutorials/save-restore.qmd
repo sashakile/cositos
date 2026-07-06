@@ -1,0 +1,62 @@
+---
+title: "Save & restore widget state"
+---
+
+Every cositos widget's state is plain data, so a whole UI — including composed,
+nested widgets and their binary buffers — can be **saved to JSON and reconstructed
+later**. cositos targets the stock ipywidgets *Widget State JSON schema v2*
+(`application/vnd.jupyter.widget-state+json`), so saved files interoperate with the
+wider ecosystem.
+
+## Dump a document
+
+`dump_document` takes `(model_id, state)` entries and returns the v2 envelope. Children
+are referenced as `"IPY_MODEL_<id>"` strings, so composition needs nothing special.
+
+```{python}
+import json
+
+from cositos import dump_document
+
+entries = [
+    ("box", {"_esm": "export default {}", "children": ["IPY_MODEL_slider"]}),
+    ("slider", {"_esm": "export default {}", "value": 42}),
+]
+doc = dump_document(entries)
+print(json.dumps(doc, indent=2))
+```
+
+Note the `version_major: 2 / version_minor: 0` envelope (the *state-format* version,
+distinct from the protocol version `2.1.0`), and that the `box` keeps its
+`"IPY_MODEL_slider"` reference verbatim.
+
+## Restore it
+
+`load_document` is the exact inverse — a flat, id-keyed pass, so reference cycles are
+safe:
+
+```{python}
+from cositos import load_document
+
+restored = load_document(doc)
+assert restored == entries          # round-trips losslessly
+restored
+```
+
+## Binary buffers
+
+Binary values (e.g. a NumPy array's bytes) are split out and base64-encoded under a
+`buffers` array; on load they are merged back. Buffers are compared by **raw bytes**, so a
+typed `float32` view round-trips correctly:
+
+```{python}
+import array
+
+arr = array.array("f", [1.5, 2.5, -3.0])
+doc = dump_document([("plot", {"shape": [3], "dtype": "float32", "data": memoryview(arr)})])
+doc["state"]["plot"]["buffers"]
+```
+
+That's the whole persistence model: `dump_document` / `load_document` (and the
+single-widget `dump_model` / `load_model`). See also [static export](static-export.qmd)
+to turn a saved document into a viewable HTML page.
