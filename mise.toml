@@ -64,6 +64,12 @@ description = "Run the Clojure backend core tests (fixture conformance)"
 dir = "clojure"
 run = "clojure -M:test"
 
+# --- R (backend port) ---
+[tasks.r-test]
+description = "Run the R backend core tests (fixture conformance)"
+dir = "r"
+run = "Rscript test.R"
+
 # --- Cross-cutting ---
 [tasks.complexity]
 description = "Structural complexity gate (pretender)"
@@ -130,6 +136,7 @@ depends = [
     "front-coverage",
     "julia-test",
     "clojure-test",
+    "r-test",
     "complexity",
     "specs",
 ]
