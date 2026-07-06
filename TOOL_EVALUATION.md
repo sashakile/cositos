@@ -140,6 +140,15 @@ cause is buried under a `core.hooksPath` reset banner. Worked around with
 `git commit --no-verify`. Fix: lefthook should exit 0 when all jobs are skipped, and/or
 the beads→lefthook delegation should not surface a non-zero status for an all-skip run.
 
+**F18 · `quarto render` (website) silently no-ops — exit 0, empty log — when one input
+file fails.** A Quarto website whose folder also held legacy plain `.md` files (no Quarto
+front matter) produced no `_site/`, no error, and an empty `--log` file, exiting 0. A
+single-file render of the same content worked, and a folder with only the good file
+worked — so one unrenderable input aborts the whole batch without naming the file or why.
+🟡 friction: cost several diagnostic rounds since success and "rendered nothing" look
+identical. (Quarto 1.9.38.) Fix: non-zero exit and/or a message naming the offending
+file. Worked around by scoping `project.render:`.
+
 ### 👍 What worked well (kept for balance)
 
 - **`wai way`** is an excellent, actionable repo-hygiene checklist; it drove most of the
