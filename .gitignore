@@ -43,3 +43,6 @@ front/coverage/
 csharp/bin/
 csharp/obj/
 
+# Jupyter
+.ipynb_checkpoints/
+
