@@ -14,15 +14,22 @@ translating to/from Julia's 1-based indexing internally.
 """
 module Cositos
 
+using Base64: base64encode, base64decode
+
 export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     build_comm_open, build_update, build_custom, mimebundle,
     parse_message, Update, RequestState, Custom,
     remove_buffers, put_buffers!,
+    dump_model, load_model, dump_document, load_document,
     PlutoWidget
 
 const PROTOCOL_VERSION_MAJOR = 2
 const PROTOCOL_VERSION_MINOR = 1
 const PROTOCOL_VERSION = "$(PROTOCOL_VERSION_MAJOR).$(PROTOCOL_VERSION_MINOR).0"
+
+#: Widget State JSON schema version (distinct from the protocol version 2.1.0).
+const STATE_VERSION_MAJOR = 2
+const STATE_VERSION_MINOR = 0
 
 const TARGET_NAME = "jupyter.widget"
 const WIDGET_VIEW_MIMETYPE = "application/vnd.jupyter.widget-view+json"
@@ -118,7 +125,6 @@ function put_buffers!(state, buffer_paths, buffers)
 end
 
 # ---- message builders ----
-
 """
     build_comm_open(state; anywidget_version=ANYWIDGET_MODULE_VERSION)
         -> (data, buffers, metadata)
@@ -144,6 +150,93 @@ end
 
 "Build a `custom` message payload."
 build_custom(content) = Dict{String,Any}("method" => "custom", "content" => content)
+
+# ---- serialization: widget-state JSON schema v2 (dump/load) ----
+
+"""
+    dump_model(entry; anywidget_version=ANYWIDGET_MODULE_VERSION) -> (model_id, record)
+
+Serialize one `(model_id, state)` entry to a schema-v2 record. The anywidget identity
+(`model_name`/`model_module`/`model_module_version`) is read from `state` if the host set
+the `_model_*` fields, else defaulted to the `AnyModel`/`anywidget` frontend. Binary
+(`Vector{UInt8}`) values move to a base64 `buffers` array; the rest of `state` is
+preserved verbatim so [`load_model`](@ref) is the exact inverse.
+"""
+function dump_model(entry; anywidget_version::AbstractString=ANYWIDGET_MODULE_VERSION)
+    model_id, state = entry
+    stripped, buffer_paths, buffers = remove_buffers(state)
+    record = Dict{String,Any}(
+        "model_name" => get(state, "_model_name", "AnyModel"),
+        "model_module" => get(state, "_model_module", "anywidget"),
+        "model_module_version" => get(state, "_model_module_version", anywidget_version),
+        "state" => stripped,
+    )
+    if !isempty(buffers)
+        record["buffers"] = [
+            Dict{String,Any}(
+                "path" => path, "encoding" => "base64", "data" => base64encode(buf)
+            ) for (path, buf) in zip(buffer_paths, buffers)
+        ]
+    end
+    return model_id, record
+end
+
+"""
+    load_model((model_id, record)) -> (model_id, state)
+
+Inverse of [`dump_model`](@ref): rebuild `(model_id, state)` from a record. Base64 buffers
+are decoded to `Vector{UInt8}` and merged back into `state` in place.
+"""
+function load_model(item)
+    model_id, record = item
+    state = record["state"]
+    entries = get(record, "buffers", [])
+    buffer_paths = [e["path"] for e in entries]
+    buffers = [_decode_buffer(e) for e in entries]
+    put_buffers!(state, buffer_paths, buffers)
+    return model_id, state
+end
+
+function _decode_buffer(entry)
+    encoding = get(entry, "encoding", nothing)
+    encoding == "base64" ||
+        error("Unsupported buffer encoding: $(repr(encoding)) (expected 'base64')")
+    return base64decode(entry["data"])
+end
+
+"""
+    dump_document(entries; anywidget_version=ANYWIDGET_MODULE_VERSION) -> Document
+
+Serialize many `(model_id, state)` entries into a v2 Widget-State envelope
+`{version_major, version_minor, state}`, where `state` maps each `model_id` to its record.
+Model ids must be non-empty and unique (they are the document keys). Composed UIs need
+nothing special: children stored as `"IPY_MODEL_<id>"` strings round-trip verbatim.
+"""
+function dump_document(entries; anywidget_version::AbstractString=ANYWIDGET_MODULE_VERSION)
+    state = Dict{String,Any}()
+    for entry in entries
+        model_id, record = dump_model(entry; anywidget_version=anywidget_version)
+        isempty(model_id) &&
+            error("model_id must be a non-empty string (it is the document key)")
+        haskey(state, model_id) &&
+            error("duplicate model_id $(repr(model_id)): document keys must be unique")
+        state[model_id] = record
+    end
+    return Dict{String,Any}(
+        "version_major" => STATE_VERSION_MAJOR,
+        "version_minor" => STATE_VERSION_MINOR,
+        "state" => state,
+    )
+end
+
+"""
+    load_document(doc) -> Vector{Tuple{String,Any}}
+
+Inverse of [`dump_document`](@ref): rebuild the list of `(model_id, state)`. References
+between models are plain `"IPY_MODEL_<id>"` strings, so loading is a flat id-keyed pass
+(reference cycles are safe — no recursive inlining).
+"""
+load_document(doc) = [load_model(item) for item in doc["state"]]
 
 "Build the widget-view mimebundle used for display."
 function mimebundle(model_id::AbstractString, repr_text::AbstractString="")

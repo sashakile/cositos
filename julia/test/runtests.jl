@@ -98,6 +98,75 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test jsonequal(build_custom(Dict{String,Any}("event" => "click", "n" => 3)), fx["data"])
     end
 
+    # ---- serialization: dump/load_document, certified vs widget-state.json ----
+    plot_bytes() = collect(reinterpret(UInt8, Float32[1.5, 2.5, -3.0]))
+
+    function widget_state_entries()
+        return [
+            ("box", Dict{String,Any}(
+                "_esm" => "export default { render({model, el}) { /* VBox */ } }",
+                "children" => Any["IPY_MODEL_plot"],
+            )),
+            ("plot", Dict{String,Any}(
+                "_esm" => "export default { render({model, el}) { /* float32 plot */ } }",
+                "shape" => Any[3],
+                "dtype" => "float32",
+                "data" => plot_bytes(),
+            )),
+        ]
+    end
+
+    @testset "serialize: dump_document reproduces the golden fixture" begin
+        fx = JSON.parsefile(joinpath(FIXTURES, "widget-state.json"))
+        @test jsonequal(dump_document(widget_state_entries()), fx)
+    end
+
+    @testset "serialize: base64 buffer codec matches the fixture string" begin
+        _, record = dump_model(("plot", Dict{String,Any}(
+            "_esm" => "e", "shape" => Any[3], "dtype" => "float32", "data" => plot_bytes(),
+        )))
+        @test record["buffers"][1]["path"] == ["data"]
+        @test record["buffers"][1]["encoding"] == "base64"
+        @test record["buffers"][1]["data"] == "AADAPwAAIEAAAEDA"
+    end
+
+    @testset "serialize: load_document reconstructs entries (composition + raw bytes)" begin
+        fx = JSON.parsefile(joinpath(FIXTURES, "widget-state.json"))
+        loaded = load_document(fx)
+        by_id = Dict(loaded)
+        @test Set(mid for (mid, _) in loaded) == Set(["box", "plot"])
+        @test by_id["box"]["children"] == ["IPY_MODEL_plot"]      # ref survives
+        @test by_id["plot"]["data"] == plot_bytes()               # float32 buffer, raw bytes
+    end
+
+    @testset "serialize: buffer-free document round-trips both ways" begin
+        entries = [
+            ("box", Dict{String,Any}("children" => Any["IPY_MODEL_child"])),
+            ("child", Dict{String,Any}("value" => 42)),
+        ]
+        by_id = Dict(load_document(dump_document(entries)))
+        @test by_id["box"]["children"] == ["IPY_MODEL_child"]
+        @test by_id["child"]["value"] == 42
+        doc = dump_document(entries)
+        @test jsonequal(dump_document(load_document(doc)), doc)
+    end
+
+    @testset "serialize: dump_document validates model ids" begin
+        @test_throws ErrorException dump_document([("", Dict{String,Any}("value" => 1))])
+        @test_throws ErrorException dump_document([
+            ("dup", Dict{String,Any}("value" => 1)),
+            ("dup", Dict{String,Any}("value" => 2)),
+        ])
+    end
+
+    @testset "serialize: load_model rejects a non-base64 buffer encoding" begin
+        record = Dict{String,Any}(
+            "state" => Dict{String,Any}("data" => nothing),
+            "buffers" => [Dict{String,Any}("path" => ["data"], "encoding" => "hex", "data" => "00")],
+        )
+        @test_throws ErrorException load_model(("m", record))
+    end
+
     @testset "Pluto extension: Bonds + HTML render contract" begin
         esm = "export default { render({model, el}) {} }"
         w = PlutoWidget(; esm=esm, state=Dict{String,Any}("value" => 0, "min" => 0, "max" => 100))
