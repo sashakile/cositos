@@ -5,6 +5,7 @@ project:
     - index.qmd
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
+    - tutorials/polyglot-parity.qmd
     - reference/index.qmd
     - reference/specs.qmd
     - explanation/architecture.qmd
@@ -24,6 +25,7 @@ website:
         menu:
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
+          - tutorials/polyglot-parity.qmd
       - text: Reference
         menu:
           - reference/index.qmd

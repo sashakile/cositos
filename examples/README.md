@@ -11,6 +11,7 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 | `static-export/` | notebook → static HTML via nbconvert; Quarto/JupyterBook recipes | no | nbconvert path **verified**; quarto/jb configs provided |
 | `binder/` | live widgets on myBinder + Voila (kernel-backed) | yes | recipe (env + docs); live path is e2e-tested |
 | `notebooks/python_counter.ipynb` | Jupyter (live comm via `CommTransport`) | yes | **works today** (needs `anywidget` in the frontend) |
+| `parity/` | Julia port emits the same widget document as Python (drives the parity docs page) | no | **works today** (run `dump.jl`) |
 | `widgets/*.js` | anywidget-style ESM used by the above and by tests | — | reference widgets |
 
 ## Backend-less web demo
