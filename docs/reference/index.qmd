@@ -88,12 +88,14 @@ thin adapter; the core contains no I/O. It is a
 implement it structurally, no subclassing required.
 
 ```python
+@runtime_checkable
 class Transport(Protocol):
-    def send(self, msg_type, content, *, buffers=None, metadata=None) -> None: ...
+    supports_receive: bool     # False on broadcast-only kernels (one-way widgets)
+
+    def send(self, msg_type, content, buffers=None, metadata=None) -> None: ...
     def on_message(self, callback) -> None: ...
-    # Optional attributes the Widget reads defensively:
-    #   comm_id: str            — the real comm id (adopted on open())
-    #   supports_receive: bool  — False on broadcast-only kernels (one-way widgets)
+    # comm_id: str — the real comm id, read defensively and adopted on open()
+    #   (not part of the Protocol; supplied by adapters whose comm generates an id)
 ```
 
 ## Protocol core
