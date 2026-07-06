@@ -25,6 +25,10 @@ e2e = [
     "ipykernel>=6.31.0",
     "jupyter-client>=8.6.3",
 ]
+export = [
+    "nbconvert>=7",
+    "nbformat>=5",
+]
 
 [build-system]
 requires = ["hatchling"]
