@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cositos — backend-less web demo</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+      .widget { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+      h1 { font-size: 1.4rem; }
+      code { background: #f4f4f4; padding: 0.1em 0.3em; border-radius: 3px; }
+    </style>
+  </head>
+  <body>
+    <h1>cositos — backend-less web demo</h1>
+    <p>
+      The <em>same</em> anywidget-style ESM that runs in Jupyter renders here with
+      <strong>no kernel</strong>. State lives in the browser via
+      <code>LocalChannel</code>. Serve this folder (e.g.
+      <code>python3 -m http.server</code>) and open the page — ES module imports need
+      HTTP, not <code>file://</code>.
+    </p>
+
+    <div class="widget" id="slider"></div>
+    <div class="widget" id="counter"></div>
+
+    <script type="module">
+      import { Model, LocalChannel, loadWidget, renderWidget } from "../../front/src/index.js";
+
+      // Mount a widget defined by an anywidget-style ESM string, backed by a client-side
+      // reducer. The reducer receives outbound messages and may `reply(...)` inbound ones
+      // — this is where a WASM module or pure-JS logic would live.
+      async function mount(el, esm, initialState, reducer) {
+        const model = new Model(initialState, new LocalChannel(reducer));
+        const widget = await loadWidget(esm);
+        await renderWidget(widget, { model, el });
+        return model;
+      }
+
+      // 1) The project's own int_slider.js example — unmodified.
+      const sliderEsm = await (await fetch("../widgets/int_slider.js")).text();
+      await mount(document.getElementById("slider"), sliderEsm, { value: 25, min: 0, max: 100 });
+
+      // 2) A counter that proves client-side logic with no backend: the reducer echoes
+      //    an `update` doubling the value on every change, purely in the browser.
+      const counterEsm = `
+        export default {
+          render({ model, el }) {
+            const btn = document.createElement("button");
+            const out = document.createElement("span");
+            const paint = () => { out.textContent = " count = " + model.get("count"); };
+            btn.textContent = "increment";
+            btn.addEventListener("click", () => {
+              model.set("count", model.get("count") + 1);
+              model.save_changes();
+            });
+            model.on("change:count", paint);
+            paint();
+            el.appendChild(btn); el.appendChild(out);
+            return () => { btn.remove(); out.remove(); };
+          }
+        }`;
+      await mount(document.getElementById("counter"), counterEsm, { count: 0 });
+    </script>
+  </body>
+</html>
