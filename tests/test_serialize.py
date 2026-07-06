@@ -2,6 +2,9 @@
 
 import array
 
+from hypothesis import given
+from hypothesis import strategies as st
+
 from cositos.serialize import (
     Document,
     ModelEntry,
@@ -173,3 +176,33 @@ def test_dump_document_rejects_duplicate_model_ids() -> None:
         assert "dup" in str(e)
     else:
         raise AssertionError("expected ValueError for duplicate model_id")
+
+
+# --- Property-based round-trip -------------------------------------------------------
+
+_ids = st.text(alphabet="abcdefghijklmnopqrstuvwxyz_", min_size=1, max_size=6)
+_keys = st.text(alphabet="abcdefghijklmnopqrstuvwxyz_", min_size=1, max_size=6)
+_scalars = st.none() | st.booleans() | st.integers() | st.text(max_size=8)
+_refs = _ids.map(lambda s: "IPY_MODEL_" + s)  # composition references
+_values = _scalars | st.binary(max_size=8) | _refs | st.lists(_scalars, max_size=3)
+_states = st.dictionaries(_keys, _values, max_size=4)
+
+
+@given(st.lists(st.tuples(_ids, _states), unique_by=lambda e: e[0], max_size=5))
+def test_document_round_trip_is_identity(entries: list[ModelEntry]) -> None:
+    # Binary values are bytes here, so equality holds directly (bytes == bytes). Typed
+    # float32 buffers are covered by the golden fixture's raw-byte assertion.
+    assert load_document(dump_document(entries)) == entries
+
+
+def test_document_round_trip_with_float32_and_refs() -> None:
+    # A worked example combining a binary buffer, a float32 array, and a child ref.
+    arr = array.array("f", [0.5, -1.25])
+    entries: list[ModelEntry] = [
+        ("root", {"children": ["IPY_MODEL_img"], "blob": b"\x00\xff"}),
+        ("img", {"shape": [2], "dtype": "float32", "data": memoryview(arr)}),
+    ]
+    loaded = dict(load_document(dump_document(entries)))
+    assert loaded["root"]["children"] == ["IPY_MODEL_img"]
+    assert _raw(loaded["root"]["blob"]) == b"\x00\xff"
+    assert _raw(loaded["img"]["data"]) == _raw(memoryview(arr))
