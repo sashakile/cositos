@@ -6,7 +6,9 @@ from cositos.serialize import (
     Document,
     ModelEntry,
     decode_buffers_base64,
+    dump_model,
     encode_buffers_base64,
+    load_model,
 )
 
 
@@ -63,3 +65,47 @@ def test_decode_rejects_unknown_encoding() -> None:
         assert "hex" in str(e)
     else:
         raise AssertionError("expected ValueError for unsupported encoding")
+
+
+def test_dump_model_defaults_to_anywidget_identity() -> None:
+    model_id, record = dump_model(("m1", {"value": 1}))
+    assert model_id == "m1"
+    assert record["model_name"] == "AnyModel"
+    assert record["model_module"] == "anywidget"
+    assert "model_module_version" in record
+    assert record["state"] == {"value": 1}
+    assert "buffers" not in record  # omitted when there are no binary values
+
+
+def test_dump_model_respects_explicit_model_fields() -> None:
+    state = {
+        "value": 1,
+        "_model_name": "MyModel",
+        "_model_module": "my-pkg",
+        "_model_module_version": "^1.2.3",
+    }
+    _, record = dump_model(("m1", state))
+    assert record["model_name"] == "MyModel"
+    assert record["model_module"] == "my-pkg"
+    assert record["model_module_version"] == "^1.2.3"
+
+
+def test_round_trip_plain_state_is_identity() -> None:
+    entry = ("m1", {"value": 42, "_esm": "export default {}"})
+    assert load_model(dump_model(entry)) == entry
+
+
+def test_round_trip_binary_by_raw_bytes() -> None:
+    arr = array.array("f", [1.5, 2.5, -3.0])
+    entry = ("plot", {"label": "x", "blob": b"\x00\x01", "data": memoryview(arr)})
+    model_id, state = load_model(dump_model(entry))
+    assert model_id == "plot"
+    assert state["label"] == "x"
+    assert _raw(state["blob"]) == b"\x00\x01"
+    assert _raw(state["data"]) == _raw(memoryview(arr))
+
+
+def test_dump_model_includes_buffers_when_present() -> None:
+    _, record = dump_model(("m1", {"blob": b"abc"}))
+    assert record["buffers"] == [{"path": ["blob"], "encoding": "base64", "data": "YWJj"}]
+    assert record["state"] == {}  # dict-keyed binary is removed from state

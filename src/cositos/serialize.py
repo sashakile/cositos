@@ -15,6 +15,9 @@ from __future__ import annotations
 import base64
 from typing import Any, TypeAlias
 
+from cositos.buffers import put_buffers, remove_buffers
+from cositos.protocol import ANYWIDGET_MODULE_VERSION
+
 #: A path to a binary value inside state: dict keys (str) and/or list indices (int).
 BufferPath: TypeAlias = list[Any]
 
@@ -30,6 +33,9 @@ SplitState: TypeAlias = tuple[Any, list[BufferPath], list[Any]]
 
 #: A JSON-safe split: stripped state + the v2 ``buffers`` array (base64 records).
 JsonSplit: TypeAlias = tuple[Any, list[dict[str, Any]]]
+
+#: One model's serialized record in the v2 ``state`` map (keyed by ``model_id``).
+Record: TypeAlias = dict[str, Any]
 
 
 def encode_buffers_base64(split: SplitState) -> JsonSplit:
@@ -71,3 +77,40 @@ def _b64decode(entry: dict[str, Any]) -> bytes:
 def _as_bytes(buf: Any) -> bytes:
     # Cast to a flat byte view so a typed memoryview serialises by its raw bytes.
     return memoryview(buf).cast("B").tobytes()
+
+
+def dump_model(
+    entry: ModelEntry, *, anywidget_version: str = ANYWIDGET_MODULE_VERSION
+) -> tuple[str, Record]:
+    """Serialize one :data:`ModelEntry` to ``(model_id, record)`` per schema v2.
+
+    The anywidget identity (``model_name``/``model_module``/``model_module_version``) is
+    read from ``state`` if the host set the ``_model_*`` fields, else defaulted to the
+    ``AnyModel``/``anywidget`` frontend. ``state`` itself is preserved verbatim (minus
+    binary values, which move to ``buffers``), so :func:`load_model` is its exact inverse.
+    """
+    model_id, state = entry
+    stripped, buffer_paths, buffers = remove_buffers(state)
+    _, entries = encode_buffers_base64((stripped, buffer_paths, buffers))
+    record: Record = {
+        "model_name": state.get("_model_name", "AnyModel"),
+        "model_module": state.get("_model_module", "anywidget"),
+        "model_module_version": state.get("_model_module_version", anywidget_version),
+        "state": stripped,
+    }
+    if entries:
+        record["buffers"] = entries
+    return model_id, record
+
+
+def load_model(item: tuple[str, Record]) -> ModelEntry:
+    """Inverse of :func:`dump_model`: rebuild ``(model_id, state)`` from a record.
+
+    Binary buffers are decoded and merged back into ``state`` in place; the returned
+    ``state`` carries real ``bytes`` at the buffer paths.
+    """
+    model_id, record = item
+    state = record["state"]
+    _, buffer_paths, buffers = decode_buffers_base64((state, record.get("buffers", [])))
+    put_buffers(state, buffer_paths, buffers)
+    return model_id, state
