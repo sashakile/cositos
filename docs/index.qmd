@@ -1,0 +1,38 @@
+---
+title: "cositos"
+---
+
+**cositos** is a binding-free [anywidget](https://anywidget.dev)-inspired backend core:
+define a widget front end once, drive it from **any** Jupyter kernel language.
+
+This page proves the docs pipeline: the widget below is **rendered statically** — no live
+kernel — from a serialized widget document embedded into the page by `cositos.embed`.
+
+```{python}
+# | echo: true
+# | output: asis
+from IPython.display import HTML
+
+from cositos import dump_document, embed_snippet
+
+ESM = """
+export default {
+  render({ model, el }) {
+    const btn = document.createElement("button");
+    const out = document.createElement("span");
+    const paint = () => { out.textContent = " count = " + model.get("n"); };
+    btn.textContent = "increment";
+    btn.addEventListener("click", () => { model.set("n", model.get("n") + 1); model.save_changes(); });
+    model.on("change:n", paint);
+    paint();
+    el.appendChild(btn); el.appendChild(out);
+  }
+}
+"""
+
+doc = dump_document([("counter", {"_esm": ESM, "n": 3})])
+HTML(embed_snippet(doc))
+```
+
+The button is a real cositos widget: its frontend ESM ran in your browser against state
+that was serialized in Python and embedded here. Interaction is client-side (no kernel).

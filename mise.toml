@@ -67,6 +67,17 @@ run = "pretender check src front/src"
 description = "Behavioural spec contracts (espectacular)"
 run = "ah check"
 
+[tasks.docs]
+description = "Render the Quarto documentation site (needs quarto on PATH)"
+run = [
+    "uv sync --extra dev --extra docs",
+    """QUARTO_PYTHON="$PWD/.venv/bin/python" quarto render docs/""",
+]
+
+[tasks.docs-preview]
+description = "Live-preview the Quarto docs site"
+run = '''QUARTO_PYTHON="$PWD/.venv/bin/python" quarto preview docs/'''
+
 [tasks.setup]
 description = "Install all Python + JS dependencies"
 run = ["uv sync --extra dev --extra oracle", "npm --prefix front install"]

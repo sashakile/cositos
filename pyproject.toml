@@ -29,6 +29,13 @@ export = [
     "nbconvert>=7",
     "nbformat>=5",
 ]
+docs = [
+    "ipykernel>=6",
+    "jupyter-client>=8",
+    "nbclient>=0.10",
+    "nbformat>=5",
+    "pyyaml>=6",
+]
 
 [build-system]
 requires = ["hatchling"]
