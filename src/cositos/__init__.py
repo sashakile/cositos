@@ -1,7 +1,7 @@
 """cositos: binding-free anywidget-style backend core."""
 
 from cositos.buffers import put_buffers, remove_buffers
-from cositos.embed import embed_html, write_html
+from cositos.embed import embed_html, embed_snippet, write_html
 from cositos.model import Widget
 from cositos.protocol import (
     PROTOCOL_VERSION,
@@ -28,6 +28,7 @@ __all__ = [
     "dump_document",
     "dump_model",
     "embed_html",
+    "embed_snippet",
     "load_document",
     "load_model",
     "parse_message",

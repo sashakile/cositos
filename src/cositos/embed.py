@@ -33,18 +33,17 @@ def _escape_script(text: str) -> str:
     return _SCRIPT_ESCAPE.sub(r"\\u003c\1", text)
 
 
-def embed_html(
+def embed_snippet(
     document: Document,
     *,
     views: Iterable[str] | None = None,
-    title: str = "cositos widgets",
     requirejs: bool = True,
     html_manager_version: str = _DEFAULT_HTML_MANAGER_VERSION,
 ) -> str:
-    """Render ``document`` (a :func:`cositos.serialize.dump_document` result) to HTML.
+    """Render the embed *snippet* (loader + state + view scripts), without an HTML wrapper.
 
-    ``views`` selects which model ids get a rendered view (default: every model in the
-    document). The full state is always embedded so cross-widget references resolve.
+    Use this to drop a widget into an existing page (a Quarto/blog cell, a template). See
+    :func:`embed_html` for a complete standalone page.
     """
     model_ids = list(views) if views is not None else list(document.get("state", {}))
     state_block = _escape_script(json.dumps(document, indent=2))
@@ -55,8 +54,24 @@ def embed_html(
         for mid in model_ids
     )
     loader = _loader(requirejs, html_manager_version)
-    snippet = (
-        f'{loader}\n<script type="{STATE_MIMETYPE}">\n{state_block}\n</script>\n{view_blocks}\n'
+    return f'{loader}\n<script type="{STATE_MIMETYPE}">\n{state_block}\n</script>\n{view_blocks}\n'
+
+
+def embed_html(
+    document: Document,
+    *,
+    views: Iterable[str] | None = None,
+    title: str = "cositos widgets",
+    requirejs: bool = True,
+    html_manager_version: str = _DEFAULT_HTML_MANAGER_VERSION,
+) -> str:
+    """Render ``document`` (a :func:`cositos.serialize.dump_document` result) to a full page.
+
+    ``views`` selects which model ids get a rendered view (default: every model in the
+    document). The full state is always embedded so cross-widget references resolve.
+    """
+    snippet = embed_snippet(
+        document, views=views, requirejs=requirejs, html_manager_version=html_manager_version
     )
     return (
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n'

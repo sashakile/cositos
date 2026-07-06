@@ -3,7 +3,7 @@
 import json
 import re
 
-from cositos.embed import embed_html, write_html
+from cositos.embed import embed_html, embed_snippet, write_html
 from cositos.serialize import dump_document
 
 VIEW_MIME = "application/vnd.jupyter.widget-view+json"
@@ -73,3 +73,21 @@ def test_write_html_matches_embed_html(tmp_path) -> None:
     out = tmp_path / "widgets.html"
     write_html(out, doc)
     assert out.read_text() == embed_html(doc)
+
+
+def test_snippet_has_state_and_views_without_html_wrapper() -> None:
+    # The snippet is for inline embedding (Quarto/blogs): no <html>/<body> wrapper.
+    snippet = embed_snippet(_doc())
+    assert "<!DOCTYPE html>" not in snippet
+    assert "<body" not in snippet
+    assert STATE_MIME in snippet
+    assert {v["model_id"] for v in _script_json(snippet, VIEW_MIME)} == {"box", "child"}
+    assert "@jupyter-widgets/html-manager" in snippet
+
+
+def test_embed_html_wraps_the_snippet() -> None:
+    doc = _doc()
+    html = embed_html(doc)
+    snippet = embed_snippet(doc)
+    assert "<!DOCTYPE html>" in html
+    assert snippet in html
