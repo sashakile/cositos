@@ -119,3 +119,40 @@ def test_close_sends_comm_close_once():
     n = len(t.sent)
     w.close()  # idempotent — no second comm_close
     assert len(t.sent) == n
+
+
+class CommIdTransport(FakeTransport):
+    """A transport that exposes a server-generated comm id, like CommTransport."""
+
+    comm_id = "server-generated-id"
+
+
+def test_open_syncs_model_id_from_transport_comm_id():
+    store = {"_esm": "x", "value": 0}
+    t = CommIdTransport()
+    w = Widget(t, get_state=lambda: dict(store), model_id="ignored")
+    w.open()
+    assert w.model_id == "server-generated-id"
+
+
+def test_open_keeps_model_id_when_transport_has_no_comm_id():
+    w, _t, _ = make_widget({"value": 0})  # FakeTransport: no comm_id
+    w.open()
+    assert w.model_id == "m1"
+
+
+def test_repr_mimebundle_auto_opens_and_returns_view_bundle():
+    from cositos.protocol import WIDGET_VIEW_MIMETYPE
+
+    w, t, _ = make_widget({"_esm": "x", "value": 0})
+    bundle = w._repr_mimebundle_()
+    assert t.sent[0][0] == "comm_open"  # displaying opens the comm
+    assert bundle[WIDGET_VIEW_MIMETYPE]["model_id"] == "m1"
+
+
+def test_repr_mimebundle_does_not_reopen_when_already_open():
+    w, t, _ = make_widget({"value": 0})
+    w.open()
+    n = len(t.sent)
+    w._repr_mimebundle_()
+    assert len(t.sent) == n  # no second comm_open

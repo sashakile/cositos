@@ -50,6 +50,11 @@ class Widget:
         data, buffers, metadata = protocol.build_comm_open(self._get_state())
         self._transport.send("comm_open", data, buffers=buffers, metadata=metadata)
         self._opened = True
+        # Adopt the transport's real comm id so the display bundle references the model
+        # the kernel actually opened (a comm generates its own id).
+        comm_id = getattr(self._transport, "comm_id", "")
+        if comm_id:
+            self.model_id = comm_id
         if getattr(self._transport, "supports_receive", False):
             self._transport.on_message(self._handle)
 
@@ -81,6 +86,16 @@ class Widget:
     def mimebundle(self, repr_text: str = "") -> dict[str, Any]:
         """Return the widget-view mimebundle for display."""
         return protocol.mimebundle(self.model_id, repr_text)
+
+    def _repr_mimebundle_(self, include: Any = None, exclude: Any = None) -> dict[str, Any]:
+        """Display hook: rendering the widget opens its comm, then returns the view bundle.
+
+        Lets a bare ``widget`` (or ``display(widget)``) render in Jupyter/Voila without a
+        manual ``display(widget.mimebundle(), raw=True)``.
+        """
+        if not self._opened:
+            self.open()
+        return self.mimebundle()
 
     def close(self) -> None:
         """Close the comm channel."""
