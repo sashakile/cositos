@@ -13,10 +13,15 @@ flat byte view before encoding — matching ipywidgets ``_buffer_list_equal``.
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterable
 from typing import Any, TypeAlias
 
 from cositos.buffers import put_buffers, remove_buffers
 from cositos.protocol import ANYWIDGET_MODULE_VERSION
+
+#: Widget State JSON schema version (distinct from the protocol version 2.1.0).
+STATE_VERSION_MAJOR = 2
+STATE_VERSION_MINOR = 0
 
 #: A path to a binary value inside state: dict keys (str) and/or list indices (int).
 BufferPath: TypeAlias = list[Any]
@@ -114,3 +119,29 @@ def load_model(item: tuple[str, Record]) -> ModelEntry:
     _, buffer_paths, buffers = decode_buffers_base64((state, record.get("buffers", [])))
     put_buffers(state, buffer_paths, buffers)
     return model_id, state
+
+
+def dump_document(
+    entries: Iterable[ModelEntry], *, anywidget_version: str = ANYWIDGET_MODULE_VERSION
+) -> Document:
+    """Serialize many :data:`ModelEntry` values into a v2 Widget State document.
+
+    The envelope is ``{version_major, version_minor, state}`` where ``state`` maps each
+    ``model_id`` to its record. A composed UI needs nothing special: children are stored
+    as ``"IPY_MODEL_<id>"`` strings in ordinary state and round-trip verbatim.
+    """
+    state = dict(dump_model(entry, anywidget_version=anywidget_version) for entry in entries)
+    return {
+        "version_major": STATE_VERSION_MAJOR,
+        "version_minor": STATE_VERSION_MINOR,
+        "state": state,
+    }
+
+
+def load_document(doc: Document) -> list[ModelEntry]:
+    """Inverse of :func:`dump_document`: rebuild the list of ``(model_id, state)``.
+
+    References between models are plain ``"IPY_MODEL_<id>"`` strings, so loading is a flat
+    id-keyed pass — reference cycles are safe (no recursive inlining).
+    """
+    return [load_model(item) for item in doc["state"].items()]

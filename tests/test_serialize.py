@@ -6,8 +6,10 @@ from cositos.serialize import (
     Document,
     ModelEntry,
     decode_buffers_base64,
+    dump_document,
     dump_model,
     encode_buffers_base64,
+    load_document,
     load_model,
 )
 
@@ -109,3 +111,47 @@ def test_dump_model_includes_buffers_when_present() -> None:
     _, record = dump_model(("m1", {"blob": b"abc"}))
     assert record["buffers"] == [{"path": ["blob"], "encoding": "base64", "data": "YWJj"}]
     assert record["state"] == {}  # dict-keyed binary is removed from state
+
+
+def test_document_envelope_shape() -> None:
+    doc = dump_document([("m1", {"value": 1})])
+    assert doc["version_major"] == 2
+    assert doc["version_minor"] == 0
+    assert set(doc["state"]) == {"m1"}
+    assert doc["state"]["m1"]["state"] == {"value": 1}
+
+
+def test_empty_document() -> None:
+    doc = dump_document([])
+    assert doc == {"version_major": 2, "version_minor": 0, "state": {}}
+    assert load_document(doc) == []
+
+
+def test_round_trip_document_preserves_order() -> None:
+    entries = [("a", {"value": 1}), ("b", {"value": 2}), ("c", {"value": 3})]
+    assert load_document(dump_document(entries)) == entries
+    doc = dump_document(entries)
+    assert dump_document(load_document(doc)) == doc
+
+
+def test_composition_child_refs_preserved_verbatim() -> None:
+    # A container references children as "IPY_MODEL_<id>" strings in ordinary state.
+    entries: list[ModelEntry] = [
+        ("box", {"children": ["IPY_MODEL_slider", "IPY_MODEL_label"]}),
+        ("slider", {"value": 10}),
+        ("label", {"text": "hi"}),
+    ]
+    doc = dump_document(entries)
+    assert doc["state"]["box"]["state"]["children"] == ["IPY_MODEL_slider", "IPY_MODEL_label"]
+    assert {"box", "slider", "label"} == set(doc["state"])
+    assert load_document(doc) == entries
+
+
+def test_reference_cycle_loads_without_recursion() -> None:
+    # Mutual references: loading is id-lookup, not inlining, so a cycle is safe.
+    entries: list[ModelEntry] = [
+        ("a", {"peer": "IPY_MODEL_b"}),
+        ("b", {"peer": "IPY_MODEL_a"}),
+    ]
+    loaded = load_document(dump_document(entries))
+    assert loaded == entries
