@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>cositos — exported widgets</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@1/dist/embed-amd.js" crossorigin="anonymous"></script>
+<script type="application/vnd.jupyter.widget-state+json">
+{
+  "version_major": 2,
+  "version_minor": 0,
+  "state": {
+    "box": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_esm": "export default { render({model, el}) { /* VBox */ } }",
+        "children": [
+          "IPY_MODEL_plot"
+        ]
+      }
+    },
+    "plot": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_esm": "export default { render({model, el}) { /* float32 plot */ } }",
+        "shape": [
+          3
+        ],
+        "dtype": "float32"
+      },
+      "buffers": [
+        {
+          "path": [
+            "data"
+          ],
+          "encoding": "base64",
+          "data": "AADAPwAAIEAAAEDA"
+        }
+      ]
+    }
+  }
+}
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"version_major": 2, "version_minor": 0, "model_id": "box"}
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"version_major": 2, "version_minor": 0, "model_id": "plot"}
+</script>
+</body>
+</html>

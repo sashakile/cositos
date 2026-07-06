@@ -7,6 +7,7 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 | Path | Host | Kernel? | Status |
 |------|------|---------|--------|
 | `web/index.html` | plain browser (`@cositos/front` + `LocalChannel`) | no | **works today** |
+| `web/exported-widget-state.html` | static export of a saved `Document` via `embed_html` (CDN html-manager) | no (needs internet for the CDN) | **works today** |
 | `notebooks/python_counter.ipynb` | Jupyter (live comm via `CommTransport`) | yes | **works today** (needs `anywidget` in the frontend) |
 | `widgets/*.js` | anywidget-style ESM used by the above and by tests | — | reference widgets |
 
@@ -28,8 +29,21 @@ Open `notebooks/python_counter.ipynb` in a JupyterLab/Notebook whose kernel can
 `_model_module="anywidget"`, so the anywidget frontend renders it). Run all cells; click
 **increment**; read `state['count']` back from the kernel.
 
+## Static HTML export
+
+Serialize any widgets to a `Document` and render a self-contained page — no kernel:
+
+```python
+from cositos import dump_document, write_html
+doc = dump_document([("m", {"_esm": "export default {render({el}){el.textContent='hi'}}"})])
+write_html("out.html", doc)   # open out.html in any browser (needs internet for the CDN)
+```
+
+`web/exported-widget-state.html` is a checked-in example produced this way from
+`fixtures/widget-state.json`.
+
 ## Not yet
 
-- **Static HTML export** (and therefore Quarto / JupyterBook / nbconvert) is blocked on
-  the `serialize-widget-state` change plus an `embed` helper — see the integration design.
+- **Quarto / JupyterBook / nbconvert recipes** build on `embed_html` (the static-export
+  helper) — see ticket `cositos-z76.4` and the integration design.
 - **Pluto notebook** needs a Julia host adapter (the Julia port is protocol-core only).
