@@ -1,0 +1,24 @@
+---
+title: "cositos counter (static)"
+format: html
+---
+
+A cositos widget rendered statically by Quarto.
+
+The widget-state `Document` must be present in this document's
+`metadata.widgets["application/vnd.jupyter.widget-state+json"]` for the widget to render
+without a kernel. Build it with `cositos.serialize.dump_document(...)` and inject it (see
+`../build.py`) after executing, then `quarto render`.
+
+```{python}
+#| echo: false
+from cositos import Widget
+from cositos.jupyter import CommTransport
+
+state = {
+    "_esm": "export default { render({ model, el }) { el.textContent = 'count = ' + model.get('n'); } }",
+    "n": 3,
+}
+w = Widget(CommTransport(), get_state=lambda: dict(state))
+w  # displays the widget-view mimebundle (Widget._repr_mimebundle_)
+```

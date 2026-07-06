@@ -1,0 +1,13 @@
+project:
+  type: default
+
+# Quarto embeds Jupyter widgets from the notebook's
+# metadata.widgets["application/vnd.jupyter.widget-state+json"] block.
+# cositos does not auto-write that block (it is binding-free), so execute the notebook
+# and inject the widget-state Document first — see ../build.py:inject_widget_state.
+
+format:
+  html:
+    toc: true
+
+# Render:  quarto render examples/static-export/quarto/

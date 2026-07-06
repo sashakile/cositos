@@ -1,0 +1,7 @@
+# JupyterBook table of contents.
+# Point at a notebook whose metadata.widgets carries an injected cositos widget-state
+# Document (see ../build.py). Build:  jupyter-book build examples/static-export/jupyterbook/
+format: jb-book
+root: index
+chapters:
+  - file: counter   # a notebook (counter.ipynb) with an injected widget-state block

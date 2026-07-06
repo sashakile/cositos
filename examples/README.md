@@ -8,6 +8,7 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 |------|------|---------|--------|
 | `web/index.html` | plain browser (`@cositos/front` + `LocalChannel`) | no | **works today** |
 | `web/exported-widget-state.html` | static export of a saved `Document` via `embed_html` (CDN html-manager) | no (needs internet for the CDN) | **works today** |
+| `static-export/` | notebook → static HTML via nbconvert; Quarto/JupyterBook recipes | no | nbconvert path **verified**; quarto/jb configs provided |
 | `notebooks/python_counter.ipynb` | Jupyter (live comm via `CommTransport`) | yes | **works today** (needs `anywidget` in the frontend) |
 | `widgets/*.js` | anywidget-style ESM used by the above and by tests | — | reference widgets |
 
@@ -44,6 +45,7 @@ write_html("out.html", doc)   # open out.html in any browser (needs internet for
 
 ## Not yet
 
-- **Quarto / JupyterBook / nbconvert recipes** build on `embed_html` (the static-export
-  helper) — see ticket `cositos-z76.4` and the integration design.
+- **Quarto / JupyterBook** — the shared static-embed mechanism is verified via nbconvert
+  in `static-export/` (with `_quarto.yml` / `_config.yml` starting points); neither tool
+  is installed here to run end-to-end.
 - **Pluto notebook** needs a Julia host adapter (the Julia port is protocol-core only).

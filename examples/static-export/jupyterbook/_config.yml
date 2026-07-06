@@ -1,0 +1,18 @@
+# JupyterBook config. Build:  jupyter-book build examples/static-export/jupyterbook/
+#
+# JupyterBook renders via nbconvert, so it embeds a widget from the notebook's
+# metadata.widgets["application/vnd.jupyter.widget-state+json"] block — the exact
+# mechanism verified in tests/test_static_export.py. Because cositos is binding-free and
+# does not auto-write that block, execute the notebook and inject the widget-state
+# Document first (see ../build.py:inject_widget_state).
+
+title: cositos widgets (static)
+author: cositos
+
+execute:
+  execute_notebooks: "off"   # notebooks are pre-executed + state-injected out of band
+
+# Widgets render via the CDN html-manager; no live kernel is needed to view the build.
+sphinx:
+  config:
+    nb_ipywidgets_js: {}
