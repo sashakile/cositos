@@ -1,0 +1,34 @@
+---
+title: "Specifications"
+---
+
+These are the **living specifications** for cositos — the source-of-truth contracts that
+the test suite and any cross-language port certify against. They are maintained under
+`openspec/specs/` and woven into this page verbatim, so the docs can never drift from the
+spec: this page *is* the spec.
+
+Each specification lists **requirements** (normative statements) and **scenarios**
+(Given/When/Then examples that pin the behaviour). The [API reference](index.qmd) links
+back here from each concern.
+
+## protocol {#protocol}
+
+The pure message-shaping and parsing contract: how state becomes `comm_open` / `update` /
+`custom` payloads, how inbound messages are parsed, and how binary buffers split and
+merge losslessly.
+
+{{< include ../../openspec/specs/protocol/spec.md >}}
+
+## serialization {#serialization}
+
+How a widget (or a composed graph of widgets) round-trips through JSON — including
+base64-encoded binary buffers and the document envelope's state-format version.
+
+{{< include ../../openspec/specs/serialization/spec.md >}}
+
+## embed {#embed}
+
+How a serialized document renders to self-contained HTML via the CDN html-manager, and
+how embedded JSON is script-escaped so widget state can't break out of the page.
+
+{{< include ../../openspec/specs/embed/spec.md >}}

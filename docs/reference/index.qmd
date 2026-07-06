@@ -1,0 +1,123 @@
+---
+title: "API reference"
+---
+
+The public API is everything exported from the top-level `cositos` package. It splits
+into six concerns: **serialization**, **embedding**, the **`Widget` façade**, the
+**`Transport` seam**, the **protocol core**, and **buffers**. Every symbol below is
+importable directly, e.g. `from cositos import dump_document`.
+
+The behaviour behind these functions is pinned by the living
+[specifications](specs.qmd) (protocol, serialization, embed) — the same contracts the
+test suite and any cross-language port certify against.
+
+## Serialization
+
+Persist a widget (or a composed graph of widgets) to plain JSON and rebuild it later.
+Round-trips are lossless, including binary buffers (base64-encoded per the widget
+state-format v2 schema). See the [serialization spec](specs.qmd#serialization).
+
+| Function | Signature | Purpose |
+|---|---|---|
+| `dump_model` | `dump_model(entry) -> tuple[str, Record]` | Serialize one `(model_id, state)` entry to a record. |
+| `load_model` | `load_model(item) -> tuple[str, dict]` | Inverse of `dump_model`. |
+| `dump_document` | `dump_document(entries) -> Document` | Serialize many entries into a v2 Widget-State document envelope. |
+| `load_document` | `load_document(doc) -> list[tuple[str, dict]]` | Inverse of `dump_document`. |
+
+```python
+from cositos import dump_document, load_document
+
+doc = dump_document([("counter", {"_esm": ESM, "n": 3})])
+# doc is a JSON-serializable dict; write it, ship it, reload it:
+entries = load_document(doc)          # [("counter", {"_esm": ..., "n": 3})]
+```
+
+## Embedding
+
+Render a serialized `Document` to self-contained HTML — no kernel required. The anywidget
+model/view resolves from a CDN at display time, so no frontend is bundled. See the
+[embed spec](specs.qmd#embed).
+
+| Function | Signature | Purpose |
+|---|---|---|
+| `embed_snippet` | `embed_snippet(document, *, views=None, requirejs=True, html_manager_version="1") -> str` | Loader + state + view `<script>`s, no page wrapper — drop into an existing page (e.g. a Quarto cell). |
+| `embed_html` | `embed_html(document, *, views=None, title="cositos widgets", requirejs=True, html_manager_version="1") -> str` | A complete standalone HTML page. |
+| `write_html` | `write_html(path, document, **kwargs) -> None` | Write `embed_html` output to `path`. |
+
+`views` selects which model ids get a rendered view (default: every model). The full
+state is always embedded so cross-widget references resolve. Embedded JSON is
+script-escaped so a `</script>` inside widget state can't break out of the page.
+
+```python
+from cositos import dump_document, write_html
+
+doc = dump_document([("m", {"_esm": ESM, "n": 3})])
+write_html("out.html", doc)           # open in any browser (needs internet for the CDN)
+```
+
+## The `Widget` façade
+
+`Widget` ties a host state object to a `Transport`. It is deliberately minimal — **no
+observer autodetection**: the host decides when state changed and calls `send_state`.
+
+```python
+Widget(
+    transport,                 # a Transport adapter (see below)
+    get_state,                 # () -> dict — current full state (must include "_esm")
+    set_state=None,            # (dict) -> None — apply inbound state; omit to ignore updates
+    model_id="",               # comm id, for the display mimebundle
+    on_custom=None,            # (content, buffers) -> None — handle custom messages
+)
+```
+
+| Method | Purpose |
+|---|---|
+| `open()` | Send `comm_open`, adopt the transport's real comm id, start listening (if the transport `supports_receive`). |
+| `send_state(include=None)` | Send an `update` with the full state, or only the `include` keys. |
+| `send_custom(content, buffers=None)` | Send a `custom` message (`model.on("msg:custom")` on the frontend). |
+| `close()` | Send `comm_close`. |
+| `mimebundle(repr_text="")` | The widget-view mimebundle for display. |
+| `_repr_mimebundle_(...)` | Jupyter display hook — rendering the widget opens its comm, then returns the view bundle. |
+
+## The `Transport` seam
+
+`Transport` is the **only** kernel-facing interface the core depends on. Each host
+(Python `comm`, Deno `Deno.jupyter.broadcast`, IJulia, dotnet-interactive) supplies a
+thin adapter; the core contains no I/O. It is a
+[`typing.Protocol`](https://docs.python.org/3/library/typing.html#typing.Protocol) —
+implement it structurally, no subclassing required.
+
+```python
+class Transport(Protocol):
+    def send(self, msg_type, content, *, buffers=None, metadata=None) -> None: ...
+    def on_message(self, callback) -> None: ...
+    # Optional attributes the Widget reads defensively:
+    #   comm_id: str            — the real comm id (adopted on open())
+    #   supports_receive: bool  — False on broadcast-only kernels (one-way widgets)
+```
+
+## Protocol core
+
+Pure message shaping and parsing — the language-neutral heart of the library. See the
+[protocol spec](specs.qmd#protocol).
+
+| Symbol | Signature | Purpose |
+|---|---|---|
+| `PROTOCOL_VERSION` | `str` (`"2.1.0"`) | The widget messaging protocol version cositos targets. |
+| `build_comm_open` | `build_comm_open(state) -> tuple[dict, list, dict]` | Build the `comm_open` payload (data, buffers, metadata). |
+| `build_update` | `build_update(state) -> tuple[dict, list]` | Build an `update` (`comm_msg`) payload. |
+| `build_custom` | `build_custom(content) -> dict` | Build a `custom` message payload. |
+| `parse_message` | `parse_message(data) -> Update \| RequestState \| Custom` | Parse an inbound `comm_msg` into a typed event. |
+
+`parse_message` returns one of three typed events: `Update{state, buffer_paths}`,
+`RequestState`, or `Custom{content}`. An unknown method is rejected.
+
+## Buffers
+
+Split binary values out of state and merge them back — a faithful port of the widget
+protocol v2 nested-buffer rules.
+
+| Function | Signature | Purpose |
+|---|---|---|
+| `remove_buffers` | `remove_buffers(state) -> tuple[state, buffer_paths, buffers]` | Extract binary values, replacing each with a hole in the state tree. |
+| `put_buffers` | `put_buffers(state, buffer_paths, buffers) -> None` | Inverse; mutates `state` in place. |

@@ -5,6 +5,9 @@ project:
     - index.qmd
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
+    - reference/index.qmd
+    - reference/specs.qmd
+    - explanation/architecture.qmd
     - widgets.md
     - pluto.md
     - porting.md
@@ -21,6 +24,13 @@ website:
         menu:
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
+      - text: Reference
+        menu:
+          - reference/index.qmd
+          - reference/specs.qmd
+      - text: Explanation
+        menu:
+          - explanation/architecture.qmd
       - text: Guides
         menu:
           - widgets.md
