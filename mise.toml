@@ -11,6 +11,11 @@ node = "26"
 [env]
 # Keep locally-built suite tools (wai/dont/pretender/ah/lefthook) discoverable.
 _.path = ["~/.local/bin"]
+# .NET: locate the Homebrew SDK and keep CI runs quiet/non-interactive.
+DOTNET_ROOT = "/opt/homebrew/opt/dotnet/libexec"
+DOTNET_NOLOGO = "1"
+DOTNET_CLI_TELEMETRY_OPTOUT = "1"
+DOTNET_GENERATE_ASPNET_CERTIFICATE = "false"
 
 # --- Python (core) ---
 [tasks.test]
@@ -69,6 +74,12 @@ run = "clojure -M:test"
 description = "Run the R backend core tests (fixture conformance)"
 dir = "r"
 run = "Rscript test.R"
+
+# --- C# (backend port) ---
+[tasks.csharp-test]
+description = "Run the C# backend core tests (fixture conformance)"
+dir = "csharp"
+run = "dotnet run -c Release"
 
 # --- Cross-cutting ---
 [tasks.complexity]
@@ -137,6 +148,7 @@ depends = [
     "julia-test",
     "clojure-test",
     "r-test",
+    "csharp-test",
     "complexity",
     "specs",
 ]

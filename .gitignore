@@ -39,3 +39,7 @@ front/coverage/
 .cpcache/
 .clj-kondo/
 
+# .NET
+csharp/bin/
+csharp/obj/
+
