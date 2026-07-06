@@ -58,6 +58,12 @@ run = "npm run coverage"
 description = "Run the Julia backend test suite (incl. fixture conformance)"
 run = "julia --project=julia -e 'import Pkg; Pkg.test()'"
 
+# --- Clojure (backend port) ---
+[tasks.clojure-test]
+description = "Run the Clojure backend core tests (fixture conformance)"
+dir = "clojure"
+run = "clojure -M:test"
+
 # --- Cross-cutting ---
 [tasks.complexity]
 description = "Structural complexity gate (pretender)"
@@ -123,6 +129,7 @@ depends = [
     "front-typecheck",
     "front-coverage",
     "julia-test",
+    "clojure-test",
     "complexity",
     "specs",
 ]

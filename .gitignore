@@ -34,3 +34,8 @@ julia/Manifest.toml
 
 # JS coverage output
 front/coverage/
+
+# Clojure
+.cpcache/
+.clj-kondo/
+
