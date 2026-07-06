@@ -155,3 +155,21 @@ def test_reference_cycle_loads_without_recursion() -> None:
     ]
     loaded = load_document(dump_document(entries))
     assert loaded == entries
+
+
+def test_dump_document_rejects_empty_model_id() -> None:
+    try:
+        dump_document([("", {"value": 1})])
+    except ValueError as e:
+        assert "model_id" in str(e)
+    else:
+        raise AssertionError("expected ValueError for empty model_id")
+
+
+def test_dump_document_rejects_duplicate_model_ids() -> None:
+    try:
+        dump_document([("dup", {"value": 1}), ("dup", {"value": 2})])
+    except ValueError as e:
+        assert "dup" in str(e)
+    else:
+        raise AssertionError("expected ValueError for duplicate model_id")

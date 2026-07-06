@@ -130,7 +130,14 @@ def dump_document(
     ``model_id`` to its record. A composed UI needs nothing special: children are stored
     as ``"IPY_MODEL_<id>"`` strings in ordinary state and round-trip verbatim.
     """
-    state = dict(dump_model(entry, anywidget_version=anywidget_version) for entry in entries)
+    state: dict[str, Record] = {}
+    for entry in entries:
+        model_id, record = dump_model(entry, anywidget_version=anywidget_version)
+        if not model_id:
+            raise ValueError("model_id must be a non-empty string (it is the document key)")
+        if model_id in state:
+            raise ValueError(f"duplicate model_id {model_id!r}: document keys must be unique")
+        state[model_id] = record
     return {
         "version_major": STATE_VERSION_MAJOR,
         "version_minor": STATE_VERSION_MINOR,
