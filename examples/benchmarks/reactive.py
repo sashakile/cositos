@@ -73,7 +73,8 @@ class Computed(_Node):
         self._run()
 
     def _run(self) -> None:
-        self._counter["n"] += 1
+        # Computed recomputes are NOT counted in the storm metric — only Effects (output
+        # refreshes) are, so storm means the same unit across A/B/C (see benchlib).
         _current.append(self)
         try:
             new = self._fn()

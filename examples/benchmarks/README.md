@@ -12,6 +12,9 @@ logical app two ways and measures the structural cost:
   inside a computation records a dependency, so one edit recomputes *only* the downstream
   nodes, and the graph is acyclic by construction. Wired for all scenarios; scenarios opt
   in via a `VARIANTS` attribute.
+- **variant D (reactive + shared memo)** — crossfilter only: like C but the expensive scan
+  is a single shared `Computed` all views read, so the O(rows) work runs once per action
+  instead of once per view.
 
 The *rendered* widget tree (deep nesting, many elements, shared/repeated widgets) is the
 same in both — only the **wiring** differs — so serialization is apples-to-apples.
@@ -50,7 +53,8 @@ user action and returns `(recomputes, needed_guard)`.
 | `widgets`/`depth`/`shared` | tree size, nesting depth, repeated (multi-parent) widgets |
 | `data_edges` | declared `observe`/`link` dependency edges — the wiring complexity |
 | `acyclic`/`HAS CYCLE` | whether the data-flow graph has a cycle (cycles need re-entrancy guards and risk infinite update loops) |
-| `storm` | recomputes triggered by **one** user action |
+| `storm` | output refreshes (widget updates) triggered by **one** user action — one unit across variants |
+| `scans` | expensive O(rows) recomputations for that action; a cost proxy the refresh count hides |
 | `models` | widgets in the serialized `cositos` document (`ipywidgets.embed.embed_data` → `cositos.embed_html`) |
 | `links_kept` | cross-part `LinkModel`s that survive into the serialized document |
 
@@ -59,14 +63,17 @@ user action and returns `(recomputes, needed_guard)`.
 **Cross-filter (bidirectional / cyclic) is where it explodes.** At `big` (16 dims, 100
 views):
 
-- wiring: A = 2000 edges (≈ views×dims) vs B = 118 (≈ views) — super-linear vs linear;
-- one click: A = 1700 recomputes vs B = 100 (a single projection pass);
+- wiring: A = 1900 edges (≈ views×dims) vs B = 118 (≈ views) — super-linear vs linear;
+- one click: A = 1700 refreshes vs B = 100 (a single projection pass);
 - A's data-flow graph is **always cyclic**, B's never is.
 
-Variant C here recomputes 200 (every view genuinely depends on every filter, so there is no
-incremental subgraph to exploit — an honest null result) but stays **acyclic** and avoids
-A's 1700-recompute cross-write cascade entirely. So even when reactivity cannot beat MVU on
-work, it still eliminates the cyclic explosion. Reactive DAG never loses across scenarios.
+**The `scans` metric corrects a naive reading of C.** On refresh *count* C matches B
+(100 = 100), but C runs the O(rows) scan **once per view** (`scans=100`) while B scans
+**once** (`scans=1`): the count hid V-to-1 redundant work. Variant **D** (shared memoized
+`Computed`) scans **once** (`scans=1`), truly tying B. And A scans **1700** times — every
+cascaded recompute rescans, so it is catastrophic on cost, not just count. Lesson: fine-
+grained reactivity needs *shared* derivations to match a well-written MVU render; it does
+not get that for free.
 
 **Master-detail (pure fan-out) is benign — an important contrast.** A and B come out nearly
 identical (`storm` equal; `data_edges` differ only by the master clique). Fan-out alone
@@ -87,12 +94,11 @@ re-renders the *whole* model projection every edit (coarse, but simple and acycl
 naive style is not simply "worse": it buys incremental recomputation at the cost of a
 cyclic, unserializable dependency web.
 
-**Variant C (reactive DAG) is the best of both.** At `big`, C recomputes **46** (only the
-affected downstream — the count is ~2× A's because it separately counts each `Computed` and
-its `Effect`; per affected node it matches A) and is **acyclic** with a single source of
-truth. It gets A's incrementality *and* B's acyclicity/serializability. This is the
-concrete argument for a tracked dependency graph over both peer `observe` and whole-model
-re-render.
+**Variant C (reactive DAG) is the best of both.** At `big`, C refreshes **23** — exactly
+variant A's incremental count (only the affected subgraph) — and is **acyclic** with a
+single source of truth. It gets A's incrementality *and* B's acyclicity/serializability.
+This is the concrete argument for a tracked dependency graph over both peer `observe` and
+whole-model re-render.
 
 ### cositos findings surfaced
 
@@ -105,8 +111,10 @@ re-render.
 ## Takeaway
 
 The tangle is measurable and topology-specific: **cyclic/cross-writing wiring is O(V×D)
-edges with O(V×D) update fan-out and does not serialize; a single-model projection is O(V)
-acyclic and does.** Fan-out and sheer size are fine. The form scenario adds the crucial
-caveat that MVU's simplicity costs coarse-grained recomputation — the motivation for a
-reactive-DAG variant. Together this is the concrete basis for the "impose one directed
-boundary (single Model / tracked DAG)" guideline.
+edges with O(V×D) refreshes *and* O(V×D) expensive scans, and does not serialize; a
+single-model projection is O(V) acyclic with a single scan.** Fan-out and sheer size are
+fine. The form scenario shows MVU's simplicity costs coarse re-rendering, which a reactive
+DAG (C) fixes — but the `scans` metric shows reactivity only matches MVU's *cost* when it
+shares derivations (variant D), not by default. Together this is the concrete basis for the
+"impose one directed boundary (single Model / tracked DAG with shared derivations)"
+guideline.

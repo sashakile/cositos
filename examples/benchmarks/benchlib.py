@@ -6,7 +6,9 @@ Each *scenario* module (e.g. ``crossfilter``, ``masterdetail``) exposes:
 * ``build(variant: str, scale: str) -> (root, edges, one_action)`` where
   ``variant`` is ``"A"`` (naive peer-to-peer) or ``"B"`` (MVU single-model),
   ``root`` is the ipywidgets root, ``edges`` is the declared data-flow edge list, and
-  ``one_action() -> (recomputes: int, needed_guard: bool)`` performs one user action.
+  ``one_action() -> (recomputes: int, needed_guard: bool, scans: int)`` performs one user
+  action, returning the output-refresh count, whether a re-entrancy guard fired, and the
+  number of expensive O(rows) recomputations (a cost proxy the refresh count hides).
 
 This module owns the metrics: widget-tree shape, data-flow acyclicity, update-storm size,
 and whether the tree survives ``cositos`` serialize -> static embed.
@@ -34,7 +36,8 @@ class Metrics:
     n_shared: int  # widgets referenced by >1 parent (repeated widgets)
     n_data_edges: int  # observe/link dependency edges
     data_flow_acyclic: bool
-    recomputes_per_action: int  # "update storm" size for one user action
+    recomputes_per_action: int  # "update storm": output refreshes for one user action
+    scans_per_action: int  # expensive O(rows) recomputations for one action (cost proxy)
     needed_reentrancy_guard: bool
     serialize_ok: bool
     n_models: int
@@ -47,7 +50,8 @@ class Metrics:
         return (
             f"{self.variant:<6} | widgets={self.n_widgets:<5} depth={self.max_depth:<2} "
             f"shared={self.n_shared:<3} | data_edges={self.n_data_edges:<5} {cyc:<9} | "
-            f"storm={self.recomputes_per_action:<5}{guard} | {ser}, links_kept={self.n_link_models}"
+            f"storm={self.recomputes_per_action:<5}{guard} scans={self.scans_per_action:<5} | "
+            f"{ser}, links_kept={self.n_link_models}"
         )
 
 
@@ -124,13 +128,13 @@ def measure(scenario_name: str, module: Any, variant: str, scale: str) -> Metric
     ipywidgets' global widget registry cross-contaminates sequential builds otherwise."""
     root, edges, one_action = module.build(variant, scale)
     n_widgets, max_depth, n_shared = containment_stats(root)
-    storm, needed_guard = one_action()
+    storm, needed_guard, scans = one_action()
     edges = list(dict.fromkeys(edges))  # dedupe (tracked reactive reads re-record edges)
     ok, n_models, n_links = serialize_check(root)
     return Metrics(
         scenario=scenario_name, variant=variant, scale=scale, n_widgets=n_widgets,
         max_depth=max_depth, n_shared=n_shared, n_data_edges=len(edges),
         data_flow_acyclic=is_acyclic(edges), recomputes_per_action=storm,
-        needed_reentrancy_guard=needed_guard, serialize_ok=ok, n_models=n_models,
-        n_link_models=n_links,
+        scans_per_action=scans, needed_reentrancy_guard=needed_guard, serialize_ok=ok,
+        n_models=n_models, n_link_models=n_links,
     )

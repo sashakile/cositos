@@ -45,7 +45,7 @@ SCALES: dict[str, Config] = {
     "big": Config(dims=16, cats=8, views=100, depth=8, shared=20, rows=8000),
 }
 
-VARIANTS = ("A", "B", "C")  # also has a reactive-DAG variant
+VARIANTS = ("A", "B", "C", "D")  # A naive, B MVU, C reactive, D reactive+shared memo
 
 
 def _dataset(cfg: Config) -> list[tuple[int, ...]]:
@@ -76,7 +76,9 @@ def _nest(items: list[Any], depth: int) -> Any:
 
 
 def build(variant: str, scale: str) -> tuple[Any, list[tuple[str, str]], Any]:
-    builder = {"A": _build_naive, "B": _build_mvu, "C": _build_reactive}[variant]
+    builder = {
+        "A": _build_naive, "B": _build_mvu, "C": _build_reactive, "D": _build_shared_reactive
+    }[variant]
     return builder(SCALES[scale])
 
 
@@ -91,6 +93,7 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     edges: list[tuple[str, str]] = []
     fires = {"n": 0}
+    scans = {"n": 0}
     guard = {"needed": False}
     busy = {"flag": False}
     links = []
@@ -104,6 +107,7 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
         def recompute(_c: Any = None, v: int = v, summary: Any = summary) -> None:
             fires["n"] += 1
+            scans["n"] += 1
             active = {d: set(f.value) for d, f in enumerate(filters) if f.value}
             summary.value = f"view{v}: {_count(data, active)} rows"
 
@@ -133,11 +137,11 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     root = W.VBox([W.VBox(filters), _nest(views, cfg.depth)])
     root._benchmark_links = links  # keep links alive (unreferenced ipywidgets links die)
 
-    def one_action() -> tuple[int, bool]:
+    def one_action() -> tuple[int, bool, int]:
         guard["needed"] = False
-        before = fires["n"]
+        before, sbefore = fires["n"], scans["n"]
         brushes[0].value = (0, 1)
-        return fires["n"] - before, guard["needed"]
+        return fires["n"] - before, guard["needed"], scans["n"] - sbefore
 
     return root, edges, one_action
 
@@ -155,9 +159,11 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     root = W.VBox([W.VBox(filter_widgets), _nest(view_panels, cfg.depth)])
 
     fires = {"n": 0}
+    scans = {"n": 0}
     edges: list[tuple[str, str]] = [("event", "update"), ("update", "model")]
 
     def render() -> None:  # pure projection Model -> views, one pass
+        scans["n"] += 1
         active = {d: sel for d, sel in filters_state.items() if sel}
         count = _count(data, active)
         for v, summary in enumerate(summaries):
@@ -176,10 +182,10 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     render()
 
-    def one_action() -> tuple[int, bool]:
-        before = fires["n"]
+    def one_action() -> tuple[int, bool, int]:
+        before, sbefore = fires["n"], scans["n"]
         dispatch(0, (0, 1))  # same user action as variant A
-        return fires["n"] - before, False
+        return fires["n"] - before, False, scans["n"] - sbefore
 
     return root, edges, one_action
 
@@ -194,6 +200,7 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     data = _dataset(cfg)
     edges: list[tuple[str, str]] = []
     counter = {"n": 0}
+    scans = {"n": 0}
 
     filter_sigs = [Signal(frozenset(), edges, name=f"filter{d}") for d in range(cfg.dims)]
     filter_widgets = [
@@ -212,6 +219,7 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
         brushes.append(brush)
 
         def compute(v: int = v) -> str:
+            scans["n"] += 1
             active = {d: set(s.get()) for d, s in enumerate(filter_sigs) if s.get()}
             return f"view{v}: {_count(data, active)} rows"
 
@@ -228,9 +236,63 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     root = W.VBox([W.VBox(filter_widgets), _nest(views, cfg.depth)])
 
-    def one_action() -> tuple[int, bool]:
-        before = counter["n"]
+    def one_action() -> tuple[int, bool, int]:
+        before, sbefore = counter["n"], scans["n"]
         filter_sigs[0].set(frozenset({0, 1}))
-        return counter["n"] - before, False
+        return counter["n"] - before, False, scans["n"] - sbefore
+
+    return root, edges, one_action
+
+
+def _build_shared_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
+    """Variant D: reactive with a SHARED memoized intermediate.
+
+    Editing EDGE-002: variant C recomputes the O(rows) scan once per view (V redundant
+    scans, hidden by the refresh-count metric). Here a single shared Computed does the scan
+    once; each view reads that memoized result. This makes the reactive cost tie MVU (both
+    scan once) instead of secretly losing V-to-1 — the honest comparison.
+    """
+    data = _dataset(cfg)
+    edges: list[tuple[str, str]] = []
+    counter = {"n": 0}
+    scans = {"n": 0}
+
+    filter_sigs = [Signal(frozenset(), edges, name=f"filter{d}") for d in range(cfg.dims)]
+    filter_widgets = [
+        W.SelectMultiple(options=list(range(cfg.cats)), description=f"d{d}")
+        for d in range(cfg.dims)
+    ]
+    for d, w in enumerate(filter_widgets):
+        w.observe(lambda ch, d=d: filter_sigs[d].set(frozenset(ch["new"])), names="value")
+
+    def scan() -> int:  # the single shared expensive computation
+        scans["n"] += 1
+        active = {d: set(s.get()) for d, s in enumerate(filter_sigs) if s.get()}
+        return _count(data, active)
+
+    count_c = Computed(scan, name="count", counter=counter, edges=edges)
+
+    shared_legends = [W.HTML(value=f"legend {i}") for i in range(cfg.shared)]
+    views: list[Any] = []
+    for v in range(cfg.views):
+        summary = W.Label()
+        brush = W.SelectMultiple(options=list(range(cfg.cats)))
+        Effect(
+            lambda summary=summary, v=v: setattr(
+                summary, "value", f"view{v}: {count_c.get()} rows"
+            ),
+            name=f"viewe{v}", counter=counter,
+        )
+        brush.observe(
+            lambda ch, v=v: filter_sigs[v % cfg.dims].set(frozenset(ch["new"])), names="value"
+        )
+        views.append(W.VBox([summary, brush, shared_legends[v % cfg.shared]]))
+
+    root = W.VBox([W.VBox(filter_widgets), _nest(views, cfg.depth)])
+
+    def one_action() -> tuple[int, bool, int]:
+        before, sbefore = counter["n"], scans["n"]
+        filter_sigs[0].set(frozenset({0, 1}))
+        return counter["n"] - before, False, scans["n"] - sbefore
 
     return root, edges, one_action
