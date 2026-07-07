@@ -19,7 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from cositos.embed import STATE_MIMETYPE, VIEW_MIMETYPE
+from cositos.embed import STATE_MIMETYPE, VIEW_MIMETYPE, with_view_identity
 from cositos.serialize import Document, ModelEntry, dump_document
 
 COUNTER_ESM = (
@@ -55,8 +55,12 @@ def build_notebook(entries: list[ModelEntry], view_ids: list[str]) -> Any:
 
 
 def inject_widget_state(nb: Any, document: Document) -> None:
-    """Put the widget-state Document where nbconvert/Quarto/JupyterBook read it."""
-    nb.metadata["widgets"] = {STATE_MIMETYPE: document}
+    """Put the widget-state Document where nbconvert/Quarto/JupyterBook read it.
+
+    The document is enriched with anywidget view identity so the CDN html-manager can
+    render it (cositos-mx7); without it the export is structurally valid but unrenderable.
+    """
+    nb.metadata["widgets"] = {STATE_MIMETYPE: with_view_identity(document)}
 
 
 def build_html(entries: list[ModelEntry], view_ids: list[str]) -> str:

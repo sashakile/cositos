@@ -26,16 +26,29 @@ ESM_KEY = "_esm"
 CSS_KEY = "_css"
 
 
-def _immutable_fields(version: str) -> dict[str, Any]:
+def model_identity(version: str) -> dict[str, Any]:
+    """anywidget's immutable *model* fields (schema-v2 top-level record identity)."""
     return {
         "_model_module": "anywidget",
         "_model_name": "AnyModel",
         "_model_module_version": version,
+    }
+
+
+def view_identity(version: str) -> dict[str, Any]:
+    """anywidget's immutable *view* fields — the identity the html-manager needs to
+    pick a view class. In schema v2 these live inside each model's ``state``.
+    """
+    return {
         "_view_module": "anywidget",
         "_view_name": "AnyView",
         "_view_module_version": version,
         "_view_count": None,
     }
+
+
+def _immutable_fields(version: str) -> dict[str, Any]:
+    return {**model_identity(version), **view_identity(version)}
 
 
 def build_comm_open(

@@ -10,7 +10,11 @@ running kernel.
 
 #### Scenario: The document state is embedded as widget-state+json
 - **WHEN** `embed_html(document)` is called
-- **THEN** the output contains a `<script type="application/vnd.jupyter.widget-state+json">` block whose parsed JSON equals `document`
+- **THEN** the output contains a `<script type="application/vnd.jupyter.widget-state+json">` block whose parsed JSON equals `document` enriched with anywidget view identity (see the view-identity scenario below)
+
+#### Scenario: Each model's state carries anywidget view identity
+- **WHEN** `embed_html(document)` is called
+- **THEN** every model's `state` in the embedded block includes the anywidget view identity (`_view_name`=`AnyView`, `_view_module`=`anywidget`, `_view_module_version`, `_view_count`), so the CDN html-manager can pick a view class and render (host-set state wins over the injected defaults)
 
 #### Scenario: A view script is emitted per model
 - **WHEN** `embed_html(document)` is called with a document whose state has model ids `a` and `b`

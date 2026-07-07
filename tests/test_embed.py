@@ -24,11 +24,35 @@ def _script_json(html: str, mime: str) -> list[dict]:
     return [json.loads(m) for m in pattern.findall(html)]
 
 
+def _with_view_identity(doc: dict) -> dict:
+    # Mirror embed's enrichment: view identity merged into each model's state.
+    from cositos.embed import with_view_identity
+
+    return with_view_identity(doc)
+
+
 def test_embeds_document_state_block() -> None:
     doc = _doc()
     html = embed_html(doc)
     (embedded,) = _script_json(html, STATE_MIME)
-    assert embedded == doc
+    # The embedded document is the serialized doc enriched with anywidget view identity
+    # so the html-manager can render it (cositos-mx7).
+    assert embedded == _with_view_identity(doc)
+
+
+def test_each_exported_model_state_carries_anywidget_view_identity() -> None:
+    # Regression (cositos-mx7): without _view_* fields in each model's state, the CDN
+    # html-manager cannot pick a view class and renders only a JS error. This asserts the
+    # semantic renderability the structural checks above miss (cositos-d33).
+    doc = _doc()
+    html = embed_html(doc)
+    (embedded,) = _script_json(html, STATE_MIME)
+    for model_id, record in embedded["state"].items():
+        state = record["state"]
+        assert state["_view_name"] == "AnyView", model_id
+        assert state["_view_module"] == "anywidget", model_id
+        assert "_view_module_version" in state, model_id
+        assert "_view_count" in state, model_id
 
 
 def test_emits_a_view_script_per_model() -> None:
@@ -57,8 +81,11 @@ def test_embedded_json_is_script_escaped() -> None:
     doc = dump_document([("m", {"html": "<b>hi</b></script><!-- x"})])
     html = embed_html(doc)
     assert "</script><!--" not in html  # breakout sequence neutralised
-    # \u003c is a valid JSON escape for '<', so the block still parses back to the doc.
-    assert _script_json(html, STATE_MIME)[0] == doc
+    # \u003c is a valid JSON escape for '<', so the block still parses back to the
+    # (view-identity-enriched) doc and the user field survives verbatim.
+    embedded = _script_json(html, STATE_MIME)[0]
+    assert embedded == _with_view_identity(doc)
+    assert embedded["state"]["m"]["state"]["html"] == "<b>hi</b></script><!-- x"
 
 
 def test_non_requirejs_uses_embed_js_without_requirejs() -> None:
