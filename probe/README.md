@@ -96,6 +96,24 @@ This is the core finding of the batch: the protocol *cores* port trivially and a
 fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
 kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
 
+## Clojure without a kernel: Clay (the viable host)
+
+Clojure's kernel (clojupyter) is blocked above (no user-facing comm-open API). But widgets
+don't strictly need a Jupyter kernel — they need a bidirectional channel. **Clay**
+(`org.scicloj/clay`, Scicloj's REPL-driven notebook/visualization tool) is *not* a kernel
+and has no comm protocol, yet it exposes a **full-duplex public websocket** (JVM→browser
+via `broadcast!`/`scittle-eval-string!`; browser→JVM via `install-websocket-handler!
+:on-receive`). That is a strictly *public* API — no kernel internals, no upstream patch —
+unlike clojupyter's private emit fns.
+
+Verified live (spike `cositos-059.7`, transport+demo `cositos-059.8`): a real browser
+exchanges cositos widget messages with the JVM over Clay's websocket, and the actual
+`@cositos/front` `Model` + `ClayChannel` drive a JVM-authoritative counter end-to-end.
+Wire format: a `cositos <json>` text frame (`{msg, buffers}`) with binary buffers
+base64-inline, since Clay frames are text. Reproduce with `clojure -M:clay-demo` in
+`clojure/` then open `http://localhost:1971/`. So the recommended route to interactive
+cositos widgets in Clojure is **Clay, not clojupyter**.
+
 ## clojupyter comm surface (jar introspection, 0.4.332)
 
 Why clojupyter is classified "no user-facing comm-open API", from introspecting the
