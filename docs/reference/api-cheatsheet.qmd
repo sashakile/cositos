@@ -1,0 +1,59 @@
+---
+title: "API cheat sheet: the same operation, five languages"
+---
+
+Every backend implements the same six operations, verified byte-for-byte against the
+shared golden fixtures (see `porting.md`). Each is deliberately idiomatic to its
+language — different casing, different mutation convention, different return shape —
+so there is no muscle-memory transfer between backends, only conceptual transfer. This
+page is the lookup table for jumping between them.
+
+## Message builders
+
+| Operation | Python | Julia | Clojure | C# | R |
+|---|---|---|---|---|---|
+| Open a widget | `build_comm_open(state)` → `(data, buffers, metadata)` | `build_comm_open(state)` → `(data, buffers, metadata)` | `(build-comm-open state)` → `[data buffers metadata]` | `Core.BuildCommOpen(state)` → `(Data, Buffers, Metadata)` named tuple | `build_comm_open(state)` → `list(data=, buffers=, metadata=)` |
+| Push a state update | `build_update(state)` → `(data, buffers)` | `build_update(state)` → `(data, buffers)` | `(build-update state)` → `[data buffers]` | `Core.BuildUpdate(state)` → `(Data, Buffers)` named tuple | `build_update(state)` → `list(data=, buffers=)` |
+| Send a custom message | `build_custom(content)` → `dict` | `build_custom(content)` → `Dict` | `(build-custom content)` → `map` | `Core.BuildCustom(content)` → `Dictionary<string, object?>` | `build_custom(content)` → `list(method=, content=)` |
+
+## Inbound parsing
+
+| Operation | Python | Julia | Clojure | C# | R |
+|---|---|---|---|---|---|
+| Parse an inbound message | `parse_message(data)` → `Update` / `RequestState` / `Custom` / `Ignored` (dataclasses) | `parse_message(data)` → `Update` / `RequestState` / `Custom` / `Ignored` (structs) | `(parse-message data)` → tagged map `{:type :update/:request-state/:custom/:ignored, ...}` | `Core.ParseMessage(data)` → `InboundMessage` abstract record (`Update`/`RequestState`/`Custom`/`Ignored`) | `parse_message(data)` → tagged list `list(type=, ...)` |
+
+Python, Julia, and C# give you a real tagged type to pattern-match/switch on; Clojure and
+R use a plain map/list with a `type`/`:type` string key instead — check that key, not a
+class, in those two.
+
+## Binary buffers
+
+| Operation | Python | Julia | Clojure | C# | R |
+|---|---|---|---|---|---|
+| Strip buffers out of state | `remove_buffers(state)` → `(stripped, buffer_paths, buffers)` | `remove_buffers(state)` → `(stripped, buffer_paths, buffers)` | `(remove-buffers state)` → `[stripped paths buffers]` | `Core.RemoveBuffers(state)` → `(Stripped, Paths, Buffers)` named tuple | `remove_buffers(state)` → `list(stripped=, paths=, buffers=)` |
+| Merge buffers back into state | `put_buffers(state, paths, buffers)` → `None` (**mutates `state` in place**) | `put_buffers!(state, paths, buffers)` → mutates in place (note the `!`) | `(put-buffers state paths buffers)` → **new** state (pure, does not mutate) | `Core.PutBuffers(state, paths, buffers)` → returns `state` (mutates nested dicts/lists in place, and also returns them) | `put_buffers(state, paths, buffers)` → **new** state (R has copy-on-modify value semantics, so this is pure regardless of the recursive-looking implementation) |
+
+This is the one operation where the *shape* of the difference matters, not just the
+name: Python/Julia/C# mutate the `state` you pass in, so the return value is a
+convenience, not the real result; Clojure and R are pure — you **must** use the
+returned value, the input is never changed.
+
+## Serialization (save / restore)
+
+| Operation | Python | Julia | Clojure | C# | R |
+|---|---|---|---|---|---|
+| Serialize all models to a document | `dump_document(entries)` → `Document` (dict) | `dump_document(entries)` → `Dict` | `(dump-document entries)` → `map` | `Core.DumpDocument(entries)` → `Dictionary<string, object?>` | `dump_document(entries)` → `list(version_major=, version_minor=, state=)` |
+| Rebuild models from a document | `load_document(doc)` → `list[ModelEntry]` | `load_document(doc)` → `Vector{Tuple{String,Any}}` | `(load-document doc)` → `vector` of `[model-id state]` | `Core.LoadDocument(doc)` → `List<(string ModelId, object? State)>` | `load_document(doc)` → `list` of `list(model_id, state)` |
+
+All five satisfy the same law: `load_document(dump_document(x)) == x`, checked against
+`fixtures/widget-state.json` in every backend's own test suite.
+
+## Naming convention, at a glance
+
+| Language | Casing | Free functions live in |
+|---|---|---|
+| Python | `snake_case` | top-level `cositos` package (`from cositos import ...`) |
+| Julia | `snake_case`, `!` suffix for in-place mutation | `Cositos` module |
+| Clojure | `kebab-case` | `cositos.core` namespace |
+| C# | `PascalCase` | `Cositos.Core` static class |
+| R | `snake_case` | top-level (source `core.R` directly; no package namespace yet) |

@@ -86,3 +86,5 @@ reference also property-tests it).
 - Wire protocol: <https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md>
 - Python reference: `src/cositos/` in this repo.
 - Design rationale: `.wai/projects/cositos-core/designs/`.
+- Cross-language symbol lookup (exact name + return shape per language for every
+  operation above): `docs/reference/api-cheatsheet.qmd`.

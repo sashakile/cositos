@@ -12,6 +12,7 @@ project:
     - tutorials/plot-integration.qmd
     - reference/index.qmd
     - reference/specs.qmd
+    - reference/api-cheatsheet.qmd
     - explanation/architecture.qmd
     - explanation/state-discipline.qmd
     - widgets.md
@@ -40,6 +41,7 @@ website:
         menu:
           - reference/index.qmd
           - reference/specs.qmd
+          - reference/api-cheatsheet.qmd
       - text: Explanation
         menu:
           - explanation/architecture.qmd
