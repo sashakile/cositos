@@ -76,6 +76,31 @@ Re-running `dont ground` for a claim that already exists errors
 must switch to `dont flag <id> --evidence ...`. A first-time user reasonably expects
 `ground` to "create-or-add-evidence". Minor but trips the natural workflow.
 
+**F27 · `dont` has no cross-machine sync primitive; its data is single-machine-only
+by architecture, not by missing config.** While researching how to make cositos'
+beads database (`bd`) shareable across contributors/agents once the repo goes public
+(cositos-dad.9), the natural follow-up was whether `dont`'s claim database (`.dont/db.cozo`)
+could get the same treatment. It can't, and not for a fixable-with-a-flag reason.
+`bd`'s sync works because its storage engine, Dolt, is a version-controlled database:
+issue history lives on a dedicated ref (`refs/dolt/data`) on the same git remote as the
+source code, with `bd dolt push`/`bd dolt pull` and a merge-slot gate to serialize
+concurrent writers. `dont` sits on Cozo, an embedded single-machine database with no
+remote/branch/merge concept at all. Checked every subcommand in `dont --help` (28 of
+them)—the closest things are `export --eval` (one-way JSON dump for eval harnesses,
+no round-trip `import --eval` counterpart) and `import` (imports terms from an *external
+ontology adapter*, not from another contributor's claim database), plus `doctor --fix`
+(rewrites managed markdown docs only, never touches `db.cozo`). None of these compose
+into push/pull/merge. Impact: any project using `dont` with more than one
+contributor/machine either (a) commits the raw `db.cozo` binary to git and accepts
+binary-diff churn with no real merge semantics if two machines edit concurrently
+(cositos' current state, see cositos-dad.1), or (b) gitignores it entirely and accepts
+that claims are local-only per machine, same as `.beads/` was before Dolt remotes
+existed. 🟡 friction (architectural gap, not a bug). Suggested fix: either (a) adopt a
+version-controlled storage engine for the claim store (Dolt itself, or an equivalent),
+or (b) ship a lighter-weight push/pull primitive purpose-built for a claim graphu2014
+export/import that's actually round-trippable (diffable JSONL and a three-way merge on
+claim IDs would go a long way) rather than the current one-way eval export.
+
 ### 🟢 Papercuts / docs
 
 **F6 · `pretender --version` unsupported** while `wai`, `dont`, `ah` all support it —
