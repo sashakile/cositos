@@ -80,7 +80,7 @@ venv's `jupyter_client` discovers them).
 | `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
 | `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
 | `.net-csharp` (.NET Interactive) | ✅ | *blocked* | does **not** answer `comm_info_request` — .NET Interactive uses its own bespoke kernel protocol, not the standard ipywidgets comm surface cositos targets. Not usable without a comm shim. |
-| `cositos-clj` (clojupyter) | ✅ | *blocked* | **answers `comm_info_request`** (has comm message plumbing and can receive), but exposes **no user-facing API to open a comm** from Clojure code — widgets need the kernel to open a comm, so it's not expressible. |
+| `cositos-clj` (clojupyter) | ✅ | *blocked* | **answers `comm_info_request`** (has comm message plumbing and can receive), but exposes **no user-facing API to open a comm** from Clojure code — the emit fns are private and the public constructors need kernel internals (`jup`/`req-message`). See "clojupyter comm surface" below for the exact mechanism + a possible in-process spike. |
 
 Kernels are installed and launch; **only `python3` supports the full widget-comm round trip
 today**. The other three are blocked upstream for distinct reasons (IRkernel bug; .NET
@@ -88,3 +88,34 @@ Interactive's non-standard protocol; clojupyter's missing comm-open API) — see
 This is the core finding of the batch: the protocol *cores* port trivially and are all
 fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
 kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
+
+## clojupyter comm surface (jar introspection, 0.4.332)
+
+Why clojupyter is classified "no user-facing comm-open API", from introspecting the
+installed `clojupyter-0.4.332.jar` (AOT-compiled; class names + a live `ns-resolve` of the
+function metadata):
+
+- **Comm plumbing exists, no widget layer.** The jar has `clojupyter.messages` (builders
+  `comm-open-content`, `comm-msg-content`, `comm-close-content`), `clojupyter.kernel.comm-atom`,
+  `clojupyter.kernel.comm-global-state`, and an inbound `clojupyter.kernel.handle-event/handle-comm`.
+  There is **no `widget` namespace anywhere** — comms are a primitive, with no ipywidgets layer on top.
+- **The emit functions are private.** `clojupyter.kernel.comm-atom/send-comm-open!` and
+  `send-comm-msg!` — the functions that actually put a `comm_open`/`comm_msg` on the wire —
+  are both `:private true` (verified via `(:private (meta (ns-resolve ...)))`). Not public API.
+- **The public constructors need kernel internals.** The public entry points
+  `create` / `create-and-insert` have arglist `[jup req-message target-name comm-id comm-state]`.
+  `jup` is the live ZMQ channel object and `req-message` is the in-flight request (for parent-
+  header routing); **neither is available to ordinary notebook-cell code** — they exist only
+  inside clojupyter's own message-handling loop.
+
+So a user cell cannot open a comm: the emit fns are private *and* the constructor args are
+kernel internals. This is an **upstream API-surface gap, not a crash** (contrast R).
+
+**Possible in-process crack (spike, unverified):** `clojupyter.state/current-context`
+(+ `with-current-context`/`push-context!`) suggests the kernel binds a context during cell
+execution that likely carries `jup` + the request message. If a cell can read
+`(clojupyter.state/current-context)` to recover those, user code could chain
+`current-context → create-and-insert (public) → send-comm-open! (private)` to open a comm
+**without patching clojupyter** — reaching into internal, version-coupled namespaces. Unconfirmed:
+`current-context` is empty outside a running kernel, so the final step needs a cell executing
+inside a live clojupyter kernel to verify. This is the concrete spike behind `cositos-059.5`.
