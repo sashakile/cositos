@@ -5,6 +5,14 @@ severity, what I tried, what happened, what I expected, and impact on developer 
 
 Legend: 🔴 blocker · 🟡 friction · 🟢 papercut/nit · 💡 suggestion
 
+> **Retest round — 2026-07-07.** After the maintainers acted on the sandbox
+> recommendations, all four tools were rebuilt from HEAD (wai `a2acbf6`, dont `4b29c12`,
+> pretender `730059a`, espectacular `9e49950`) and the affected findings re-verified.
+> Results are in the **Retest results** section at the bottom. Summary: 5 findings
+> fixed (F1, F4, F6, F7, F23) plus the E3 gate now enabled, 2 partial (F19, F26),
+> 6 still reproduce (F2, F5, F10, F11, F21, F22), and 2 useful new features
+> (`pretender doctor`, `WAI_DONT_SIGNALS=1 wai doctor`).
+
 ---
 
 ## Environment notes
@@ -317,4 +325,52 @@ that kept `pretender`/`ah` alive.
   and scriptable.
 - **`dont`** error messages each carry a `run:` remediation line — good affordance,
   and the claim→flag→verified lifecycle is coherent once past F1–F3.
+
+---
+
+## Retest results — 2026-07-07
+
+Rebuilt all four tools from HEAD and re-ran the exact commands from each finding.
+Versions: `wai a2acbf6`, `dont 4b29c12`, `pretender 730059a`, `espectacular 9e49950`.
+Exit codes were captured with `cmd >/tmp/out 2>&1; echo $?` (never through a pipe —
+see F25) to avoid masking.
+
+| ID | Verdict | Evidence |
+|----|---------|----------|
+| F1 | ✅ **Addressed** | `dont ground "..." --url https://github.com/.../blob/abc123/widget.py --lines 10-20` → `verified`. A commit-pinned `--url` permalink now lets you cite evidence outside the project root (the vendored-repo case). `--file` (in-root) and `--url` (out-of-root) are mutually exclusive. |
+| F4 | ✅ **Addressed** | `ah init` with no `openspec/` now prints the minimal layout (`openspec/ └── specs/ └── <spec>/ └── spec.md ← "#### Scenario: ..." headings go here`) and points at `openspec init`. No auto-scaffold flag yet, but the guidance is now actionable. |
+| F6 | ✅ **Fixed** | `pretender --version` → `pretender 0.1.0`. Now consistent with `wai`/`dont`/`ah`. |
+| F7 | ✅ **Fixed** | `espectacular/llm.txt` now says a Scenario is a `#### Scenario:` heading nested under a `### Requirement:` grouping (lines 13–14) — matches how `ah` actually discovers scenarios. |
+| F23 | ✅ **Fixed** | `dont ground "..." --evidence code.py --lines 1` → `verified`. `--evidence` now accepts a repo-relative path, not just a URL. |
+| E3 | ✅ **Now enabled** | New `dont check --ungrounded` exits **1** when any claim is unverified (`✗ 1 ungrounded claim(s)`) and **0** when all are grounded (`✓ all claims grounded`); JSON envelope carries `ungrounded`/`unverified_count`. This is the gate E3 needed — combined with the F1 `--url` fix, `dont` can now be wired into `verify`/pre-push. |
+| F19 | 🟡 **Partial** | (a) **Julia and R plugins added** — `pretender check julia/src` and `r/` now report real metrics. (b) Unsupported explicit paths now emit `warning: no files matched a supported grammar in: <path>` on **stderr**. **But** the JSON envelope is still `{"files": []}` with no warning field, and exit stays **0 even under `--mode gate`**, so an automated (JSON/exit-code) gate still passes silently. C# and Clojure remain unsupported. The E1 coverage-manifest workaround is therefore still required for CI. |
+| F26 | 🟡 **Partial** | `/` (path separator) is now **accepted** in a statement — `dont conclude "state/frontend split ..."` succeeds. But `<`/`>` are still rejected (`found '<'`). Angle-bracket wire-format notation (`<json>`, `kernel->front`) still forces a rewrite. |
+| F2 | ❌ **Still reproduces** | `dont conclude "adapter; frontend reused"` → `found ';'`. Semicolons in prose still rejected (unchanged; F2 was always scoped to true shell metachars). |
+| F5 | ❌ **Still reproduces** | Re-grounding an existing claim → `error: claim with equivalent text already exists`. Still no upsert; remediation now points to `dont show` (was `dont flag`). |
+| F10 | ❌ **Still reproduces** | With a 10+-task `mise.toml` present, `wai way` still prints `Command standardization: No task runner detected` and suggests adding a justfile. mise still not recognised. |
+| F11 | ❌ **Still reproduces** | `wai way` still reports `lefthook.yml found but hooks not installed` even though beads owns `core.hooksPath` and delegates to lefthook. |
+| F21 | ❌ **Still reproduces** | `dont flag <id> --file code.py` against a dirty tracked file → `error: file has unstaged modifications; SHA would not match current content`; committing then makes the identical command succeed. No `--allow-dirty` / working-tree-hash option. |
+| F22 | ❌ **Still unresolved** | No hard-delete for stray claims. A new `forget` verb exists but it is an **alias for `lock`** ("permanently preserve a verified claim"), the *opposite* of retract; `ignore` remains the only "never mind". The `forget`=`lock`=preserve naming is itself confusing. |
+
+### New capabilities observed this round (👍)
+
+- **`pretender doctor`** — 6 health checks (git context, config present/valid, hook
+  installed/executable, plugin manifests) with a `N/6 checks passed` summary. Useful
+  onboarding/diagnostic surface.
+- **`WAI_DONT_SIGNALS=1 wai doctor`** — adds a `dont drift signals` check to `wai doctor`
+  (`✓ No dont rejection signals detected`). A soft cross-tool integration that helps
+  mitigate F20 (dont decaying to zero use) by surfacing dont activity in the wai health
+  view.
+- **`dont --url` + `dont check --ungrounded`** together retire the F1 blocker path and
+  enable the E3 hard gate — the two changes that most improve the `dont` story.
+
+### Net assessment
+
+The blocker (**F1**) is resolved and the highest-value enablement (**E3** gate) now
+exists, so `dont` is finally wireable into CI for this project. The remaining open items
+are all friction/papercut tier. The two that most degrade the epistemic record in daily
+use are **F21** (must commit evidence before grounding) and **F26/F2** (prose punctuation
+rejected) — both are input-validation over-reach worth narrowing next. **F10/F11**
+(`wai way` blind to mise and to delegated lefthook) remain the most visible false
+negatives in the hygiene audit.
 
