@@ -28,28 +28,35 @@
 
 (defn frame
   "Encode an outbound comm_msg `msg` plus its `byte-buffers` (a seq of byte arrays) as a
-  cositos wire frame string."
-  [msg byte-buffers]
-  (str prefix (json/write-str {"msg" msg "buffers" (encode-buffers byte-buffers)})))
+  cositos wire frame string. With an `id`, the frame is tagged for multiplexing several
+  widgets over one socket; a nil id is omitted from the wire (single-widget)."
+  ([msg byte-buffers] (frame nil msg byte-buffers))
+  ([id msg byte-buffers]
+   (str prefix (json/write-str (cond-> {"msg" msg "buffers" (encode-buffers byte-buffers)}
+                                 id (assoc "id" id))))))
 
 (defn update-frame
-  "Frame an `update` for `state` (buffers split by the core, then base64-encoded)."
-  [state]
-  (let [[data buffers] (core/build-update state)]
-    (frame data buffers)))
+  "Frame an `update` for `state` (buffers split by the core, then base64-encoded),
+  optionally tagged with a widget `id`."
+  ([state] (update-frame nil state))
+  ([id state]
+   (let [[data buffers] (core/build-update state)]
+     (frame id data buffers))))
 
 (defn custom-frame
-  "Frame a `custom` message carrying `content`."
-  [content]
-  (frame (core/build-custom content) []))
+  "Frame a `custom` message carrying `content`, optionally tagged with a widget `id`."
+  ([content] (custom-frame nil content))
+  ([id content]
+   (frame id (core/build-custom content) [])))
 
 (defn parse-frame
-  "Parse an inbound wire frame. Returns {:msg <comm_msg> :buffers [<byte-array>...]} for a
-  cositos frame, or nil for anything else (Clay's own frames, non-strings)."
+  "Parse an inbound wire frame. Returns {:id <string|nil> :msg <comm_msg>
+  :buffers [<byte-array>...]} for a cositos frame, or nil for anything else (Clay's own
+  frames, non-strings). `:id` routes the frame to a widget when multiplexing."
   [s]
   (when (and (string? s) (str/starts-with? s prefix))
-    (let [{:strs [msg buffers]} (json/read-str (subs s (count prefix)))]
-      {:msg msg :buffers (decode-buffers (or buffers []))})))
+    (let [{:strs [id msg buffers]} (json/read-str (subs s (count prefix)))]
+      {:id id :msg msg :buffers (decode-buffers (or buffers []))})))
 
 (defn apply-inbound
   "Dispatch a parsed frame through the core parser. For an update, merge the decoded

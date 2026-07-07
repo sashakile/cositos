@@ -5,6 +5,7 @@
   (:require [clojure.test :refer [deftest testing is]]
             [clojure.data.json :as json]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [cositos.clay :as clay]))
 
 (def prefix "cositos ")
@@ -54,3 +55,15 @@
            (:type (clay/apply-inbound (clay/parse-frame (str prefix (json/write-str {"msg" {"method" "request_state"} "buffers" []})))))))
     (is (= :ignored
            (:type (clay/apply-inbound (clay/parse-frame (str prefix (json/write-str {"msg" {"method" "bogus"} "buffers" []})))))))))
+
+;; --- multi-widget routing (cositos-059.8b) ---
+
+(deftest id-arities-stamp-and-expose-widget-id
+  (testing "the id arities tag the envelope, and parse-frame exposes :id (nil when absent)"
+    (let [tagged (clay/update-frame "w1" {"count" 5})
+          plain  (clay/update-frame {"count" 5})]
+      (is (= "w1" (:id (clay/parse-frame tagged))) "id round-trips through the envelope")
+      (is (nil? (:id (clay/parse-frame plain))) "single-widget frames carry no id")
+      (is (not (str/includes? plain "\"id\"")) "a null id is omitted from the wire, not serialized")))
+  (testing "custom-frame also supports an id arity"
+    (is (= "w2" (:id (clay/parse-frame (clay/custom-frame "w2" {"kind" "ping"})))))))

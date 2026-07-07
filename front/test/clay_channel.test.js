@@ -122,3 +122,47 @@ test("Model over ClayChannel: set+save_changes emits an update; inbound update a
   assert.equal(model.get("value"), 42);
   assert.deepEqual(seen, [42]);
 });
+
+// --- multi-widget routing (cositos-059.8b): several widgets share one Clay websocket ---
+
+test("an id-tagged channel stamps its id on outbound frames", () => {
+  const socket = new FakeSocket();
+  const channel = new ClayChannel(socket, "a");
+  channel.send({ method: "custom", content: { kind: "ping" } });
+  assert.equal(socket.lastEnvelope().id, "a");
+});
+
+test("id-tagged channels on one socket only receive frames addressed to them", () => {
+  const socket = new FakeSocket();
+  const a = new ClayChannel(socket, "a");
+  const b = new ClayChannel(socket, "b");
+  const gotA = [];
+  const gotB = [];
+  a.onMessage((msg) => gotA.push(msg));
+  b.onMessage((msg) => gotB.push(msg));
+
+  const frame = (id, value) =>
+    PREFIX + JSON.stringify({ id, msg: { method: "update", state: { value }, buffer_paths: [] }, buffers: [] });
+  socket.receive(frame("a", 1));
+  socket.receive(frame("b", 2));
+
+  assert.deepEqual(gotA, [{ method: "update", state: { value: 1 }, buffer_paths: [] }]);
+  assert.deepEqual(gotB, [{ method: "update", state: { value: 2 }, buffer_paths: [] }]);
+});
+
+test("a null-id (single-widget) channel ignores id-tagged frames and vice versa", () => {
+  const socket = new FakeSocket();
+  const plain = new ClayChannel(socket); // id defaults to null
+  const tagged = new ClayChannel(socket, "a");
+  const gotPlain = [];
+  const gotTagged = [];
+  plain.onMessage((msg) => gotPlain.push(msg));
+  tagged.onMessage((msg) => gotTagged.push(msg));
+
+  // untagged frame -> only the null-id channel; tagged frame -> only the "a" channel
+  socket.receive(PREFIX + JSON.stringify({ msg: { method: "custom", content: 1 }, buffers: [] }));
+  socket.receive(PREFIX + JSON.stringify({ id: "a", msg: { method: "custom", content: 2 }, buffers: [] }));
+
+  assert.deepEqual(gotPlain, [{ method: "custom", content: 1 }]);
+  assert.deepEqual(gotTagged, [{ method: "custom", content: 2 }]);
+});

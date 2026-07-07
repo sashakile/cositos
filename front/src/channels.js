@@ -118,18 +118,26 @@ export class ClayChannel {
   /** @type {((msg: any, buffers: any[]) => void) | null} */
   #inbound = null;
   #socket;
+  #id;
 
   /**
    * @param {{ send: (data: string) => void, addEventListener: (type: string, cb: (e: {data: any}) => void) => void }} socket
    *   A WebSocket (or compatible) already connected to the Clay server.
+   * @param {string|null} [id]
+   *   Optional widget id for multiplexing several widgets over one socket. When set, it is
+   *   stamped on outbound frames and only inbound frames with a matching id are delivered.
+   *   Left null (the default), the channel is single-widget: it stamps no id and receives
+   *   only untagged frames.
    */
-  constructor(socket) {
+  constructor(socket, id = null) {
     this.#socket = socket;
+    this.#id = id;
     socket.addEventListener("message", (event) => this.#onFrame(event.data));
   }
 
   send(msg, buffers = []) {
     const envelope = { msg, buffers: buffers.map(encodeBuffer) };
+    if (this.#id !== null) envelope.id = this.#id;
     this.#socket.send(CLAY_PREFIX + JSON.stringify(envelope));
   }
 
@@ -139,7 +147,8 @@ export class ClayChannel {
 
   #onFrame(data) {
     if (typeof data !== "string" || !data.startsWith(CLAY_PREFIX)) return;
-    const { msg, buffers = [] } = JSON.parse(data.slice(CLAY_PREFIX.length));
+    const { id = null, msg, buffers = [] } = JSON.parse(data.slice(CLAY_PREFIX.length));
+    if (id !== this.#id) return; // addressed to a different widget on this shared socket
     this.#inbound?.(msg, buffers.map(decodeBuffer));
   }
 }

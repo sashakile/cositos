@@ -38,49 +38,58 @@
        (str/join "\n\n")))
 
 (def widget-bootstrap
-  "Mounts a JVM-authoritative counter: ClayChannel over Clay's websocket; the button sends
-  a custom 'increment', the JVM bumps the count and pushes it back."
+  "Mounts two independent JVM-authoritative counters over ONE websocket, each with its own
+  ClayChannel id. Routing (cositos-059.8b) keeps their messages separate: clicking counter
+  'a' only increments 'a'."
   "
-const root = document.getElementById('cositos-counter');
-const out = root.querySelector('.count');
 const ws = new WebSocket('ws://' + location.host);
-const channel = new ClayChannel(ws);            // listener attached before the server push
-const model = new Model({ count: 0 }, channel);
-model.on('change:count', (v) => { out.textContent = v; });
-root.querySelector('button').addEventListener('click', () => {
-  try { model.send({ kind: 'increment' }); } catch (e) { /* static export: no live server */ }
-});
-window.__widget = { model };
+function mount(id, elId) {
+  const root = document.getElementById(elId);
+  const out = root.querySelector('.count');
+  const channel = new ClayChannel(ws, id);        // id-tagged: shares the socket, routes by id
+  const model = new Model({ count: 0 }, channel);
+  model.on('change:count', (v) => { out.textContent = v; });
+  root.querySelector('button').addEventListener('click', () => {
+    try { model.send({ kind: 'increment' }); } catch (e) { /* static export: no live server */ }
+  });
+  return model;
+}
+window.__widgets = { a: mount('a', 'cositos-counter-a'), b: mount('b', 'cositos-counter-b') };
 ")
+
+(defn- counter-box [id label]
+  [:div {:id (str "cositos-counter-" id)
+         :style {:font "16px sans-serif" :padding "0.75em" :border "1px solid #ddd"
+                 :border-radius "6px" :display "inline-block" :margin-right "1em"}}
+   label ": count = " [:span {:class "count"} "?"] " " [:button "increment"]])
 
 (defn widget-hiccup []
   (kind/hiccup
    [:div
     [:h2 "cositos on Clay"]
-    [:p "A binding-free anywidget-style widget, hosted by "
+    [:p "Two binding-free anywidget-style widgets, hosted by "
      [:a {:href "https://scicloj.github.io/clay/"} "Clay"] " — "
-     "not a Jupyter kernel, no comm protocol. State is authoritative on the JVM and "
-     "syncs to the browser over Clay's websocket via the cositos.clay transport."]
-    [:div {:id "cositos-counter"
-           :style {:font "16px sans-serif" :padding "0.75em" :border "1px solid #ddd"
-                   :border-radius "6px" :display "inline-block"}}
-     "count = " [:span {:class "count"} "?"] " "
-     [:button "increment"]]
+     "not a Jupyter kernel, no comm protocol. Each counter's state is authoritative on the "
+     "JVM and syncs over a single Clay websocket via the cositos.clay transport; per-widget "
+     "ids keep the two counters independent."]
+    [:div (counter-box "a" "Counter A") (counter-box "b" "Counter B")]
     [:script {:type "module"} (str runtime-bundle "\n" widget-bootstrap)]]))
 
-;; ---- JVM-side counter (reuses the cositos.clay transport) ----
+;; ---- JVM-side counters (reuses the cositos.clay transport) ----
 
-(def state (atom {"count" 0}))
+(def state (atom {"a" 0 "b" 0}))
 
 (defn on-open [_ch]
-  (server/broadcast! (tx/update-frame @state)))
+  (doseq [id ["a" "b"]]
+    (server/broadcast! (tx/update-frame id {"count" (get @state id)}))))
 
 (defn on-receive [_ch msg]
   (when-let [parsed (tx/parse-frame msg)]
-    (let [{:keys [type content]} (tx/apply-inbound parsed)]
-      (when (and (= :custom type) (= "increment" (get content "kind")))
-        (swap! state update "count" inc)
-        (server/broadcast! (tx/update-frame @state))))))
+    (let [id (:id parsed)
+          {:keys [type content]} (tx/apply-inbound parsed)]
+      (when (and (= :custom type) (= "increment" (get content "kind")) (contains? @state id))
+        (swap! state update id inc)
+        (server/broadcast! (tx/update-frame id {"count" (get @state id)}))))))
 
 (defn install-handlers! []
   (server/install-websocket-handler! :on-open #'on-open)
