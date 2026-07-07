@@ -28,9 +28,9 @@ metadata in every `comm_open` payload.
 - **AND** the metadata declares protocol version `2.1.0`
 
 ### Requirement: Inbound Message Parsing
-The system SHALL parse inbound comm messages into typed events and reject unknown methods.
+The system SHALL parse inbound comm messages into typed events and ignore unknown methods (matching ipywidgets' forward-compatible dispatch).
 
-#### Scenario: Unknown method is rejected
-- **GIVEN** an inbound comm message whose `method` is not update, request_state, or custom
+#### Scenario: Unknown method is ignored
+- **GIVEN** an inbound comm message whose `method` is not update, request_state, or custom (or is missing)
 - **WHEN** `parse_message` is called
-- **THEN** it raises an error rather than silently ignoring the message
+- **THEN** it returns a benign `Ignored` event rather than raising, so the caller no-ops on it

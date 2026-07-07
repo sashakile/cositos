@@ -1,7 +1,5 @@
 """Tests for protocol message builders and the inbound parser."""
 
-import pytest
-
 from cositos import protocol
 from cositos.protocol import (
     Custom,
@@ -58,9 +56,21 @@ def test_parse_custom():
     assert parse_message({"method": "custom", "content": 42}) == Custom(content=42)
 
 
-def test_parse_unknown_method_raises():
-    with pytest.raises(ValueError, match="Unrecognized"):
-        parse_message({"method": "bogus"})
+def test_parse_unknown_method_is_ignored():
+    # Forward-compat (cositos-05i): an unknown method yields a benign Ignored sentinel
+    # rather than raising, matching ipywidgets' silent dispatch.
+    assert parse_message({"method": "bogus"}) == protocol.Ignored(method="bogus")
+
+
+def test_parse_missing_method_is_ignored():
+    assert parse_message({}) == protocol.Ignored(method=None)
+
+
+def test_parse_echo_update_is_ignored():
+    # ipywidgets defines echo_update; cositos does not handle it and must not raise.
+    assert parse_message({"method": "echo_update", "state": {"a": 1}}) == protocol.Ignored(
+        method="echo_update"
+    )
 
 
 def test_mimebundle_shape():

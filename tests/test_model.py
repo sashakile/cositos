@@ -54,6 +54,17 @@ def test_inbound_update_applies_state():
     assert store["value"] == 99
 
 
+def test_inbound_unknown_method_is_ignored():
+    # Forward-compat (cositos-05i): an unrecognized inbound method must no-op, not raise
+    # out of the comm dispatch callback, and must not touch host state.
+    w, t, store = make_widget({"value": 7})
+    w.open()
+    t.deliver({"method": "echo_update", "state": {"value": 99}})
+    t.deliver({"method": "bogus"})
+    t.deliver({})  # missing method
+    assert store["value"] == 7
+
+
 def test_request_state_triggers_full_update():
     w, t, _ = make_widget({"value": 5})
     w.open()

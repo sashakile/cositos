@@ -112,13 +112,24 @@ class Custom:
     content: Any
 
 
-def parse_message(data: dict[str, Any]) -> Update | RequestState | Custom:
+@dataclass(frozen=True)
+class Ignored:
+    """An inbound message cositos does not act on (unknown/missing ``method``).
+
+    ipywidgets' ``Widget._handle_msg`` silently ignores methods it does not recognize
+    (e.g. a newer frontend's ``echo_update``). Returning this benign sentinel instead of
+    raising keeps a cositos widget forward-compatible and stops an unrecognized message
+    from propagating out of the comm dispatch callback (cositos-05i).
+    """
+
+    method: Any = None
+
+
+def parse_message(data: dict[str, Any]) -> Update | RequestState | Custom | Ignored:
     """Parse an inbound ``comm_msg`` ``data`` dict into a typed event.
 
-    Raises
-    ------
-    ValueError
-        If the ``method`` is missing or unrecognized.
+    An unknown or missing ``method`` yields :class:`Ignored` (never raises), matching
+    ipywidgets' forward-compatible dispatch — the caller no-ops on it.
     """
     method = data.get("method")
     if method == "update":
@@ -127,4 +138,4 @@ def parse_message(data: dict[str, Any]) -> Update | RequestState | Custom:
         return RequestState()
     if method == "custom":
         return Custom(content=data.get("content"))
-    raise ValueError(f"Unrecognized comm message method: {method!r}")
+    return Ignored(method=method)
