@@ -140,10 +140,10 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     rows = [W.VBox([inputs[i], errors[i], shared_legends[i % cfg.shared]]) for i in range(n)]
     root = W.VBox([_nest(rows, cfg.depth), W.VBox(derived), grand_total, submit])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = fires["n"]
         inputs[0].value = 42.0
-        return fires["n"] - before, False, 0
+        return fires["n"] - before, False, 0, 0
 
     return root, edges, one_action
 
@@ -205,10 +205,10 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     rows = [W.VBox([inputs[i], errors[i], shared_legends[i % cfg.shared]]) for i in range(n)]
     root = W.VBox([_nest(rows, cfg.depth), W.VBox(derived), grand_total, submit])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = fires["n"]
         dispatch(0, 42.0)
-        return fires["n"] - before, False, 0
+        return fires["n"] - before, False, 0, 0
 
     return root, edges, one_action
 
@@ -274,9 +274,9 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     rows = [W.VBox([inputs[i], errors[i], shared_legends[i % cfg.shared]]) for i in range(n)]
     root = W.VBox([_nest(rows, cfg.depth), W.VBox(derived), grand_total, submit])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = counter["n"]
         sig[0].set(42.0)  # recomputes ONLY the downstream nodes
-        return counter["n"] - before, False, 0
+        return counter["n"] - before, False, 0, 0
 
     return root, edges, one_action

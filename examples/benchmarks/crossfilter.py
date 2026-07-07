@@ -137,11 +137,11 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     root = W.VBox([W.VBox(filters), _nest(views, cfg.depth)])
     root._benchmark_links = links  # keep links alive (unreferenced ipywidgets links die)
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         guard["needed"] = False
         before, sbefore = fires["n"], scans["n"]
         brushes[0].value = (0, 1)
-        return fires["n"] - before, guard["needed"], scans["n"] - sbefore
+        return fires["n"] - before, guard["needed"], scans["n"] - sbefore, 0
 
     return root, edges, one_action
 
@@ -182,10 +182,10 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     render()
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before, sbefore = fires["n"], scans["n"]
         dispatch(0, (0, 1))  # same user action as variant A
-        return fires["n"] - before, False, scans["n"] - sbefore
+        return fires["n"] - before, False, scans["n"] - sbefore, 0
 
     return root, edges, one_action
 
@@ -236,10 +236,10 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     root = W.VBox([W.VBox(filter_widgets), _nest(views, cfg.depth)])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before, sbefore = counter["n"], scans["n"]
         filter_sigs[0].set(frozenset({0, 1}))
-        return counter["n"] - before, False, scans["n"] - sbefore
+        return counter["n"] - before, False, scans["n"] - sbefore, 0
 
     return root, edges, one_action
 
@@ -290,9 +290,9 @@ def _build_shared_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any
 
     root = W.VBox([W.VBox(filter_widgets), _nest(views, cfg.depth)])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before, sbefore = counter["n"], scans["n"]
         filter_sigs[0].set(frozenset({0, 1}))
-        return counter["n"] - before, False, scans["n"] - sbefore
+        return counter["n"] - before, False, scans["n"] - sbefore, 0
 
     return root, edges, one_action

@@ -6,9 +6,10 @@ Each *scenario* module (e.g. ``crossfilter``, ``masterdetail``) exposes:
 * ``build(variant: str, scale: str) -> (root, edges, one_action)`` where
   ``variant`` is ``"A"`` (naive peer-to-peer) or ``"B"`` (MVU single-model),
   ``root`` is the ipywidgets root, ``edges`` is the declared data-flow edge list, and
-  ``one_action() -> (recomputes: int, needed_guard: bool, scans: int)`` performs one user
-  action, returning the output-refresh count, whether a re-entrancy guard fired, and the
-  number of expensive O(rows) recomputations (a cost proxy the refresh count hides).
+  ``one_action() -> (recomputes: int, needed_guard: bool, scans: int, created: int)``
+  performs one user action, returning the output-refresh count, whether a re-entrancy guard
+  fired, the number of expensive O(rows) recomputations, and the number of widgets
+  constructed (reconciliation cost, which dominates dynamic-structure scenarios).
 
 This module owns the metrics: widget-tree shape, data-flow acyclicity, update-storm size,
 and whether the tree survives ``cositos`` serialize -> static embed.
@@ -34,10 +35,12 @@ class Metrics:
     n_widgets: int
     max_depth: int
     n_shared: int  # widgets referenced by >1 parent (repeated widgets)
-    n_data_edges: int  # observe/link dependency edges
+    n_data_edges: int  # observe/link dependency edges (declared by the builder)
+    observers: int  # REAL traitlets change-handlers on the widget tree (measured)
     data_flow_acyclic: bool
     recomputes_per_action: int  # "update storm": output refreshes for one user action
     scans_per_action: int  # expensive O(rows) recomputations for one action (cost proxy)
+    created_per_action: int  # widgets constructed for one action (reconciliation cost)
     needed_reentrancy_guard: bool
     serialize_ok: bool
     n_models: int
@@ -49,8 +52,9 @@ class Metrics:
         ser = f"{self.n_models} models" if self.serialize_ok else "FAILED"
         return (
             f"{self.variant:<6} | widgets={self.n_widgets:<5} depth={self.max_depth:<2} "
-            f"shared={self.n_shared:<3} | data_edges={self.n_data_edges:<5} {cyc:<9} | "
-            f"storm={self.recomputes_per_action:<5}{guard} scans={self.scans_per_action:<5} | "
+            f"shared={self.n_shared:<3} | edges={self.n_data_edges:<5} obs={self.observers:<5} "
+            f"{cyc:<9} | storm={self.recomputes_per_action:<5}{guard} "
+            f"scans={self.scans_per_action:<4} created={self.created_per_action:<5} | "
             f"{ser}, links_kept={self.n_link_models}"
         )
 
@@ -77,6 +81,37 @@ def containment_stats(root: Any) -> tuple[int, int, int]:
     walk(root, 0)
     n_shared = sum(1 for cnt in parents.values() if cnt > 1)
     return len(seen), max_depth, n_shared
+
+
+def _collect_widgets(root: Any) -> list[Any]:
+    """All distinct widgets reachable via ``.children`` from ``root``."""
+    seen: dict[int, Any] = {}
+
+    def walk(w: Any) -> None:
+        if id(w) in seen:
+            return
+        seen[id(w)] = w
+        for c in getattr(w, "children", ()) or ():
+            walk(c)
+
+    walk(root)
+    return list(seen.values())
+
+
+def count_observers(root: Any) -> int:
+    """MEASURED wiring: total traitlets ``change`` handlers across the widget tree.
+
+    Unlike ``data_edges`` (declared by each builder) this reads the real observer registry
+    (``_trait_notifiers``), so it is an objective corroboration of wiring density. Link
+    widgets register their handlers on the in-tree source/target widgets, so peer links are
+    counted here even though the Link widgets themselves float outside the tree.
+    """
+    total = 0
+    for w in _collect_widgets(root):
+        notifiers = getattr(w, "_trait_notifiers", {}) or {}
+        for by_type in notifiers.values():
+            total += len(by_type.get("change", []))
+    return total
 
 
 def is_acyclic(edges: list[tuple[Any, Any]]) -> bool:
@@ -128,13 +163,15 @@ def measure(scenario_name: str, module: Any, variant: str, scale: str) -> Metric
     ipywidgets' global widget registry cross-contaminates sequential builds otherwise."""
     root, edges, one_action = module.build(variant, scale)
     n_widgets, max_depth, n_shared = containment_stats(root)
-    storm, needed_guard, scans = one_action()
+    observers = count_observers(root)
+    storm, needed_guard, scans, created = one_action()
     edges = list(dict.fromkeys(edges))  # dedupe (tracked reactive reads re-record edges)
     ok, n_models, n_links = serialize_check(root)
     return Metrics(
         scenario=scenario_name, variant=variant, scale=scale, n_widgets=n_widgets,
         max_depth=max_depth, n_shared=n_shared, n_data_edges=len(edges),
-        data_flow_acyclic=is_acyclic(edges), recomputes_per_action=storm,
-        scans_per_action=scans, needed_reentrancy_guard=needed_guard, serialize_ok=ok,
-        n_models=n_models, n_link_models=n_links,
+        observers=observers, data_flow_acyclic=is_acyclic(edges),
+        recomputes_per_action=storm, scans_per_action=scans, created_per_action=created,
+        needed_reentrancy_guard=needed_guard, serialize_ok=ok, n_models=n_models,
+        n_link_models=n_links,
     )

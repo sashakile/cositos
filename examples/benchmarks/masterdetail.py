@@ -105,10 +105,10 @@ def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
     root = W.VBox([W.HBox(masters), _nest(details, cfg.depth)])
     root._benchmark_links = links
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = fires["n"]
         masters[1].value = 3  # change one master -> clique propagation + detail fan-out
-        return fires["n"] - before, False, 0
+        return fires["n"] - before, False, 0, 0
 
     return root, edges, one_action
 
@@ -156,10 +156,10 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     render()
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = fires["n"]
         masters[1].value = 3
-        return fires["n"] - before, False, 0
+        return fires["n"] - before, False, 0, 0
 
     return root, edges, one_action
 
@@ -208,9 +208,9 @@ def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
 
     root = W.VBox([W.HBox(masters), _nest(details, cfg.depth)])
 
-    def one_action() -> tuple[int, bool, int]:
+    def one_action() -> tuple[int, bool, int, int]:
         before = counter["n"]
         masters[1].value = 3
-        return counter["n"] - before, False, 0
+        return counter["n"] - before, False, 0, 0
 
     return root, edges, one_action

@@ -40,6 +40,10 @@ to `RESULTS.md`.
   controls kept in sync.
 - `form.py` — scenario: validated form with a derived-field chain, a grand-total fan-in,
   cross-field validation, and a submit gate.
+- `dynamic.py` — scenario: a variable-length list of rows; one action *adds* rows
+  (structural change, not just value change).
+- `reactive.py` — the glitch-free tracked-signal core; `reactive_selftest.py` proves
+  diamond-recompute-once and cycle detection.
 - `run.py` — subprocess-isolated runner.
 
 A scenario module exposes `SCALES: dict[str, Config]` and
@@ -53,8 +57,11 @@ user action and returns `(recomputes, needed_guard)`.
 | `widgets`/`depth`/`shared` | tree size, nesting depth, repeated (multi-parent) widgets |
 | `data_edges` | declared `observe`/`link` dependency edges — the wiring complexity |
 | `acyclic`/`HAS CYCLE` | whether the data-flow graph has a cycle (cycles need re-entrancy guards and risk infinite update loops) |
+| `edges` / `obs` | *declared* dependency edges vs *measured* traitlets change-handlers on the tree (`obs` corroborates `edges` from the real observer registry) |
+| `acyclic`/`HAS CYCLE` | whether the declared data-flow graph has a cycle (cycles need re-entrancy guards and risk infinite update loops) |
 | `storm` | output refreshes (widget updates) triggered by **one** user action — one unit across variants |
 | `scans` | expensive O(rows) recomputations for that action; a cost proxy the refresh count hides |
+| `created` | widgets constructed for that action — reconciliation cost (dominates dynamic structure) |
 | `models` | widgets in the serialized `cositos` document (`ipywidgets.embed.embed_data` → `cositos.embed_html`) |
 | `links_kept` | cross-part `LinkModel`s that survive into the serialized document |
 
@@ -107,6 +114,15 @@ whole-model re-render.
 2. **Limitation (not a bug):** peer-`link` interaction is unserializable by construction —
    direct evidence for the guideline that cross-part behavior belongs in the **model**, not
    in widget-to-widget links.
+
+**Dynamic structure flips the verdict on MVU.** Adding 20 rows to a 100-row list
+(`dynamic` big): A and C construct only the new rows (`created=60`, `storm=1`), but B
+re-renders the children list from the model, **rebuilding every row** (`created=360`,
+`storm=120`) — and the orphaned widgets inflate its serialized document (1827 vs 1027
+models). MVU's whole-projection rebuild is fine for value changes but pays O(N)
+reconciliation cost for structural ones (the reason React has keys/a vdom). Incremental and
+reactive styles stay O(churn). Note A here is *acyclic* — pure fan-in, no cross-writes —
+confirming again that cycles, not naivety per se, are the hazard.
 
 ## Takeaway
 
