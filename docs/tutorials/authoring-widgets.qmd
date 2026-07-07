@@ -7,6 +7,10 @@ This page is for **authoring a new widget**, not porting a backend (for that, se
 module and it renders unchanged in the browser, in a live Jupyter kernel, and in a
 static export — **no new JavaScript per host**.
 
+<!-- Repo-relative paths to files outside docs/ are plain text here, not markdown
+     links: docs/tutorials/*.qmd renders one directory level deeper than its source,
+     so a relative link outside docs/ 404s in the built site. See cositos-7co. -->
+
 ## The minimal ESM shape
 
 A cositos widget is a plain anywidget-style ES module: a default export with a

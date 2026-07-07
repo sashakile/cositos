@@ -11,10 +11,10 @@ Every snippet below renders the *same* counter widget — one anywidget-style ES
 reused verbatim, with **no new JavaScript** regardless of host language. The full
 runnable notebooks these snippets are extracted from live in `examples/notebooks/`.
 
-> Repo-relative paths on this page (`README.md`, `probe/README.md`,
-> `examples/notebooks/`) are given as plain text, not links: this page renders one
-> directory level deeper than its source (`docs/_site/tutorials/`), so a relative link
-> to a file outside `docs/` would 404 in the built site (see `cositos-7co`).
+<!-- Repo-relative paths to files outside docs/ (README.md, probe/README.md,
+     examples/notebooks/) are plain text here, not markdown links: docs/tutorials/*.qmd
+     renders one directory level deeper than its source (docs/_site/tutorials/), so a
+     relative link to a file outside docs/ 404s in the built site. See cositos-7co. -->
 
 ## Python
 
@@ -117,3 +117,9 @@ cositos itself. See `probe/README.md` for how each was classified.
 If you're evaluating a language for a polyglot team today, treat this table as
 current status, not a roadmap commitment — each is blocked on an upstream kernel fix,
 not on cositos work.
+
+## Next steps
+
+- Author a new widget's ESM: `tutorials/authoring-widgets.qmd`.
+- Embed a widget into an existing tool (Quarto, JupyterBook, Voila, Clay, …):
+  `tutorials/integrating.qmd`.

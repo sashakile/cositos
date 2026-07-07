@@ -8,6 +8,10 @@ a Quarto document, a JupyterBook, a Voila app, myBinder, a Clay notebook, a term
 a new widget's ESM (`tutorials/authoring-widgets.qmd`). Those two answer "which language,
 which widget"; this page answers "which environment renders it."
 
+<!-- Repo-relative paths to files outside docs/ are plain text here, not markdown
+     links: docs/tutorials/*.qmd renders one directory level deeper than its source,
+     so a relative link outside docs/ 404s in the built site. See cositos-7co. -->
+
 ## The seam: `Channel` (frontend) and `Transport` (backend)
 
 cositos isolates everything environment-specific behind one small seam on each side:
