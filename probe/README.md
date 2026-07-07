@@ -79,9 +79,12 @@ venv's `jupyter_client` discovers them).
 |--------|----------------------|------|-------|
 | `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
 | `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
-| `.net-csharp` (.NET Interactive) | ✅ | *unverified* | needs a C# probe program; comm mapping is the least certain |
-| `cositos-clj` (clojupyter) | ✅ | *unverified* | clojupyter ships comm *message specs* but no user-facing comm API — likely Tier 3 |
+| `.net-csharp` (.NET Interactive) | ✅ | *blocked* | does **not** answer `comm_info_request` — .NET Interactive uses its own bespoke kernel protocol, not the standard ipywidgets comm surface cositos targets. Not usable without a comm shim. |
+| `cositos-clj` (clojupyter) | ✅ | *blocked* | **answers `comm_info_request`** (has comm message plumbing and can receive), but exposes **no user-facing API to open a comm** from Clojure code — widgets need the kernel to open a comm, so it's not expressible. |
 
-Kernels are installed and launch; their **tiers are still unverified** — classifying each
-requires writing its probe program (the seed of that language's `Transport`), which is the
-first step of the transport tickets `cositos-ex2.5/6/7`.
+Kernels are installed and launch; **only `python3` supports the full widget-comm round trip
+today**. The other three are blocked upstream for distinct reasons (IRkernel bug; .NET
+Interactive's non-standard protocol; clojupyter's missing comm-open API) — see the table.
+This is the core finding of the batch: the protocol *cores* port trivially and are all
+fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
+kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
