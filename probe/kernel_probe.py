@@ -55,6 +55,11 @@ PROBE_PROGRAMS: dict[str, str] = {
         "comm$on_msg(function(msg) comm$send(list(echo = TRUE)))\n"
         "comm$open(msg = list(hello = 1))\n"
     ),
+    "julia": (
+        "import IJulia.CommManager\n"
+        '_probe_comm = CommManager.Comm("cositos.probe"; data=Dict("hello"=>1))\n'
+        '_probe_comm.on_msg = (msg) -> CommManager.send_comm(_probe_comm, Dict("echo"=>true))\n'
+    ),
 }
 
 

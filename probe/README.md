@@ -59,6 +59,11 @@ venv's `jupyter_client` discovers them).
   interactive` with no env — patch it to use an absolute `dotnet` path and add an `env`
   block with `DOTNET_ROOT` and a `PATH` that includes `~/.dotnet/tools`, or the kernel dies
   before the `kernel_info` handshake.
+- **Julia** (`julia-1.12`): `julia -e 'using Pkg; Pkg.add("IJulia")'` then
+  `julia -e 'using IJulia; IJulia.installkernel("Julia")'`. IJulia comes from the General
+  registry (not a GitHub release asset), so it is **not** proxy-blocked. `installkernel`
+  writes the kernelspec under `JUPYTER_DATA_DIR`. The kernel name is version-stamped
+  (`julia-1.12`), so invoke the probe with an explicit program key: `--program julia`.
 - **Clojure** (`cositos-clj`): clojupyter's normal install needs a prebuilt standalone jar,
   distributed as a **GitHub release asset — blocked by the proxy here**. Work around it with
   a **jar-free deps-based kernelspec** that launches clojupyter's kernel entry point straight
@@ -81,10 +86,12 @@ venv's `jupyter_client` discovers them).
 | `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
 | `.net-csharp` (.NET Interactive) | ✅ | *blocked* | does **not** answer `comm_info_request` — .NET Interactive uses its own bespoke kernel protocol, not the standard ipywidgets comm surface cositos targets. Not usable without a comm shim. |
 | `cositos-clj` (clojupyter) | ✅ | *blocked* | **answers `comm_info_request`** (has comm message plumbing and can receive), but exposes **no user-facing API to open a comm** from Clojure code — the emit fns are private and the public constructors need kernel internals (`jup`/`req-message`). See "clojupyter comm surface" below for the exact mechanism + a possible in-process spike. |
+| `julia-1.12` (IJulia) | ✅ | **1** | full two-way comm via `IJulia.CommManager.Comm` (mutable `on_msg` field + `send_comm`). Kernel-initiated `comm_open` works and frontend→kernel `comm_msg` is echoed back — same round trip as `python3`. Probe program key: `julia` (run `mise run probe -- julia-1.12 --program julia`). Unblocks the Julia notebook (`cositos-059.2`) and IJulia transport adapter (`cositos-z76.6`). |
 
-Kernels are installed and launch; **only `python3` supports the full widget-comm round trip
-today**. The other three are blocked upstream for distinct reasons (IRkernel bug; .NET
-Interactive's non-standard protocol; clojupyter's missing comm-open API) — see the table.
+Kernels are installed and launch; **`python3` and `julia-1.12` support the full
+widget-comm round trip today**. The other three are blocked upstream for distinct reasons
+(IRkernel bug; .NET Interactive's non-standard protocol; clojupyter's missing comm-open
+API) — see the table.
 This is the core finding of the batch: the protocol *cores* port trivially and are all
 fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
 kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
