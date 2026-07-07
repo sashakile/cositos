@@ -13,6 +13,7 @@ flat byte view before encoding — matching ipywidgets ``_buffer_list_equal``.
 from __future__ import annotations
 
 import base64
+import copy
 import re
 from collections.abc import Iterable
 from typing import Any, TypeAlias
@@ -118,11 +119,12 @@ def dump_model(
 def load_model(item: tuple[str, Record]) -> ModelEntry:
     """Inverse of :func:`dump_model`: rebuild ``(model_id, state)`` from a record.
 
-    Binary buffers are decoded and merged back into ``state`` in place; the returned
-    ``state`` carries real ``bytes`` at the buffer paths.
+    Binary buffers are decoded and merged into a *copy* of ``record["state"]``, so the
+    input record (and any :data:`Document` holding it) is not mutated — load is pure and
+    the source document stays JSON-serializable for a later ``embed_html`` (cositos-t3c).
     """
     model_id, record = item
-    state = record["state"]
+    state = copy.deepcopy(record["state"])
     _, buffer_paths, buffers = decode_buffers_base64((state, record.get("buffers", [])))
     put_buffers(state, buffer_paths, buffers)
     return model_id, state

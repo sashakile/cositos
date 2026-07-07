@@ -204,11 +204,12 @@ end
     load_model((model_id, record)) -> (model_id, state)
 
 Inverse of [`dump_model`](@ref): rebuild `(model_id, state)` from a record. Base64 buffers
-are decoded to `Vector{UInt8}` and merged back into `state` in place.
+are decoded to `Vector{UInt8}` and merged into a *copy* of `record["state"]`, so the input
+record (and any document holding it) is not mutated — load is pure (cositos-t3c).
 """
 function load_model(item)
     model_id, record = item
-    state = record["state"]
+    state = deepcopy(record["state"])
     entries = get(record, "buffers", [])
     buffer_paths = [e["path"] for e in entries]
     buffers = [_decode_buffer(e) for e in entries]

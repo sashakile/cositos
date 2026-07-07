@@ -116,6 +116,20 @@ def test_check_references_allows_reference_cycle() -> None:
     assert check_references(doc) is None
 
 
+def test_load_document_does_not_mutate_input_document() -> None:
+    # Regression (cositos-t3c): load must be pure. Mutating record['state'] in place put
+    # raw bytes back into the input Document, so a later json.dumps/embed_html raised
+    # 'bytes is not JSON serializable'.
+    import json
+
+    entries: list[ModelEntry] = [("m1", {"_esm": "x", "blob": b"\x00\x01\x02"})]
+    doc = dump_document(entries)
+    before = json.dumps(doc)
+    loaded = load_document(doc)
+    assert json.dumps(doc) == before  # input Document unchanged, still JSON-safe
+    assert _raw(dict(loaded)["m1"]["blob"]) == b"\x00\x01\x02"  # load still reconstructs bytes
+
+
 def test_dump_model_defaults_to_anywidget_identity() -> None:
     model_id, record = dump_model(("m1", {"value": 1}))
     assert model_id == "m1"

@@ -202,6 +202,19 @@ b64(buffers) = [base64encode(b) for b in buffers]
         )
     end
 
+    @testset "load_document does not mutate the input document (cositos-t3c)" begin
+        # load must be pure: mutating record["state"] in place would merge raw bytes back
+        # into the input document, breaking a later re-dump/embed.
+        entries = [("plot", Dict{String,Any}(
+            "_esm" => "e", "shape" => Any[3], "dtype" => "float32", "data" => plot_bytes(),
+        ))]
+        doc = dump_document(entries)
+        doc_before = deepcopy(doc)
+        loaded = load_document(doc)
+        @test doc == doc_before                              # input unchanged
+        @test Dict(loaded)["plot"]["data"] == plot_bytes()   # load still reconstructs bytes
+    end
+
     @testset "Pluto extension: Bonds + HTML render contract" begin
         esm = "export default { render({model, el}) {} }"
         w = PlutoWidget(; esm=esm, state=Dict{String,Any}("value" => 0, "min" => 0, "max" => 100))
