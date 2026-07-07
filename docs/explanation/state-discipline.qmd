@@ -1,0 +1,184 @@
+---
+title: "State discipline for cositos apps"
+---
+
+Once a cositos app grows past a handful of widgets, the hard question is no longer *how do
+I display a widget?* but *how do I keep many widgets consistent as the user interacts?*
+This page answers that with a small set of **rules**, and — because rules without evidence
+are just opinions — grounds every one of them in a measured benchmark.
+
+The benchmarks build the *same logical app* several ways and measure the structural cost of
+each wiring style. The full apparatus lives in
+[`examples/benchmarks/`](../../examples/benchmarks/README.md); the raw numbers are in
+[`examples/benchmarks/RESULTS.md`](../../examples/benchmarks/RESULTS.md). This page is the
+distillation.
+
+## The one-sentence discipline
+
+**Keep one domain model as the single source of truth, render views as pure projections of
+it, and route every cross-part interaction through the model (or a tracked derivation
+graph) — never through widget-to-widget `link`/`observe`.**
+
+Everything below is the evidence for why, and the precise boundaries of when.
+
+## The four wiring styles, defined
+
+Every benchmark scenario is built in up to four variants. You will meet these names
+throughout, so they are defined once here:
+
+- **A — naive (peer-to-peer).** Real ipywidgets wired directly to each other with
+  `observe`/`link`. This is the idiomatic first-reach style: when widget X changes, a
+  callback pokes widget Y.
+- **B — MVU (Model–View–Update).** One domain `Model` object holds the state. A user action
+  is a single `update` to the model; every view is a **pure projection** of the model,
+  re-rendered in one pass. No widget observes another widget.
+- **C — reactive DAG.** A tracked signal graph (see
+  [`reactive.py`](../../examples/benchmarks/reactive.py)): *reading* a value inside a
+  computation records a dependency, so one edit recomputes **only** the downstream nodes,
+  and the graph is **acyclic by construction**.
+- **D — reactive + shared memo.** Like C, but an expensive shared computation (e.g. a scan
+  over all rows) is a single memoized node that every view reads, so the costly work runs
+  **once per action** instead of once per view.
+
+The *rendered* widget tree — nesting depth, element count, shared/repeated widgets — is
+identical across variants. Only the **wiring between them** differs, which is exactly what
+these rules are about.
+
+## How to read the evidence
+
+Two measured quantities carry most of the argument (full definitions in the
+[benchmark README](../../examples/benchmarks/README.md#metrics)):
+
+- **`storm`** — the number of output refreshes (widget updates) triggered by **one** user
+  action. Counted identically across variants, so A/B/C/D are directly comparable.
+- **`scans`** — the number of expensive `O(rows)` recomputations that same action performs.
+  This is the cost the refresh count *hides*: two styles can refresh the same number of
+  times while one does far more redundant work underneath.
+
+Plus two structural facts: whether the data-flow graph is **acyclic** (cycles need
+re-entrancy guards and risk infinite update loops), and **`links_kept`** — how many
+cross-part `link`s survive when the app is serialized for static export.
+
+---
+
+## The rules
+
+### Rule 1 — One domain model is the single source of truth
+
+Put the app's state in **one** plain object, not scattered across widget traits that
+reference each other.
+
+**Evidence.** In the cross-filter scenario at big scale (16 dimensions, 100 views), the
+naive peer-wired variant A declares ≈1900 dependency edges (≈ `views × dims`) and its
+data-flow graph is **cyclic in every scenario that cross-writes**. The single-model variant
+B declares ≈118 edges (≈ `views`) and is **never** cyclic. Measured traitlets change-handlers
+corroborate this: crossfilter-big A carries **2750** live observers versus B's **466** — the
+tangle is real, not a modelling artifact. A cyclic state graph is the source of "why did
+this update loop forever / why do I need a re-entrancy guard" bugs; a single model makes
+those states unrepresentable.
+
+### Rule 2 — Views are pure projections, not stateful peers
+
+A view should *read* the model and render. It should not hold authoritative state that
+another view then observes.
+
+**Evidence.** This is what keeps variant B and C acyclic while A is cyclic. When each view
+is a pure function of the model, there is no path for view X to write view Y to write view
+X. The moment a widget's `observe` callback writes back into another widget, you have
+re-introduced the cycle Rule 1 removed.
+
+### Rule 3 — Never wire cross-part behavior with widget-to-widget `link`/`observe`
+
+The tempting shortcut — `link((slider, 'value'), (text, 'value'))` or a chain of `observe`
+callbacks between sibling widgets — is precisely the pattern that fails at scale.
+
+**Evidence, three ways:**
+
+1. **It does not serialize.** Across *every* scenario, at *every* scale, `links_kept = 0`.
+   Peer `LinkModel`s live outside the container widget tree, so the static-export harvester
+   never reaches them. An app saved or embedded to static HTML **silently loses all its
+   cross-part interactivity** — see [static export](../tutorials/static-export.qmd) and the
+   [Document model](architecture.qmd#the-document-is-the-virtual-dom).
+2. **It explodes on cyclic topologies.** Cross-filter big: one user click causes **1700**
+   output refreshes and **1700** expensive scans in variant A, versus **100** refreshes and
+   a **single** scan in variant B. Peer wiring is `O(views × dims)`; the model projection is
+   `O(views)`.
+3. **It is cyclic.** Variant A's graph has a cycle in crossfilter, masterdetail, and form —
+   requiring guards and risking runaway loops.
+
+Route the behavior through the model (Rule 1) and all three problems disappear at once: the
+*state* serializes, one projection pass replaces the storm, and the graph stays acyclic.
+
+### Rule 4 — Not all coupling is bad: fan-out is fine, cycles and cross-writes are the hazard
+
+The rules above are about *cycles and cross-writes*, **not** about size or fan-out. Do not
+over-engineer a benign app.
+
+**Evidence.** The master-detail scenario (one selection drives many detail views — pure
+fan-out) comes out **nearly identical** between naive A and model-based B: equal `storm`,
+edges differing only by the linked-master clique. Fan-out alone does not tangle. Likewise
+the `dynamic` scenario's naive variant is **acyclic** because it is pure fan-in with no
+cross-writes. The precise lesson: **cycles and cross-writes are the problem, not fan-out or
+sheer widget count.** A large read-only dashboard fed from one model needs no ceremony.
+
+### Rule 5 — Share expensive derivations; do not recompute per view
+
+If many views depend on the same costly computation, compute it **once** and let them all
+read the result. Fine-grained reactivity does **not** give you this for free.
+
+**Evidence.** On refresh *count*, the reactive variant C ties the model variant B in
+crossfilter big (both `storm = 100`). But C runs the `O(rows)` scan **once per view**
+(`scans = 100`) while B scans **once** (`scans = 1`) — the count hid 100-to-1 redundant
+work. Variant **D**, which makes the scan a single memoized shared node, restores
+`scans = 1` and truly ties B. Whether you use a model or a reactive graph, **shared
+derivations are what make it cheap.**
+
+### Rule 6 — For structural change (adding/removing widgets), prefer incremental or reactive updates over whole-model re-render
+
+A pure MVU re-render is simple and correct, but rebuilding the whole projection is `O(N)`
+for a change that touched one row.
+
+**Evidence.** The `dynamic` scenario adds 20 rows to a 100-row list (a *structural* change,
+not just a value change). Incremental (A) and reactive (C) construct only the new rows
+(`created = 60`, `storm = 1`). Whole-projection MVU (B) rebuilds **every** row
+(`created = 360`, `storm = 120`) and the orphaned widgets inflate its serialized document
+(1827 vs 1027 models). This is the same reason web frameworks add keys and a virtual DOM.
+For value-heavy changes MVU is perfectly cheap; the cost shows up for structural churn.
+
+---
+
+## Which style should I use?
+
+No single style wins everywhere — the benchmark's honest conclusion. Match the style to the
+app's topology:
+
+| App shape | Recommended | Why (from the evidence) |
+|---|---|---|
+| Read-only dashboard, pure fan-out from one source | **B (MVU)** | Fan-out is benign (Rule 4); one model is simplest and acyclic |
+| Cross-filtering / any cross-writing between parts | **B or C/D**, never A | A is cyclic + `O(V×D)` and never serializes (Rule 3); a model or tracked DAG stays acyclic |
+| Derived-field chains, validation, value-heavy edits | **C (reactive)** | Recomputes only the affected subgraph — incremental *and* acyclic (form: `storm 23` vs MVU's `86`) |
+| Many views over one expensive computation | **D (shared memo)** | Shared derivation → one scan, not one per view (Rule 5) |
+| Frequently adding/removing widgets (structural churn) | **C / incremental** | Avoids MVU's `O(N)` rebuild (Rule 6) |
+
+In practice most cositos apps are well served by **B**: one model, pure-projection views. Reach
+for a tracked reactive graph (**C/D**) when you have derived-value chains or an expensive shared
+computation and profiling shows the whole-projection re-render is the bottleneck.
+
+## Why this is a discipline, not a runtime
+
+cositos's core stays [binding-free and pure](architecture.qmd#the-binding-free-core): it does
+**not** ship a reactive runtime or an MVU framework. These rules are a *discipline you apply in
+your host language*, not machinery baked into the core. That keeps the fixture-certified core
+small and portable, while giving every app a measured, principled way to stay **acyclic,
+serializable, and cheap** as it grows.
+
+## See also
+
+- [`examples/benchmarks/README.md`](../../examples/benchmarks/README.md) — the full apparatus,
+  scenarios, and metric definitions.
+- [`examples/benchmarks/RESULTS.md`](../../examples/benchmarks/RESULTS.md) — the complete
+  A/B/C/D results across scenarios and scales.
+- [Architecture](architecture.qmd) — why the Document (not live widget links) is the unit of
+  persistence.
+- [Static export tutorial](../tutorials/static-export.qmd) — where `links_kept = 0` bites in
+  practice.

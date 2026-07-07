@@ -9,6 +9,7 @@ project:
     - reference/index.qmd
     - reference/specs.qmd
     - explanation/architecture.qmd
+    - explanation/state-discipline.qmd
     - widgets.md
     - pluto.md
     - porting.md
@@ -33,6 +34,7 @@ website:
       - text: Explanation
         menu:
           - explanation/architecture.qmd
+          - explanation/state-discipline.qmd
       - text: Guides
         menu:
           - widgets.md
