@@ -1,5 +1,7 @@
 """Tests for protocol message builders and the inbound parser."""
 
+import pytest
+
 from cositos import protocol
 from cositos.protocol import (
     Custom,
@@ -64,6 +66,13 @@ def test_parse_unknown_method_is_ignored():
 
 def test_parse_missing_method_is_ignored():
     assert parse_message({}) == protocol.Ignored(method=None)
+
+
+@pytest.mark.parametrize("data", [None, "not a dict", [1, 2, 3], 42, b"bytes"])
+def test_parse_non_dict_is_ignored(data):
+    # Malformed wire data (a non-dict comm_msg payload) must not raise from the comm
+    # dispatch callback: it is an unrecognized message and yields Ignored (cositos-dzt).
+    assert parse_message(data) == protocol.Ignored(method=None)
 
 
 def test_parse_echo_update_is_ignored():

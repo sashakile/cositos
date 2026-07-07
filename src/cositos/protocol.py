@@ -125,12 +125,15 @@ class Ignored:
     method: Any = None
 
 
-def parse_message(data: dict[str, Any]) -> Update | RequestState | Custom | Ignored:
+def parse_message(data: Any) -> Update | RequestState | Custom | Ignored:
     """Parse an inbound ``comm_msg`` ``data`` dict into a typed event.
 
-    An unknown or missing ``method`` yields :class:`Ignored` (never raises), matching
-    ipywidgets' forward-compatible dispatch — the caller no-ops on it.
+    An unknown or missing ``method`` — or a non-dict ``data`` (malformed wire payload) —
+    yields :class:`Ignored` (never raises), matching ipywidgets' forward-compatible
+    dispatch: the caller no-ops on it.
     """
+    if not isinstance(data, dict):
+        return Ignored()
     method = data.get("method")
     if method == "update":
         return Update(state=data.get("state", {}), buffer_paths=data.get("buffer_paths", []))
