@@ -1,0 +1,103 @@
+---
+title: "Integrate a plotting library"
+---
+
+You already have a chart built with a widget library — Plotly, Altair, bqplot — and you want
+to **save it, or render it as a static page, through cositos**. You do not rebuild the chart.
+Because cositos speaks the ipywidgets Widget-State format, an existing widget tree can be
+*harvested* as-is.
+
+## The one-liner
+
+[`ipywidgets.embed.embed_data(views=[w])["manager_state"]`](https://ipywidgets.readthedocs.io/en/stable/examples/Widget%20Low%20Level.html#Embedding-Widgets)
+is, byte for byte, a cositos v2 [`Document`](../reference/specs.qmd#serialization). So the
+whole "wrap an existing tree" story is a thin wrapper, shipped as
+[`cositos.contrib.harvest`](#about-cositos-contrib):
+
+```python
+from cositos.contrib import harvest, harvest_html
+
+doc  = harvest(my_widget)          # -> a cositos Document (round-trips, embeds)
+html = harvest_html(my_widget)     # -> a self-contained static HTML page
+```
+
+`harvest` captures the widget **and its transitive children** (children are held by
+reference, exactly like a natively built cositos document). `harvest_html` renders only the
+top-level widgets you pass as *views* — a widget expands to auxiliary layout/style models
+that have no view of their own, so it would be wrong to render them.
+
+## Plotly (works with zero special-casing)
+
+Plotly 6's `FigureWidget` is **anywidget-based** (`_model_module == "anywidget"`) — which is
+exactly the frontend cositos targets — so it harvests, serializes, and static-embeds like a
+native cositos widget:
+
+```python
+import plotly.graph_objects as go
+from cositos.contrib import harvest_html
+
+fig = go.FigureWidget(data=[go.Bar(x=["Mon", "Tue", "Wed"], y=[4, 7, 3])])
+open("plot.html", "w").write(harvest_html(fig, title="my plot"))
+# open plot.html in any browser — no kernel (needs internet for the CDN)
+```
+
+A complete, runnable version is
+[`examples/plots/build.py`](../../examples/plots/build.py):
+
+```bash
+uv run --with plotly python examples/plots/build.py
+```
+
+## Altair (also anywidget-based)
+
+Altair's `JupyterChart` is anywidget-based too, so it behaves identically — harvest it the
+same way:
+
+```python
+import altair as alt
+from vega_datasets import data
+from cositos.contrib import harvest_html
+
+chart = alt.Chart(data.cars()).mark_point().encode(x="Horsepower", y="Miles_per_Gallon")
+html = harvest_html(alt.JupyterChart(chart))
+```
+
+## bqplot — harvestable, with a static-render caveat
+
+`harvest(bqplot_figure)` produces a perfectly valid `Document`. The caveat is *frontend
+resolution* on static export: bqplot is **not** anywidget-based — a harvested `bqplot.Figure`
+declares its own frontend modules (`bqplot`, `bqscales`, plus `@jupyter-widgets/base`), not
+`anywidget`:
+
+```python
+import bqplot as bq
+from cositos.contrib import harvest
+
+fig = bq.Figure(marks=[bq.Lines(x=[0, 1, 2], y=[3, 1, 2],
+                                scales={"x": bq.LinearScale(), "y": bq.LinearScale()})])
+doc = harvest(fig)
+# {r["model_module"] for r in doc["state"].values()}
+#   -> {"@jupyter-widgets/base", "bqplot", "bqscales"}
+```
+
+cositos's [static export](static-export.qmd) reliably resolves the **anywidget** module from
+the CDN; for bqplot the html-manager must instead load the `bqplot`/`bqscales` modules, which
+is outside that guaranteed path. So: bqplot **saves/round-trips** fine, but a **static** page
+depends on those custom modules being CDN-resolvable — where a live kernel (which serves the
+frontend from the installed package) has no such issue. Prefer the anywidget-based libraries
+(Plotly, Altair) when your target is backend-less static HTML.
+
+## Live vs. static
+
+Everything above is about **static** export. With a live kernel the harvested widget is
+already interactive through its own comm — you only need `harvest` when you want to *persist*
+or *embed without a kernel*. See [save & restore](save-restore.qmd) and
+[static export](static-export.qmd).
+
+## About `cositos.contrib`
+
+`cositos.contrib` is **optional, Python-only** territory that may depend on the wider widget
+ecosystem (here, `ipywidgets`). Nothing in it is imported by the pure `cositos`
+[core](../explanation/architecture.qmd#the-binding-free-core), so the fixture-certified,
+cross-language core stays dependency-free — `harvest` imports `ipywidgets` lazily and raises
+a clear error if it is missing.

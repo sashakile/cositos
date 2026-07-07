@@ -6,6 +6,7 @@ project:
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
     - tutorials/polyglot-parity.qmd
+    - tutorials/plot-integration.qmd
     - reference/index.qmd
     - reference/specs.qmd
     - explanation/architecture.qmd
@@ -27,6 +28,7 @@ website:
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
           - tutorials/polyglot-parity.qmd
+          - tutorials/plot-integration.qmd
       - text: Reference
         menu:
           - reference/index.qmd
