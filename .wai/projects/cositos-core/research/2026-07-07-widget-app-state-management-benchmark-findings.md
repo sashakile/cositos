@@ -22,6 +22,23 @@ app built three ways and measured.
    re-renders the whole projection every edit (coarse). A reactive DAG (variant C) gets
    both — incremental recompute AND acyclicity/serializability.
 
+## Complete results (storm = recomputes per action at `big` scale; A/B/C)
+
+| Scenario | A naive | B MVU | C reactive DAG |
+|----------|---------|-------|----------------|
+| crossfilter | 1700, **cyclic** | 100, acyclic | 200, **acyclic** |
+| masterdetail | 150, **cyclic** | 150, acyclic | 301, **acyclic** |
+| form | 23, **cyclic** | 86, acyclic | 46, **acyclic** |
+
+(C counts each Computed plus its Effect separately, so its per-node work is ~half the
+listed number — on a per-affected-node basis C matches A's incrementality.)
+
+**Consolidated conclusion.** Across all three topologies: A is always cyclic (needs guards,
+risks loops, never serializes its links); B is always acyclic but recomputes the whole
+projection; C is always acyclic and never loses — it *wins* where an incremental subgraph
+exists (form: 46 vs 86) and *ties* B where dependencies are genuinely dense
+(crossfilter/masterdetail), while always removing A's cyclic explosion.
+
 ## Design implication for cositos
 Recommend a documented discipline (not a runtime in the pure core): one domain Model as the
 single source of truth; views as projections; cross-part behavior through the model or a
