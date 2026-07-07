@@ -1,0 +1,98 @@
+---
+title: "Authoring a widget: write ESM once, run it everywhere"
+---
+
+This page is for **authoring a new widget**, not porting a backend (for that, see
+`porting.md`). The core cositos promise, delivered today: you write one small ESM
+module and it renders unchanged in the browser, in a live Jupyter kernel, and in a
+static export — **no new JavaScript per host**.
+
+## The minimal ESM shape
+
+A cositos widget is a plain anywidget-style ES module: a default export with a
+`render({ model, el })` function. `examples/widgets/button.js` is a complete, minimal
+example:
+
+```js
+// Button — button/event category (ipywidgets: Button). Uses a custom message to notify
+// the kernel of clicks (ipywidgets Button emits an "on_click" event, not state).
+export default {
+  render({ model, el }) {
+    const button = document.createElement("button");
+    const paint = () => {
+      button.textContent = model.get("description") ?? "Click";
+    };
+    paint();
+    button.addEventListener("click", () => {
+      model.set("clicks", (model.get("clicks") ?? 0) + 1);
+      model.save_changes();
+      model.send({ event: "click" });
+    });
+    model.on("change:description", paint);
+    el.appendChild(button);
+    return () => button.remove(); // optional cleanup, called on unmount
+  },
+};
+```
+
+The `model` passed into `render` is the same `Model` surface anywidget gives you:
+`get(key)` / `set(key, value)` / `on("change:key", cb)` / `off` / `save_changes()` /
+`send(content)` / `request_state()`. This is a fixed contract regardless of host — see
+`hosts.md` for the full `Channel`/`Model` seam that makes that possible.
+
+## Where widgets live, and what patterns are already covered
+
+`examples/widgets/*.js` holds six small, render+interaction-tested widgets, one per
+ipywidgets synchronization pattern (two-way state, kernel→view push, dynamic option
+lists, custom events). Before writing a new pattern from scratch, check whether yours is
+a variant of one of these — see the category table in `widgets.md`.
+
+## The same file, three hosts, no changes
+
+| Host | What you need | Worked example |
+|---|---|---|
+| Browser, no kernel | `Model` + `LocalChannel` from `@cositos/front` | below |
+| Live Jupyter kernel | a `Widget` façade + a `Transport` (Python `CommTransport`, Julia `CositosIJuliaExt`) | `tutorials/quickstart.qmd` |
+| Static export, no kernel | `dump_document` + `embed_html`/`write_html` | `tutorials/static-export.qmd` |
+
+The browser path needs no kernel and no build step, so it is the fastest way to see a
+widget you're authoring render, before wiring it into a kernel at all:
+
+```js
+import { Model, LocalChannel, loadWidget, renderWidget } from "../../front/src/index.js";
+
+const esm = await (await fetch("./my_widget.js")).text();
+const model = new Model({ value: 0 }, new LocalChannel());
+const widget = await loadWidget(esm);
+await renderWidget(widget, { model, el: document.getElementById("mount") });
+```
+
+Serve the folder over HTTP (`python3 -m http.server`) rather than opening the file
+directly — ES module imports need `http://`, not `file://`. The full runnable version,
+including a `LocalChannel` reducer for client-side-only logic, is
+`examples/web/index.html`.
+
+## Before you compose widgets: two caveats
+
+If your widget is a container that holds *other* widgets (a `VBox`-style layout, a
+dashboard), two things surprise first-time authors — read this before writing a
+composition example, not after debugging one:
+
+1. **A plain cositos widget cannot hold live widget references.** `AnyModel` (what
+   every cositos widget emits) declares no widget-reference traits, so an
+   `"IPY_MODEL_<id>"` string in your state — e.g. a `children` list — reaches the
+   frontend as a literal string, not a resolved child widget. Composition needs a real
+   ipywidgets **controls** container (`VBoxModel` + `LayoutModel`, not `AnyModel`) as
+   the parent; see the "Composing widgets" section of `tutorials/static-export.qmd` for
+   the full recipe and a runnable reference (`examples/composition/build.py`).
+2. **`jslink`/`dlink` do not work in a static (backend-less) export.** Linking two
+   widgets creates a `LinkModel` that only gets instantiated when a live kernel's
+   html-manager references it; in a static export there's no kernel to do that, so
+   link updates silently don't propagate. Linking requires a live kernel.
+
+## Next steps
+
+- Drive your widget from a live kernel: `tutorials/quickstart.qmd`.
+- Ship it in a saved/static document: `tutorials/static-export.qmd`.
+- Embed it into an existing tool (Quarto, JupyterBook, Voila, Clay, …): the host matrix
+  in `examples/README.md` and the `Channel` contract in `hosts.md`.

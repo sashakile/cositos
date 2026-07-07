@@ -4,6 +4,7 @@ project:
   render:
     - index.qmd
     - tutorials/quickstart.qmd
+    - tutorials/authoring-widgets.qmd
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
     - tutorials/polyglot-parity.qmd
@@ -28,6 +29,7 @@ website:
       - text: Tutorials
         menu:
           - tutorials/quickstart.qmd
+          - tutorials/authoring-widgets.qmd
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
           - tutorials/polyglot-parity.qmd

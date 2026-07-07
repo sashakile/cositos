@@ -7,7 +7,7 @@
 between a host language's state object and the Jupyter **comm** channel. It speaks the
 [ipywidgets widget messaging protocol](https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md)
 (v2.1.0) and reuses anywidget's published `AnyModel`/`AnyView` front end verbatim — so
-you write **no new JavaScript**.
+you write **no new JavaScript** (see `docs/tutorials/authoring-widgets.qmd` to author one).
 
 ## Why
 
