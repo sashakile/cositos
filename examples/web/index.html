@@ -41,8 +41,9 @@
       const sliderEsm = await (await fetch("../widgets/int_slider.js")).text();
       await mount(document.getElementById("slider"), sliderEsm, { value: 25, min: 0, max: 100 });
 
-      // 2) A counter that proves client-side logic with no backend: the reducer echoes
-      //    an `update` doubling the value on every change, purely in the browser.
+      // 2) A counter that proves client-side logic with no backend: clicking increments
+      //    the value by 1 purely in the browser (no reducer, no kernel). `LocalChannel`
+      //    keeps the state; a reducer would only be needed to transform outbound messages.
       const counterEsm = `
         export default {
           render({ model, el }) {
