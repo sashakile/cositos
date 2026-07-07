@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import ipywidgets as W
+from reactive import Computed, Effect, Signal
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,8 @@ SCALES: dict[str, Config] = {
     "big": Config(items=200, details=150, masters=6, depth=8, shared=20),
 }
 
+VARIANTS = ("A", "B", "C")  # also has a reactive-DAG variant
+
 
 def _facts(cfg: Config) -> list[int]:
     rng = random.Random(cfg.seed)
@@ -66,7 +69,8 @@ def _nest(items: list[Any], depth: int) -> Any:
 
 
 def build(variant: str, scale: str) -> tuple[Any, list[tuple[str, str]], Any]:
-    return (_build_naive if variant == "A" else _build_mvu)(SCALES[scale])
+    builder = {"A": _build_naive, "B": _build_mvu, "C": _build_reactive}[variant]
+    return builder(SCALES[scale])
 
 
 def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
@@ -156,5 +160,57 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
         before = fires["n"]
         masters[1].value = 3
         return fires["n"] - before, False
+
+    return root, edges, one_action
+
+
+def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
+    """Variant C: one selection signal; details are computeds; masters sync via an effect.
+
+    The naive clique of linked masters collapses to a single source (all masters read and
+    write one selection signal), so the graph is acyclic. Every detail depends on the
+    selection, so a change recomputes all details (inherent fan-out) — but with no cycle.
+    """
+    facts = _facts(cfg)
+    opts = list(range(cfg.items))
+    edges: list[tuple[str, str]] = []
+    counter = {"n": 0}
+
+    selection = Signal(0, edges, name="selection")
+    masters = [W.Dropdown(options=opts, value=0) for _ in range(cfg.masters)]
+    for m in masters:  # any master edits the single source; equal-value sets are ignored
+        m.observe(lambda ch: selection.set(ch["new"]), names="value")
+
+    shared_legends = [W.HTML(value=f"legend {i}") for i in range(cfg.shared)]
+    details: list[Any] = []
+    for k in range(cfg.details):
+        label = W.Label()
+
+        def compute(k: int = k) -> str:
+            sel = selection.get()
+            return f"detail{k}: item {sel} = {facts[sel]}"
+
+        c = Computed(compute, name=f"detail{k}", counter=counter, edges=edges)
+        Effect(
+            lambda label=label, c=c: setattr(label, "value", c.get()),
+            name=f"detaile{k}", counter=counter,
+        )
+        details.append(W.VBox([label, shared_legends[k % cfg.shared]]))
+
+    # one effect keeps every master control consistent with the selection
+    def sync_masters() -> None:
+        sel = selection.get()
+        for m in masters:
+            if m.value != sel:
+                m.value = sel
+
+    Effect(sync_masters, name="mastersync", counter=counter)
+
+    root = W.VBox([W.HBox(masters), _nest(details, cfg.depth)])
+
+    def one_action() -> tuple[int, bool]:
+        before = counter["n"]
+        masters[1].value = 3
+        return counter["n"] - before, False
 
     return root, edges, one_action

@@ -10,8 +10,8 @@ logical app two ways and measures the structural cost:
   **pure projections** re-rendered in a single pass.
 - **variant C (reactive DAG)** — a tracked signal graph (`reactive.py`): reading a value
   inside a computation records a dependency, so one edit recomputes *only* the downstream
-  nodes, and the graph is acyclic by construction. Wired for the `form` and `crossfilter`
-  scenarios; scenarios opt in via a `VARIANTS` attribute.
+  nodes, and the graph is acyclic by construction. Wired for all scenarios; scenarios opt
+  in via a `VARIANTS` attribute.
 
 The *rendered* widget tree (deep nesting, many elements, shared/repeated widgets) is the
 same in both — only the **wiring** differs — so serialization is apples-to-apples.

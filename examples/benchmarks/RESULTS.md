@@ -35,6 +35,7 @@ C      | widgets=465   depth=9  shared=20  | data_edges=1700  acyclic   | storm=
 ```
 A      | widgets=26    depth=5  shared=2   | data_edges=12    HAS CYCLE | storm=6     | 63 models, links_kept=0
 B      | widgets=26    depth=5  shared=2   | data_edges=11    acyclic   | storm=6     | 63 models, links_kept=0
+C      | widgets=26    depth=5  shared=2   | data_edges=13    acyclic   | storm=13    | 63 models, links_kept=0
 ```
 
 ## masterdetail — scale = complex  (items=50 details=30 masters=4 depth=6 shared=6)
@@ -42,6 +43,7 @@ B      | widgets=26    depth=5  shared=2   | data_edges=11    acyclic   | storm=
 ```
 A      | widgets=103   depth=7  shared=6   | data_edges=42    HAS CYCLE | storm=30    | 246 models, links_kept=0
 B      | widgets=103   depth=7  shared=6   | data_edges=36    acyclic   | storm=30    | 246 models, links_kept=0
+C      | widgets=103   depth=7  shared=6   | data_edges=61    acyclic   | storm=61    | 246 models, links_kept=0
 ```
 
 ## masterdetail — scale = big  (items=200 details=150 masters=6 depth=8 shared=20)
@@ -49,6 +51,7 @@ B      | widgets=103   depth=7  shared=6   | data_edges=36    acyclic   | storm=
 ```
 A      | widgets=499   depth=10 shared=20  | data_edges=180   HAS CYCLE | storm=150   | 1174 models, links_kept=0
 B      | widgets=499   depth=10 shared=20  | data_edges=158   acyclic   | storm=150   | 1174 models, links_kept=0
+C      | widgets=499   depth=10 shared=20  | data_edges=301   acyclic   | storm=301   | 1174 models, links_kept=0
 ```
 
 ## form — scale = small  (fields=6 chain=3 depth=3 shared=2)
