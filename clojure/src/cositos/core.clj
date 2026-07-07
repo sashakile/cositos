@@ -111,7 +111,8 @@
 ;; ---- inbound parsing ----
 
 (defn parse-message
-  "Parse an inbound comm_msg data map into a tagged map. Throws on an unknown method."
+  "Parse an inbound comm_msg data map into a tagged map. Unknown/missing methods are
+  ignored (forward-compat, cositos-dow), never thrown."
   [data]
   (case (get data "method")
     "update" {:type :update
@@ -119,8 +120,7 @@
               :buffer-paths (get data "buffer_paths" [])}
     "request_state" {:type :request-state}
     "custom" {:type :custom :content (get data "content")}
-    (throw (ex-info (str "Unrecognized comm message method: " (pr-str (get data "method")))
-                    {:method (get data "method")}))))
+    {:type :ignored :method (get data "method")}))
 
 ;; ---- serialization: widget-state JSON schema v2 (dump/load) ----
 

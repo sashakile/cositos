@@ -69,7 +69,8 @@ m <- parse_message(list("method" = "update", "state" = list("a" = 1), "buffer_pa
 check(m$type == "update" && json_equal(m$state, list("a" = 1)), "parse update")
 check(parse_message(list("method" = "request_state"))$type == "request_state", "parse request_state")
 check(parse_message(list("method" = "custom", "content" = 42))$content == 42, "parse custom")
-expect_error(parse_message(list("method" = "bogus")), "parse rejects unknown method")
+check(parse_message(list("method" = "bogus"))$type == "ignored", "parse ignores unknown method")
+check(parse_message(list())$type == "ignored", "parse ignores missing method")
 
 # ---- buffer split / merge ----
 blob <- charToRaw("AB")

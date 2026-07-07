@@ -148,7 +148,8 @@ parse_message <- function(data) {
   } else if (identical(method, "custom")) {
     list(type = "custom", content = data[["content"]])
   } else {
-    stop(sprintf("Unrecognized comm message method: %s", deparse(method)))
+    # Unknown/missing method is ignored, not rejected (forward-compat, cositos-dow).
+    list(type = "ignored", method = method)
   }
 }
 

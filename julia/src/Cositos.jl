@@ -18,7 +18,7 @@ using Base64: base64encode, base64decode
 
 export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     build_comm_open, build_update, build_custom, mimebundle,
-    parse_message, Update, RequestState, Custom,
+    parse_message, Update, RequestState, Custom, Ignored,
     remove_buffers, put_buffers!,
     dump_model, load_model, dump_document, load_document,
     view_identity, with_view_identity,
@@ -304,14 +304,20 @@ struct RequestState end
 struct Custom
     content::Any
 end
+struct Ignored
+    method::Any
+end
 
 Base.:(==)(a::Update, b::Update) = a.state == b.state && a.buffer_paths == b.buffer_paths
 Base.:(==)(a::Custom, b::Custom) = a.content == b.content
+Base.:(==)(a::Ignored, b::Ignored) = a.method == b.method
 
 """
-    parse_message(data) -> Union{Update,RequestState,Custom}
+    parse_message(data) -> Union{Update,RequestState,Custom,Ignored}
 
-Parse an inbound `comm_msg` `data` dict into a typed event. Throws on an unknown method.
+Parse an inbound `comm_msg` `data` dict into a typed event. An unknown or missing `method`
+yields `Ignored` (never throws), matching ipywidgets' forward-compatible dispatch
+(cositos-05i/dow).
 """
 function parse_message(data)
     method = get(data, "method", nothing)
@@ -319,7 +325,7 @@ function parse_message(data)
         return Update(get(data, "state", Dict{String,Any}()), get(data, "buffer_paths", []))
     method == "request_state" && return RequestState()
     method == "custom" && return Custom(get(data, "content", nothing))
-    error("Unrecognized comm message method: $(repr(method))")
+    return Ignored(method)
 end
 
 # ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----

@@ -141,6 +141,7 @@ public static class Core
     public sealed record Update(object? State, object? BufferPaths) : InboundMessage;
     public sealed record RequestState : InboundMessage;
     public sealed record Custom(object? Content) : InboundMessage;
+    public sealed record Ignored(string? Method) : InboundMessage;
 
     public static InboundMessage ParseMessage(Dictionary<string, object?> data)
     {
@@ -152,7 +153,8 @@ public static class Core
                 data.GetValueOrDefault("buffer_paths") ?? new List<object?>()),
             "request_state" => new RequestState(),
             "custom" => new Custom(data.GetValueOrDefault("content")),
-            _ => throw new ArgumentException($"Unrecognized comm message method: {method ?? "null"}"),
+            // Unknown/missing method is ignored, not thrown (forward-compat, cositos-dow).
+            _ => new Ignored(method),
         };
     }
 

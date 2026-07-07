@@ -55,7 +55,10 @@ b64(buffers) = [base64encode(b) for b in buffers]
             "buffer_paths" => [])) == Update(Dict("a" => 1), [])
         @test parse_message(Dict("method" => "request_state")) == RequestState()
         @test parse_message(Dict("method" => "custom", "content" => 42)) == Custom(42)
-        @test_throws ErrorException parse_message(Dict("method" => "bogus"))
+        # Unknown/missing method is ignored, not thrown (forward-compat, cositos-dow).
+        @test parse_message(Dict("method" => "bogus")) == Ignored("bogus")
+        @test parse_message(Dict("method" => "echo_update")) == Ignored("echo_update")
+        @test parse_message(Dict{String,Any}()) == Ignored(nothing)
     end
 
     @testset "mimebundle" begin

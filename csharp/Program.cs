@@ -97,7 +97,9 @@ Check(Core.ParseMessage(Obj(("method", "update"), ("state", Obj(("a", 1L))), ("b
 Check(Core.ParseMessage(Obj(("method", "request_state"))) is Core.RequestState, "parse request_state");
 Check(Core.ParseMessage(Obj(("method", "custom"), ("content", 42L))) is Core.Custom { Content: 42L },
     "parse custom");
-ExpectThrows(() => Core.ParseMessage(Obj(("method", "bogus"))), "parse rejects unknown method");
+Check(Core.ParseMessage(Obj(("method", "bogus"))) is Core.Ignored { Method: "bogus" },
+    "parse ignores unknown method");
+Check(Core.ParseMessage(Obj()) is Core.Ignored { Method: null }, "parse ignores missing method");
 
 // ---- buffer split / merge ----
 {

@@ -58,7 +58,9 @@
          (c/parse-message {"method" "update" "state" {"a" 1} "buffer_paths" []})))
   (is (= {:type :request-state} (c/parse-message {"method" "request_state"})))
   (is (= {:type :custom :content 42} (c/parse-message {"method" "custom" "content" 42})))
-  (is (thrown? clojure.lang.ExceptionInfo (c/parse-message {"method" "bogus"}))))
+  ;; Unknown/missing method is ignored, not thrown (forward-compat, cositos-dow).
+  (is (= {:type :ignored :method "bogus"} (c/parse-message {"method" "bogus"})))
+  (is (= {:type :ignored :method nil} (c/parse-message {}))))
 
 ;; ---- buffer split / merge ----
 
