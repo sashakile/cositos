@@ -5,103 +5,104 @@ Same logical app per scenario, built up to four ways (A = naive peer-to-peer ipy
 - `edges` — declared observe/link dependency edges; `obs` — measured traitlets change-handlers on the tree (wiring density)
 - `storm` — output refreshes (widget updates) triggered by ONE user action
 - `scans` — expensive O(rows) recomputations for that action (cost the refresh count hides); `created` — widgets built per action (reconciliation cost)
+- `t` — median wall-clock of ONE user action over fresh rebuilds (only with `--timing`); latency backing for the cost proxies
 - `links_kept` — cross-part LinkModels that survive into the serialized document
 
 ## crossfilter — scale = small  (dims=4 cats=4 views=6 depth=3 shared=2)
 
 ```
-A      | widgets=33    depth=5  shared=2   | edges=42    obs=111   HAS CYCLE | storm=30    scans=30   created=0     | 87 models, links_kept=0
-B      | widgets=27    depth=5  shared=2   | edges=12    obs=49    acyclic   | storm=6     scans=1    created=0     | 66 models, links_kept=0
-C      | widgets=33    depth=5  shared=2   | edges=30    obs=85    acyclic   | storm=6     scans=6    created=0     | 84 models, links_kept=0
-D      | widgets=33    depth=5  shared=2   | edges=10    obs=85    acyclic   | storm=6     scans=1    created=0     | 84 models, links_kept=0
+A      | widgets=33    depth=5  shared=2   | edges=42    obs=111   HAS CYCLE | storm=30    scans=30   created=0     t=3.252ms | 87 models, links_kept=0
+B      | widgets=27    depth=5  shared=2   | edges=12    obs=49    acyclic   | storm=6     scans=1    created=0     t=0.105ms | 66 models, links_kept=0
+C      | widgets=33    depth=5  shared=2   | edges=30    obs=85    acyclic   | storm=6     scans=6    created=0     t=0.544ms | 84 models, links_kept=0
+D      | widgets=33    depth=5  shared=2   | edges=10    obs=85    acyclic   | storm=6     scans=1    created=0     t=0.108ms | 84 models, links_kept=0
 ```
 
 ## crossfilter — scale = complex  (dims=8 cats=6 views=24 depth=6 shared=6)
 
 ```
-A      | widgets=119   depth=7  shared=6   | edges=264   obs=492   HAS CYCLE | storm=216   scans=216  created=0     | 303 models, links_kept=0
-B      | widgets=95    depth=7  shared=6   | edges=34    obs=140   acyclic   | storm=24    scans=1    created=0     | 228 models, links_kept=0
-C      | widgets=119   depth=7  shared=6   | edges=216   obs=284   acyclic   | storm=24    scans=24   created=0     | 300 models, links_kept=0
-D      | widgets=119   depth=7  shared=6   | edges=32    obs=284   acyclic   | storm=24    scans=1    created=0     | 300 models, links_kept=0
+A      | widgets=119   depth=7  shared=6   | edges=264   obs=492   HAS CYCLE | storm=216   scans=216  created=0     t=88.383ms | 303 models, links_kept=0
+B      | widgets=95    depth=7  shared=6   | edges=34    obs=140   acyclic   | storm=24    scans=1    created=0     t=0.409ms | 228 models, links_kept=0
+C      | widgets=119   depth=7  shared=6   | edges=216   obs=284   acyclic   | storm=24    scans=24   created=0     t=8.257ms | 300 models, links_kept=0
+D      | widgets=119   depth=7  shared=6   | edges=32    obs=284   acyclic   | storm=24    scans=1    created=0     t=0.425ms | 300 models, links_kept=0
 ```
 
 ## crossfilter — scale = big  (dims=16 cats=8 views=100 depth=8 shared=20)
 
 ```
-A      | widgets=465   depth=9  shared=20  | edges=1900  obs=2750  HAS CYCLE | storm=1700  scans=1700 created=0     | 1169 models, links_kept=0
-B      | widgets=365   depth=9  shared=20  | edges=118   obs=466   acyclic   | storm=100   scans=1    created=0     | 866 models, links_kept=0
-C      | widgets=465   depth=9  shared=20  | edges=1700  obs=1066  acyclic   | storm=100   scans=100  created=0     | 1166 models, links_kept=0
-D      | widgets=465   depth=9  shared=20  | edges=116   obs=1066  acyclic   | storm=100   scans=1    created=0     | 1166 models, links_kept=0
+A      | widgets=465   depth=9  shared=20  | edges=1900  obs=2750  HAS CYCLE | storm=1700  scans=1700 created=0     t=2738.222ms | 1169 models, links_kept=0
+B      | widgets=365   depth=9  shared=20  | edges=118   obs=466   acyclic   | storm=100   scans=1    created=0     t=1.703ms | 866 models, links_kept=0
+C      | widgets=465   depth=9  shared=20  | edges=1700  obs=1066  acyclic   | storm=100   scans=100  created=0     t=141.574ms | 1166 models, links_kept=0
+D      | widgets=465   depth=9  shared=20  | edges=116   obs=1066  acyclic   | storm=100   scans=1    created=0     t=1.786ms | 1166 models, links_kept=0
 ```
 
 ## masterdetail — scale = small  (items=10 details=6 masters=3 depth=3 shared=2)
 
 ```
-A      | widgets=26    depth=5  shared=2   | edges=12    obs=52    HAS CYCLE | storm=6     scans=0    created=0     | 63 models, links_kept=0
-B      | widgets=26    depth=5  shared=2   | edges=11    obs=43    acyclic   | storm=6     scans=0    created=0     | 63 models, links_kept=0
-C      | widgets=26    depth=5  shared=2   | edges=13    obs=43    acyclic   | storm=7     scans=0    created=0     | 63 models, links_kept=0
+A      | widgets=26    depth=5  shared=2   | edges=12    obs=52    HAS CYCLE | storm=6     scans=0    created=0     t=0.077ms | 63 models, links_kept=0
+B      | widgets=26    depth=5  shared=2   | edges=11    obs=43    acyclic   | storm=6     scans=0    created=0     t=0.057ms | 63 models, links_kept=0
+C      | widgets=26    depth=5  shared=2   | edges=13    obs=43    acyclic   | storm=7     scans=0    created=0     t=0.067ms | 63 models, links_kept=0
 ```
 
 ## masterdetail — scale = complex  (items=50 details=30 masters=4 depth=6 shared=6)
 
 ```
-A      | widgets=103   depth=7  shared=6   | edges=42    obs=166   HAS CYCLE | storm=30    scans=0    created=0     | 246 models, links_kept=0
-B      | widgets=103   depth=7  shared=6   | edges=36    obs=128   acyclic   | storm=30    scans=0    created=0     | 246 models, links_kept=0
-C      | widgets=103   depth=7  shared=6   | edges=61    obs=128   acyclic   | storm=31    scans=0    created=0     | 246 models, links_kept=0
+A      | widgets=103   depth=7  shared=6   | edges=42    obs=166   HAS CYCLE | storm=30    scans=0    created=0     t=0.213ms | 246 models, links_kept=0
+B      | widgets=103   depth=7  shared=6   | edges=36    obs=128   acyclic   | storm=30    scans=0    created=0     t=0.139ms | 246 models, links_kept=0
+C      | widgets=103   depth=7  shared=6   | edges=61    obs=128   acyclic   | storm=31    scans=0    created=0     t=0.175ms | 246 models, links_kept=0
 ```
 
 ## masterdetail — scale = big  (items=200 details=150 masters=6 depth=8 shared=20)
 
 ```
-A      | widgets=499   depth=10 shared=20  | edges=180   obs=746   HAS CYCLE | storm=150   scans=0    created=0     | 1174 models, links_kept=0
-B      | widgets=499   depth=10 shared=20  | edges=158   obs=572   acyclic   | storm=150   scans=0    created=0     | 1174 models, links_kept=0
-C      | widgets=499   depth=10 shared=20  | edges=301   obs=572   acyclic   | storm=151   scans=0    created=0     | 1174 models, links_kept=0
+A      | widgets=499   depth=10 shared=20  | edges=180   obs=746   HAS CYCLE | storm=150   scans=0    created=0     t=0.767ms | 1174 models, links_kept=0
+B      | widgets=499   depth=10 shared=20  | edges=158   obs=572   acyclic   | storm=150   scans=0    created=0     t=0.486ms | 1174 models, links_kept=0
+C      | widgets=499   depth=10 shared=20  | edges=301   obs=572   acyclic   | storm=151   scans=0    created=0     t=0.695ms | 1174 models, links_kept=0
 ```
 
 ## form — scale = small  (fields=6 chain=3 depth=3 shared=2)
 
 ```
-A      | widgets=34    depth=5  shared=2   | edges=23    obs=59    HAS CYCLE | storm=6     scans=0    created=0     | 87 models, links_kept=0
-B      | widgets=34    depth=5  shared=2   | edges=19    obs=42    acyclic   | storm=8     scans=0    created=0     | 87 models, links_kept=0
-C      | widgets=34    depth=5  shared=2   | edges=28    obs=42    acyclic   | storm=6     scans=0    created=0     | 87 models, links_kept=0
+A      | widgets=34    depth=5  shared=2   | edges=23    obs=59    HAS CYCLE | storm=6     scans=0    created=0     t=0.042ms | 87 models, links_kept=0
+B      | widgets=34    depth=5  shared=2   | edges=19    obs=42    acyclic   | storm=8     scans=0    created=0     t=0.037ms | 87 models, links_kept=0
+C      | widgets=34    depth=5  shared=2   | edges=28    obs=42    acyclic   | storm=6     scans=0    created=0     t=0.038ms | 87 models, links_kept=0
 ```
 
 ## form — scale = complex  (fields=30 chain=8 depth=6 shared=6)
 
 ```
-A      | widgets=139   depth=7  shared=6   | edges=105   obs=249   HAS CYCLE | storm=11    scans=0    created=0     | 354 models, links_kept=0
-B      | widgets=139   depth=7  shared=6   | edges=72    obs=174   acyclic   | storm=25    scans=0    created=0     | 354 models, links_kept=0
-C      | widgets=139   depth=7  shared=6   | edges=115   obs=174   acyclic   | storm=11    scans=0    created=0     | 354 models, links_kept=0
+A      | widgets=139   depth=7  shared=6   | edges=105   obs=249   HAS CYCLE | storm=11    scans=0    created=0     t=0.073ms | 354 models, links_kept=0
+B      | widgets=139   depth=7  shared=6   | edges=72    obs=174   acyclic   | storm=25    scans=0    created=0     t=0.064ms | 354 models, links_kept=0
+C      | widgets=139   depth=7  shared=6   | edges=115   obs=174   acyclic   | storm=11    scans=0    created=0     t=0.068ms | 354 models, links_kept=0
 ```
 
 ## form — scale = big  (fields=128 chain=20 depth=8 shared=20)
 
 ```
-A      | widgets=555   depth=9  shared=20  | edges=423   obs=999   HAS CYCLE | storm=23    scans=0    created=0     | 1408 models, links_kept=0
-B      | widgets=555   depth=9  shared=20  | edges=280   obs=704   acyclic   | storm=86    scans=0    created=0     | 1408 models, links_kept=0
-C      | widgets=555   depth=9  shared=20  | edges=445   obs=704   acyclic   | storm=23    scans=0    created=0     | 1408 models, links_kept=0
+A      | widgets=555   depth=9  shared=20  | edges=423   obs=999   HAS CYCLE | storm=23    scans=0    created=0     t=0.176ms | 1408 models, links_kept=0
+B      | widgets=555   depth=9  shared=20  | edges=280   obs=704   acyclic   | storm=86    scans=0    created=0     t=0.139ms | 1408 models, links_kept=0
+C      | widgets=555   depth=9  shared=20  | edges=445   obs=704   acyclic   | storm=23    scans=0    created=0     t=0.155ms | 1408 models, links_kept=0
 ```
 
 ## dynamic — scale = small  (rows=5 churn=3 depth=3 shared=2)
 
 ```
-A      | widgets=20    depth=3  shared=2   | edges=8     obs=25    acyclic   | storm=1     scans=0    created=9     | 77 models, links_kept=0
-B      | widgets=20    depth=3  shared=2   | edges=7     obs=20    acyclic   | storm=8     scans=0    created=24    | 117 models, links_kept=0
-C      | widgets=20    depth=3  shared=2   | edges=9     obs=25    acyclic   | storm=1     scans=0    created=9     | 77 models, links_kept=0
+A      | widgets=20    depth=3  shared=2   | edges=8     obs=25    acyclic   | storm=1     scans=0    created=9     t=0.768ms | 77 models, links_kept=0
+B      | widgets=20    depth=3  shared=2   | edges=7     obs=20    acyclic   | storm=8     scans=0    created=24    t=2.010ms | 117 models, links_kept=0
+C      | widgets=20    depth=3  shared=2   | edges=9     obs=25    acyclic   | storm=1     scans=0    created=9     t=0.777ms | 77 models, links_kept=0
 ```
 
 ## dynamic — scale = complex  (rows=30 churn=10 depth=6 shared=6)
 
 ```
-A      | widgets=99    depth=3  shared=6   | edges=40    obs=129   acyclic   | storm=1     scans=0    created=30    | 345 models, links_kept=0
-B      | widgets=99    depth=3  shared=6   | edges=32    obs=99    acyclic   | storm=40    scans=0    created=120   | 585 models, links_kept=0
-C      | widgets=99    depth=3  shared=6   | edges=41    obs=129   acyclic   | storm=1     scans=0    created=30    | 345 models, links_kept=0
+A      | widgets=99    depth=3  shared=6   | edges=40    obs=129   acyclic   | storm=1     scans=0    created=30    t=2.544ms | 345 models, links_kept=0
+B      | widgets=99    depth=3  shared=6   | edges=32    obs=99    acyclic   | storm=40    scans=0    created=120   t=10.270ms | 585 models, links_kept=0
+C      | widgets=99    depth=3  shared=6   | edges=41    obs=129   acyclic   | storm=1     scans=0    created=30    t=2.566ms | 345 models, links_kept=0
 ```
 
 ## dynamic — scale = big  (rows=100 churn=20 depth=8 shared=20)
 
 ```
-A      | widgets=323   depth=3  shared=20  | edges=120   obs=423   acyclic   | storm=1     scans=0    created=60    | 1027 models, links_kept=0
-B      | widgets=323   depth=3  shared=20  | edges=102   obs=323   acyclic   | storm=120   scans=0    created=360   | 1827 models, links_kept=0
-C      | widgets=323   depth=3  shared=20  | edges=121   obs=423   acyclic   | storm=1     scans=0    created=60    | 1027 models, links_kept=0
+A      | widgets=323   depth=3  shared=20  | edges=120   obs=423   acyclic   | storm=1     scans=0    created=60    t=5.089ms | 1027 models, links_kept=0
+B      | widgets=323   depth=3  shared=20  | edges=102   obs=323   acyclic   | storm=120   scans=0    created=360   t=30.270ms | 1827 models, links_kept=0
+C      | widgets=323   depth=3  shared=20  | edges=121   obs=423   acyclic   | storm=1     scans=0    created=60    t=5.190ms | 1027 models, links_kept=0
 ```

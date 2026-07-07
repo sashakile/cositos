@@ -25,11 +25,34 @@ same in both — only the **wiring** differs — so serialization is apples-to-a
 # env with ipywidgets + cositos (extras: oracle)
 python examples/benchmarks/run.py                 # all scenarios, all scales
 python examples/benchmarks/run.py crossfilter big
+python examples/benchmarks/run.py all all --timing # + wall-clock per action (slower)
 ```
 
 Each `(scenario, variant, scale)` runs in a **fresh subprocess**: ipywidgets keeps a
 global widget registry that cross-contaminates sequential harvests otherwise. Output goes
-to `RESULTS.md`.
+to `RESULTS.md`. `--timing` adds a median wall-clock per user action (over fresh rebuilds),
+so the cost story rests on latency, not just counts.
+
+## Is variant A a fair baseline?
+
+Variant A is the **idiomatic** ipywidgets style, not an engineered strawman: it wires
+widgets to each other with `observe`, `link`, and `jslink` — the very APIs ipywidgets ships
+and its tutorials teach for keeping widgets in sync. The *same* idiom is applied unchanged
+in every scenario; only the app **topology** differs. That is what makes the comparison
+fair, and the results prove the harness is not rigged to always favour B:
+
+- **master-detail (fan-out): A ≈ B** — nearly identical `storm` and sub-millisecond latency
+  in both. Peer wiring is *fine* here.
+- **form (derived chain): A is actually cheaper on count** — incremental `observe`
+  recomputes only the affected subgraph (`storm=23`) versus MVU's whole-projection rebuild
+  (`storm=86`); latency is tiny for both.
+- **cross-filter (bidirectional/cyclic): A explodes** — and only here.
+
+So A wins, ties, or loses purely as a function of topology. The one honest caveat:
+cross-filter A wires a *fully-connected* cross-filter (every view cross-writes every
+dimension). That is the realistic shape of a cross-filter dashboard — and the finding is
+precisely that this common, idiomatically-wired pattern is the hazard, not that the wiring
+was contrived to fail.
 
 ## Files
 
@@ -62,6 +85,7 @@ user action and returns `(recomputes, needed_guard)`.
 | `storm` | output refreshes (widget updates) triggered by **one** user action — one unit across variants |
 | `scans` | expensive O(rows) recomputations for that action; a cost proxy the refresh count hides |
 | `created` | widgets constructed for that action — reconciliation cost (dominates dynamic structure) |
+| `t` | median wall-clock of **one** user action over fresh rebuilds (only with `--timing`) — latency backing for the `scans`/`created` proxies |
 | `models` | widgets in the serialized `cositos` document (`ipywidgets.embed.embed_data` → `cositos.embed_html`) |
 | `links_kept` | cross-part `LinkModel`s that survive into the serialized document |
 
@@ -72,15 +96,19 @@ views):
 
 - wiring: A = 1900 edges (≈ views×dims) vs B = 118 (≈ views) — super-linear vs linear;
 - one click: A = 1700 refreshes vs B = 100 (a single projection pass);
+- **wall-clock: A ≈ 2.7 s per click vs B ≈ 1.7 ms** (`--timing`, big) — a ~1600× latency
+  gap, so "explodes" is literal, not rhetorical; at medium it is already A ≈ 88 ms vs
+  B ≈ 0.4 ms;
 - A's data-flow graph is **always cyclic**, B's never is.
 
 **The `scans` metric corrects a naive reading of C.** On refresh *count* C matches B
 (100 = 100), but C runs the O(rows) scan **once per view** (`scans=100`) while B scans
 **once** (`scans=1`): the count hid V-to-1 redundant work. Variant **D** (shared memoized
 `Computed`) scans **once** (`scans=1`), truly tying B. And A scans **1700** times — every
-cascaded recompute rescans, so it is catastrophic on cost, not just count. Lesson: fine-
-grained reactivity needs *shared* derivations to match a well-written MVU render; it does
-not get that for free.
+cascaded recompute rescans, so it is catastrophic on cost, not just count. Latency confirms
+the ordering directly: at `big`, D ≈ 1.8 ms ≈ B ≈ 1.7 ms ≪ C ≈ 142 ms ≪ A ≈ 2.7 s. Lesson:
+fine-grained reactivity needs *shared* derivations to match a well-written MVU render; it
+does not get that for free.
 
 **Master-detail (pure fan-out) is benign — an important contrast.** A and B come out nearly
 identical (`storm` equal; `data_edges` differ only by the master clique). Fan-out alone
@@ -119,10 +147,11 @@ whole-model re-render.
 (`dynamic` big): A and C construct only the new rows (`created=60`, `storm=1`), but B
 re-renders the children list from the model, **rebuilding every row** (`created=360`,
 `storm=120`) — and the orphaned widgets inflate its serialized document (1827 vs 1027
-models). MVU's whole-projection rebuild is fine for value changes but pays O(N)
-reconciliation cost for structural ones (the reason React has keys/a vdom). Incremental and
-reactive styles stay O(churn). Note A here is *acyclic* — pure fan-in, no cross-writes —
-confirming again that cycles, not naivety per se, are the hazard.
+models). Latency makes the reconciliation cost concrete: B ≈ 30 ms vs A/C ≈ 5 ms (~6×).
+MVU's whole-projection rebuild is fine for value changes but pays O(N) reconciliation cost
+for structural ones (the reason React has keys/a vdom). Incremental and reactive styles
+stay O(churn). Note A here is *acyclic* — pure fan-in, no cross-writes — confirming again
+that cycles, not naivety per se, are the hazard.
 
 ## Takeaway
 

@@ -23,10 +23,12 @@ HERE = Path(__file__).parent
 SCENARIOS = ["crossfilter", "masterdetail", "form", "dynamic"]
 
 
-def _measure_isolated(scenario: str, variant: str, scale: str) -> benchlib.Metrics:
+def _measure_isolated(scenario: str, variant: str, scale: str, timing: int = 0) -> benchlib.Metrics:
     out = subprocess.run(
-        [sys.executable, __file__, "--worker", scenario, variant, scale],
-        capture_output=True, text=True, cwd=HERE,
+        [sys.executable, __file__, "--worker", scenario, variant, scale, str(timing)],
+        capture_output=True,
+        text=True,
+        cwd=HERE,
     )
     picks = [ln for ln in out.stdout.splitlines() if ln.startswith("{")]
     if not picks:
@@ -37,12 +39,15 @@ def _measure_isolated(scenario: str, variant: str, scale: str) -> benchlib.Metri
 def main() -> int:
     if len(sys.argv) >= 5 and sys.argv[1] == "--worker":
         _, _, scenario, variant, scale = sys.argv[:5]
+        timing = int(sys.argv[5]) if len(sys.argv) > 5 else 0
         module = importlib.import_module(scenario)
-        print(json.dumps(asdict(benchlib.measure(scenario, module, variant, scale))))
+        print(json.dumps(asdict(benchlib.measure(scenario, module, variant, scale, timing))))
         return 0
 
-    arg_scenario = sys.argv[1] if len(sys.argv) > 1 else "all"
-    arg_scale = sys.argv[2] if len(sys.argv) > 2 else "all"
+    argv = [a for a in sys.argv[1:] if a != "--timing"]
+    timing = benchlib.TIMING_REPEATS if "--timing" in sys.argv else 0
+    arg_scenario = argv[0] if len(argv) > 0 else "all"
+    arg_scale = argv[1] if len(argv) > 1 else "all"
     scenarios = SCENARIOS if arg_scenario in ("all", None) else [arg_scenario]
 
     lines = [
@@ -57,6 +62,8 @@ def main() -> int:
         "- `storm` — output refreshes (widget updates) triggered by ONE user action",
         "- `scans` — expensive O(rows) recomputations for that action (cost the refresh "
         "count hides); `created` — widgets built per action (reconciliation cost)",
+        "- `t` — median wall-clock of ONE user action over fresh rebuilds (only with "
+        "`--timing`); latency backing for the cost proxies",
         "- `links_kept` — cross-part LinkModels that survive into the serialized document",
     ]
     print("\n".join(lines))
@@ -68,7 +75,7 @@ def main() -> int:
             print("\n" + header)
             lines += ["", header, "", "```"]
             for variant in getattr(module, "VARIANTS", ("A", "B")):
-                m = _measure_isolated(scenario, variant, scale)
+                m = _measure_isolated(scenario, variant, scale, timing)
                 print("  " + m.row())
                 lines.append(m.row())
             lines.append("```")

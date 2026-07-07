@@ -17,8 +17,13 @@ and whether the tree survives ``cositos`` serialize -> static embed.
 
 from __future__ import annotations
 
+import statistics
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
+
+#: Default fresh-rebuild repeats when timing is requested (median resists scheduler noise).
+TIMING_REPEATS = 7
 
 
 class Scenario(Protocol):
@@ -45,16 +50,18 @@ class Metrics:
     serialize_ok: bool
     n_models: int
     n_link_models: int  # LinkModels that survived into the serialized document
+    action_ms: float | None = None  # median wall-clock of one_action() (None = not timed)
 
     def row(self) -> str:
         cyc = "acyclic" if self.data_flow_acyclic else "HAS CYCLE"
         guard = " (guarded)" if self.needed_reentrancy_guard else ""
         ser = f"{self.n_models} models" if self.serialize_ok else "FAILED"
+        timing = "" if self.action_ms is None else f" t={self.action_ms:.3f}ms"
         return (
             f"{self.variant:<6} | widgets={self.n_widgets:<5} depth={self.max_depth:<2} "
             f"shared={self.n_shared:<3} | edges={self.n_data_edges:<5} obs={self.observers:<5} "
             f"{cyc:<9} | storm={self.recomputes_per_action:<5}{guard} "
-            f"scans={self.scans_per_action:<4} created={self.created_per_action:<5} | "
+            f"scans={self.scans_per_action:<4} created={self.created_per_action:<5}{timing} | "
             f"{ser}, links_kept={self.n_link_models}"
         )
 
@@ -158,20 +165,54 @@ def serialize_check(root: Any) -> tuple[bool, int, int]:
         return False, 0, 0
 
 
-def measure(scenario_name: str, module: Any, variant: str, scale: str) -> Metrics:
+def time_action(module: Any, variant: str, scale: str, repeats: int) -> float:
+    """Median wall-clock (ms) of one ``one_action()``, each on a **fresh** build.
+
+    Actions are not idempotent (crossfilter re-sets the same value → no re-fire; dynamic
+    appends rows), so a repeated action on one build would not represent "one action".
+    We therefore rebuild before every timed action and exclude build time from the clock,
+    isolating the latency of the user action itself. The median resists scheduler noise.
+    """
+    samples: list[float] = []
+    for _ in range(repeats):
+        _root, _edges, one_action = module.build(variant, scale)
+        start = time.perf_counter()
+        one_action()
+        samples.append((time.perf_counter() - start) * 1000.0)
+    return statistics.median(samples)
+
+
+def measure(
+    scenario_name: str, module: Any, variant: str, scale: str, timing_repeats: int = 0
+) -> Metrics:
     """Build one (scenario, variant, scale) and compute its metrics. Run in a subprocess:
-    ipywidgets' global widget registry cross-contaminates sequential builds otherwise."""
+    ipywidgets' global widget registry cross-contaminates sequential builds otherwise.
+
+    When ``timing_repeats > 0`` also records ``action_ms`` (median wall-clock of the user
+    action over that many fresh rebuilds) so cost claims rest on latency, not just counts."""
     root, edges, one_action = module.build(variant, scale)
     n_widgets, max_depth, n_shared = containment_stats(root)
     observers = count_observers(root)
     storm, needed_guard, scans, created = one_action()
     edges = list(dict.fromkeys(edges))  # dedupe (tracked reactive reads re-record edges)
     ok, n_models, n_links = serialize_check(root)
+    action_ms = time_action(module, variant, scale, timing_repeats) if timing_repeats else None
     return Metrics(
-        scenario=scenario_name, variant=variant, scale=scale, n_widgets=n_widgets,
-        max_depth=max_depth, n_shared=n_shared, n_data_edges=len(edges),
-        observers=observers, data_flow_acyclic=is_acyclic(edges),
-        recomputes_per_action=storm, scans_per_action=scans, created_per_action=created,
-        needed_reentrancy_guard=needed_guard, serialize_ok=ok, n_models=n_models,
+        scenario=scenario_name,
+        variant=variant,
+        scale=scale,
+        n_widgets=n_widgets,
+        max_depth=max_depth,
+        n_shared=n_shared,
+        n_data_edges=len(edges),
+        observers=observers,
+        data_flow_acyclic=is_acyclic(edges),
+        recomputes_per_action=storm,
+        scans_per_action=scans,
+        created_per_action=created,
+        needed_reentrancy_guard=needed_guard,
+        serialize_ok=ok,
+        n_models=n_models,
         n_link_models=n_links,
+        action_ms=action_ms,
     )

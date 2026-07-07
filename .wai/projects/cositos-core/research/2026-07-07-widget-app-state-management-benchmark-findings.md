@@ -72,9 +72,18 @@ acyclic, serializable, AND cheap.
 - `data_edges` and cyclicity come from the *declared* edge list, but a *measured* `obs`
   (real traitlets change-handlers) now corroborates wiring density (CORR-002 addressed for
   magnitude; cyclicity remains a model property).
-- Variant A is engineered to expose the tangle (write-back cycles + link clique) — a
-  plausible-worst-case, not a measured-typical, baseline. *(open)*
-- `scans`/`created` are cost proxies; no wall-clock timing was taken. *(open)*
+- Variant A is the **idiomatic** ipywidgets style (`observe`/`link`/`jslink`), applied
+  unchanged across every scenario; the harness is not rigged, because A is benign in
+  master-detail (fan-out, A≈B) and even cheaper than B in the form (incremental
+  `observe`), and explodes *only* in the cyclic cross-filter topology. The one caveat:
+  cross-filter A is fully-connected (every view cross-writes every dimension) — the
+  realistic shape of a cross-filter dashboard, and the point is that this common
+  idiomatic pattern is the hazard, not a contrived one. (BASE-001 addressed — see
+  `examples/benchmarks/README.md` “Is variant A a fair baseline?”.)
+- Wall-clock latency now backs the `scans`/`created` proxies (`run.py --timing`, median
+  over fresh rebuilds): crossfilter big **A ≈ 2.7 s vs B ≈ 1.7 ms** per click (~1600×),
+  D ≈ 1.8 ms ≈ B ≪ C ≈ 142 ms ≪ A; dynamic big **B ≈ 30 ms vs A/C ≈ 5 ms** (rebuild cost);
+  master-detail and form are sub-millisecond in all variants (TIME-001 addressed).
 - Dynamic structure is now covered by the `dynamic` scenario and it flips the MVU verdict
   (EDGE-001 addressed).
 - `reactive.py` is now glitch-free (mark-and-pull, memoized) with a cycle guard, proven by
