@@ -50,6 +50,11 @@ PROBE_PROGRAMS: dict[str, str] = {
         '    _probe_comm.send({"echo": True})\n'
         "_probe_comm.on_msg(_probe_on)\n"
     ),
+    "ir": (
+        'comm <- IRkernel:::Comm(target_name = "cositos.probe", id = "cositos-probe-1")\n'
+        "comm$on_msg(function(msg) comm$send(list(echo = TRUE)))\n"
+        "comm$open(msg = list(hello = 1))\n"
+    ),
 }
 
 

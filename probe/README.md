@@ -78,7 +78,7 @@ venv's `jupyter_client` discovers them).
 | Kernel | Installed / launches | Tier | Notes |
 |--------|----------------------|------|-------|
 | `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
-| `ir` (IRkernel) | ✅ | *unverified* | needs an R probe program (IRkernel comm API) |
+| `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
 | `.net-csharp` (.NET Interactive) | ✅ | *unverified* | needs a C# probe program; comm mapping is the least certain |
 | `cositos-clj` (clojupyter) | ✅ | *unverified* | clojupyter ships comm *message specs* but no user-facing comm API — likely Tier 3 |
 
