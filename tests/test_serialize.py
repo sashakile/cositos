@@ -54,6 +54,18 @@ def test_round_trip_float32_array_by_raw_bytes() -> None:
     assert _raw(buffers2[0]) == _raw(memoryview(arr))
 
 
+def test_encode_non_contiguous_memoryview() -> None:
+    # Regression (cositos-cnq): a strided/sliced memoryview (common from numpy views) is
+    # non-contiguous, so memoryview.cast('B') raises. Encoding must still succeed by
+    # copying to contiguous bytes in C order.
+    strided = memoryview(bytearray(range(16)))[::2]  # non-contiguous view
+    assert not strided.contiguous
+    expected = strided.tobytes()  # bytes 0,2,4,...,14
+    _, entries = encode_buffers_base64(({}, [["d"]], [strided]))
+    _, _, buffers2 = decode_buffers_base64(({}, entries))
+    assert buffers2[0] == expected
+
+
 def test_no_buffers_round_trips() -> None:
     split = ({"a": 1, "b": [1, 2]}, [], [])
     stripped2, paths2, buffers2 = decode_buffers_base64(encode_buffers_base64(split))

@@ -80,8 +80,14 @@ def _b64decode(entry: dict[str, Any]) -> bytes:
 
 
 def _as_bytes(buf: Any) -> bytes:
-    # Cast to a flat byte view so a typed memoryview serialises by its raw bytes.
-    return memoryview(buf).cast("B").tobytes()
+    # Cast to a flat byte view so a typed memoryview serialises by its raw bytes. A
+    # non-contiguous view (a strided/sliced numpy view) can't be cast, so fall back to
+    # tobytes(), which copies in C order and yields the same raw bytes (cositos-cnq).
+    mv = memoryview(buf)
+    try:
+        return mv.cast("B").tobytes()
+    except TypeError:
+        return mv.tobytes()
 
 
 def dump_model(
