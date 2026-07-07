@@ -11,6 +11,7 @@ from cositos.protocol import (
     parse_message,
 )
 from cositos.serialize import (
+    check_references,
     dump_document,
     dump_model,
     load_document,
@@ -25,6 +26,7 @@ __all__ = [
     "build_comm_open",
     "build_custom",
     "build_update",
+    "check_references",
     "dump_document",
     "dump_model",
     "embed_html",

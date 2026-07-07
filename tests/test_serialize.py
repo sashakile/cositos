@@ -8,6 +8,7 @@ from hypothesis import strategies as st
 from cositos.serialize import (
     Document,
     ModelEntry,
+    check_references,
     decode_buffers_base64,
     dump_document,
     dump_model,
@@ -82,6 +83,37 @@ def test_decode_rejects_unknown_encoding() -> None:
         assert "hex" in str(e)
     else:
         raise AssertionError("expected ValueError for unsupported encoding")
+
+
+def test_check_references_raises_on_dangling_ref() -> None:
+    # Regression (cositos-qzk): a reference to a model absent from the document must be
+    # caught, not silently exported into a broken render.
+    doc = dump_document([("box", {"_esm": "e", "children": ["IPY_MODEL_ghost"]})])
+    try:
+        check_references(doc)
+    except ValueError as e:
+        assert "ghost" in str(e) and "box" in str(e)
+    else:
+        raise AssertionError("expected ValueError for a dangling IPY_MODEL reference")
+
+
+def test_check_references_passes_for_resolved_and_shared_refs() -> None:
+    # Present refs, a nested ref, and a diamond (two holders -> one child) all resolve.
+    doc = dump_document(
+        [
+            ("box", {"children": ["IPY_MODEL_slider", "IPY_MODEL_label"]}),
+            ("panel", {"body": {"main": "IPY_MODEL_slider"}}),
+            ("slider", {"value": 1}),
+            ("label", {"text": "hi"}),
+        ]
+    )
+    assert check_references(doc) is None  # no raise
+
+
+def test_check_references_allows_reference_cycle() -> None:
+    # Mutual references are integrity-valid (both ids present); only missing ids are errors.
+    doc = dump_document([("a", {"peer": "IPY_MODEL_b"}), ("b", {"peer": "IPY_MODEL_a"})])
+    assert check_references(doc) is None
 
 
 def test_dump_model_defaults_to_anywidget_identity() -> None:

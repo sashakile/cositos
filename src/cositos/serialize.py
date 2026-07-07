@@ -13,6 +13,7 @@ flat byte view before encoding — matching ipywidgets ``_buffer_list_equal``.
 from __future__ import annotations
 
 import base64
+import re
 from collections.abc import Iterable
 from typing import Any, TypeAlias
 
@@ -158,3 +159,49 @@ def load_document(doc: Document) -> list[ModelEntry]:
     id-keyed pass — reference cycles are safe (no recursive inlining).
     """
     return [load_model(item) for item in doc["state"].items()]
+
+
+#: A widget reference is a string value of exactly ``"IPY_MODEL_<model_id>"``.
+_MODEL_REF = re.compile(r"^IPY_MODEL_(.+)$")
+
+
+def _referenced_ids(value: Any) -> Iterable[str]:
+    """Yield model ids referenced by ``"IPY_MODEL_<id>"`` strings anywhere in ``value``."""
+    if isinstance(value, str):
+        match = _MODEL_REF.match(value)
+        if match:
+            yield match.group(1)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _referenced_ids(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _referenced_ids(item)
+
+
+def check_references(doc: Document) -> None:
+    """Validate that every ``"IPY_MODEL_<id>"`` reference points at a model in ``doc``.
+
+    A dangling reference (a typo'd or dropped id) is silently exported otherwise, and the
+    browser html-manager then fails to resolve the child — a partially broken render with
+    no build-time signal (cositos-qzk). Reference cycles and shared/diamond references are
+    integrity-valid; only *missing* ids are errors.
+
+    Raises
+    ------
+    ValueError
+        Naming each holder model and the missing ids it references.
+    """
+    present = set(doc.get("state", {}))
+    dangling: dict[str, list[str]] = {}
+    for model_id, record in doc.get("state", {}).items():
+        missing = sorted(
+            {rid for rid in _referenced_ids(record.get("state", {})) if rid not in present}
+        )
+        if missing:
+            dangling[model_id] = missing
+    if dangling:
+        detail = "; ".join(
+            f"{holder} -> {', '.join(ids)}" for holder, ids in sorted(dangling.items())
+        )
+        raise ValueError(f"dangling IPY_MODEL references (missing models): {detail}")
