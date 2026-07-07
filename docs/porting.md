@@ -40,7 +40,9 @@ Implement, matching `fixtures/*.json` byte-for-byte (modulo comm_id and buffer e
   version), strip buffers, `metadata = {"version": "2.1.0"}`.
 - `build_update(state) -> (data, buffers)` — `{method:"update", state, buffer_paths}`.
 - `build_custom(content)` — `{method:"custom", content}`.
-- `parse_message(data)` — dispatch on `method`: `update` | `request_state` | `custom`.
+- `parse_message(data)` — dispatch on `method`: `update` | `request_state` | `custom`;
+  an unknown or missing `method` is *ignored* (return a benign sentinel, never raise) so a
+  newer frontend's messages stay forward-compatible.
 - `remove_buffers` / `put_buffers` — protocol v2 nested-buffer rules: a binary value at
   a dict key is *removed* and its key path recorded; at a list index it becomes `null`.
 
@@ -81,4 +83,4 @@ reference also property-tests it).
 
 - Wire protocol: <https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md>
 - Python reference: `src/cositos/` in this repo.
-- Design rationale: `.wai/projects/cositos-core/design/`.
+- Design rationale: `.wai/projects/cositos-core/designs/`.

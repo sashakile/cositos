@@ -113,10 +113,12 @@ Pure message shaping and parsing — the language-neutral heart of the library. 
 | `build_comm_open` | `build_comm_open(state) -> tuple[dict, list, dict]` | Build the `comm_open` payload (data, buffers, metadata). |
 | `build_update` | `build_update(state) -> tuple[dict, list]` | Build an `update` (`comm_msg`) payload. |
 | `build_custom` | `build_custom(content) -> dict` | Build a `custom` message payload. |
-| `parse_message` | `parse_message(data) -> Update \| RequestState \| Custom` | Parse an inbound `comm_msg` into a typed event. |
+| `parse_message` | `parse_message(data)` → `Update` \| `RequestState` \| `Custom` \| `Ignored` | Parse an inbound `comm_msg` into a typed event. |
 
-`parse_message` returns one of three typed events: `Update{state, buffer_paths}`,
-`RequestState`, or `Custom{content}`. An unknown method is rejected.
+`parse_message` returns one of four typed events: `Update{state, buffer_paths}`,
+`RequestState`, `Custom{content}`, or `Ignored{method}`. An unknown or missing `method`
+yields `Ignored` (it never raises), matching ipywidgets' forward-compatible dispatch — the
+caller no-ops on it (see the [protocol spec](specs.qmd#protocol)).
 
 ## Buffers
 
