@@ -11,4 +11,8 @@
   ;; Live Clay counter demo (cositos-059.8): real @cositos/front runtime over Clay.
   :clay-demo {:extra-paths ["dev"]
               :extra-deps {org.scicloj/clay {:mvn/version "2.0.16"}}
-              :main-opts ["-m" "cositos.clay-demo"]}}}
+              :main-opts ["-m" "cositos.clay-demo"]}
+  ;; Proper Clay notebook (cositos-059.8a): widget via the kind system + make!.
+  :clay-notebook {:extra-paths ["dev"]
+                  :extra-deps {org.scicloj/clay {:mvn/version "2.0.16"}}
+                  :main-opts ["-m" "cositos.clay-notebook"]}}}
