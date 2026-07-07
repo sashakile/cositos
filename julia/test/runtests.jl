@@ -234,4 +234,6 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test occursin("\"value\":0", replace(html, " " => ""))  # state embedded
         @test occursin("render({model, el})", html)                # esm embedded
     end
+
+    include("host_tests.jl")
 end

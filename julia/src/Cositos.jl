@@ -22,6 +22,8 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     remove_buffers, put_buffers!,
     dump_model, load_model, dump_document, load_document,
     view_identity, with_view_identity,
+    Widget, open!, close!, send_state!, send_custom!,
+    supports_receive, comm_id, transport_send, transport_on_message, ijulia_transport,
     PlutoWidget
 
 const PROTOCOL_VERSION_MAJOR = 2
@@ -328,6 +330,165 @@ function parse_message(data)
     method == "custom" && return Custom(get(data, "content", nothing))
     return Ignored(method)
 end
+
+# ---- Widget façade + Transport contract (kernel-agnostic) ----
+
+# The Transport seam: the only kernel-facing interface the core depends on. A host
+# language supplies a concrete transport (e.g. over IJulia's Comm API) by adding methods
+# to these functions. The core never imports kernel code — mirrors `cositos.transport` /
+# `cositos.jupyter.CommTransport` in the Python port.
+
+"""Whether the transport can receive frontend→kernel messages (one-way otherwise)."""
+supports_receive(::Any) = false
+
+"""The transport's comm id (widget `model_id`); empty until opened."""
+comm_id(::Any) = ""
+
+"""
+    transport_send(transport, msg_type, content; buffers=Any[], metadata=nothing)
+
+Send a Jupyter comm message (`comm_open` / `comm_msg` / `comm_close`) to the frontend.
+"""
+function transport_send end
+
+"""
+    transport_on_message(transport, callback)
+
+Register `callback(data, buffers)`, invoked for each inbound `comm_msg`.
+"""
+function transport_on_message end
+
+"""
+    ijulia_transport() -> transport
+
+Construct an IJulia comm transport for driving a [`Widget`](@ref) inside a live IJulia
+(Julia Jupyter) kernel. The implementation lives in the `CositosIJuliaExt` package
+extension and is available only once `IJulia` is loaded (`using IJulia`); calling this
+without IJulia raises a hint.
+"""
+function ijulia_transport(args...; kwargs...)
+    return error(
+        "ijulia_transport() requires IJulia to be loaded; run `using IJulia` first " *
+        "(the CositosIJuliaExt package extension provides the implementation).",
+    )
+end
+
+"""
+    Widget(transport; get_state, set_state=nothing, model_id="", on_custom=nothing)
+
+Drive one anywidget-compatible widget over a `transport`. The host owns the state: it
+supplies `get_state` (returns the full state `Dict`, including `_esm`) and, to accept
+inbound updates, `set_state` (applies an inbound state `Dict`). Deliberately minimal — no
+observer autodetection; the host decides when state changed and calls [`send_state!`](@ref).
+Mirrors the Python `cositos.model.Widget`.
+"""
+mutable struct Widget
+    transport::Any
+    get_state::Function
+    set_state::Union{Function,Nothing}
+    on_custom::Union{Function,Nothing}
+    model_id::String
+    opened::Bool
+end
+
+function Widget(
+    transport;
+    get_state::Function,
+    set_state::Union{Function,Nothing}=nothing,
+    model_id::AbstractString="",
+    on_custom::Union{Function,Nothing}=nothing,
+)
+    return Widget(transport, get_state, set_state, on_custom, String(model_id), false)
+end
+
+"""
+    open!(widget) -> widget
+
+Send the `comm_open` and start listening for inbound messages. Idempotent: a second call
+while already open is a no-op (no duplicate `comm_open`), matching [`close!`](@ref).
+"""
+function open!(w::Widget)
+    w.opened && return w
+    data, buffers, metadata = build_comm_open(w.get_state())
+    transport_send(w.transport, "comm_open", data; buffers=buffers, metadata=metadata)
+    w.opened = true
+    # Adopt the transport's real comm id so the display bundle references the model the
+    # kernel actually opened (a comm generates its own id).
+    cid = comm_id(w.transport)
+    isempty(cid) || (w.model_id = cid)
+    if supports_receive(w.transport)
+        transport_on_message(w.transport, (d, b) -> _handle!(w, d, b))
+    end
+    return w
+end
+
+"""
+    send_state!(widget; include=nothing)
+
+Send an `update` with the full state, or only the keys in `include`. Requires an open comm.
+"""
+function send_state!(w::Widget; include=nothing)
+    _require_open(w, "send_state!")
+    state = w.get_state()
+    if include !== nothing
+        state = Dict{String,Any}(k => v for (k, v) in state if k in include)
+    end
+    data, buffers = build_update(state)
+    transport_send(w.transport, "comm_msg", data; buffers=buffers)
+    return nothing
+end
+
+"""
+    send_custom!(widget, content; buffers=Any[])
+
+Send a `custom` message to the frontend (`model.on("msg:custom")`). Requires an open comm.
+"""
+function send_custom!(w::Widget, content; buffers=Any[])
+    _require_open(w, "send_custom!")
+    transport_send(w.transport, "comm_msg", build_custom(content); buffers=buffers)
+    return nothing
+end
+
+function _require_open(w::Widget, action::AbstractString)
+    w.opened || error("$(action) requires an open comm; call open!() first")
+    return nothing
+end
+
+function _handle!(w::Widget, data, buffers)
+    message = parse_message(data)
+    if message isa Update
+        if w.set_state !== nothing
+            state = Dict{String,Any}(message.state)
+            put_buffers!(state, message.buffer_paths, buffers)
+            w.set_state(state)
+        end
+    elseif message isa RequestState
+        send_state!(w)
+    elseif message isa Custom && w.on_custom !== nothing
+        w.on_custom(message.content, buffers)
+    end
+    return nothing
+end
+
+"""
+    close!(widget)
+
+Close the comm channel. Idempotent.
+"""
+function close!(w::Widget)
+    if w.opened
+        transport_send(w.transport, "comm_close", Dict{String,Any}())
+        w.opened = false
+    end
+    return nothing
+end
+
+"""
+    mimebundle(widget, repr_text="") -> Dict
+
+The widget-view mimebundle for display, referencing the widget's `model_id`.
+"""
+mimebundle(w::Widget, repr_text::AbstractString="") = mimebundle(w.model_id, repr_text)
 
 # ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----
 
