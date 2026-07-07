@@ -30,6 +30,18 @@ export default {
 };
 `;
 
+test("loadWidget uses the browser base64 path when Buffer is unavailable", async () => {
+  // Force the TextEncoder + btoa fallback (runtime.js) that browsers/WASM hosts take.
+  const savedBuffer = globalThis.Buffer;
+  try {
+    globalThis.Buffer = undefined;
+    const widget = await loadWidget(`export default { render() {} }`);
+    assert.equal(typeof widget.render, "function");
+  } finally {
+    globalThis.Buffer = savedBuffer;
+  }
+});
+
 test("anywidget-authored ESM renders and reacts under cositos-front (no Jupyter)", async () => {
   const dom = new JSDOM("<!DOCTYPE html><div id='root'></div>");
   globalThis.document = dom.window.document;
