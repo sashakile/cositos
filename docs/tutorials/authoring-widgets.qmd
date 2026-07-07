@@ -94,5 +94,5 @@ composition example, not after debugging one:
 
 - Drive your widget from a live kernel: `tutorials/quickstart.qmd`.
 - Ship it in a saved/static document: `tutorials/static-export.qmd`.
-- Embed it into an existing tool (Quarto, JupyterBook, Voila, Clay, …): the host matrix
-  in `examples/README.md` and the `Channel` contract in `hosts.md`.
+- Embed it into an existing tool (Quarto, JupyterBook, Voila, Clay, …):
+  `tutorials/integrating.qmd`.

@@ -1,0 +1,61 @@
+---
+title: "Integrating cositos into an existing tool or host"
+---
+
+This page is for **embedding a cositos widget into an environment you didn't build** —
+a Quarto document, a JupyterBook, a Voila app, myBinder, a Clay notebook, a terminal UI
+— as opposed to choosing a kernel *language* (`tutorials/quickstart.qmd`) or *authoring*
+a new widget's ESM (`tutorials/authoring-widgets.qmd`). Those two answer "which language,
+which widget"; this page answers "which environment renders it."
+
+## The seam: `Channel` (frontend) and `Transport` (backend)
+
+cositos isolates everything environment-specific behind one small seam on each side:
+
+- **`Channel`** (JS frontend, `@cositos/front`) — `send(msg, buffers)` /
+  `onMessage(cb)`. Full contract: `hosts.md`.
+- **`Transport`** (host-language backend) — `send(msg_type, content, buffers, metadata)`
+  / `on_message(cb)` / `supports_receive`. Full contract: `src/cositos/transport.py`
+  (Python) and the porting guide's Step 1 table (`porting.md`).
+
+Integrating into a new tool almost always means picking (or writing) one of these, not
+touching the protocol core.
+
+## Built-in implementations — use this when
+
+| Implementation | Side | Use this when |
+|---|---|---|
+| Native Jupyter comm (`CommTransport`) | Python backend | You have a live Python kernel (JupyterLab, Notebook, Voila, myBinder). |
+| `CositosIJuliaExt` (`ijulia_transport`) | Julia backend | You have a live IJulia kernel. |
+| `CositosPlutoExt` (`PlutoWidget`) | Julia backend | You're in Pluto.jl — not Jupyter, no comm protocol; state flows through `@bind` instead. See `pluto.md`. |
+| `LocalChannel` | JS frontend | A plain web page or WASM app with no backend at all — client-only widget state. |
+| `MemoryChannel` | JS frontend | Tests, or a JS "kernel" co-located with a JS "frontend" in the same process. |
+| `ClayChannel` | JS frontend | Clojure, via Clay's public websocket — clojupyter's own kernel has no user-facing comm-open API (see the maturity table in the root `README.md`), so Clay is the recommended Clojure host. |
+| Static export (`dump_document` + `embed_html`/`write_html`) | Python backend, no transport | No live process at all — a saved document rendered once. See `tutorials/static-export.qmd`. |
+
+Writing a new one (a Channel or a Transport) is documented step by step in `hosts.md`
+("Writing a new channel") and `porting.md` ("Step 1 — Implement the Transport").
+
+## Host / tool matrix
+
+Which of the above applies to a given tool, and what's actually been run and verified
+(Voila, myBinder, Quarto, JupyterBook, nbconvert, plain browser, static export), is
+tracked as a single table in `examples/README.md` rather than duplicated here — that
+table is the up-to-date source of truth and changes independently of this page.
+
+## Not yet: terminal UIs (TUIs)
+
+A terminal has no DOM and no JS engine, so `@cositos/front`'s ESM/DOM view cannot run
+there directly — the protocol *core* (message builders, buffer split/merge, the
+`Transport` seam) is pure and reusable, but a TUI needs its own renderer on top of it.
+The feasibility analysis (what's reusable, what isn't, and how frameworks like Bubble
+Tea/Ratatui/Textual solve the same reactivity problem) is captured as a research note:
+`.wai/projects/cositos-core/research/2026-07-07-research-reusing-cositos-in-a-tui-bubble-tea.md`.
+No TUI transport/channel exists yet; treat that note as a feasibility finding, not a
+roadmap commitment.
+
+## Next steps
+
+- Choosing a kernel language: `tutorials/quickstart.qmd`.
+- Authoring a new widget's ESM: `tutorials/authoring-widgets.qmd`.
+- The full `Channel`/`Transport` contract and writing a new one: `hosts.md`.

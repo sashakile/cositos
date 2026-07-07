@@ -45,7 +45,9 @@ host state ──▶ cositos-core (pure protocol, no I/O) ──▶ Transport se
 - **Core is pure**: message shaping, binary-buffer split/merge, inbound parsing. No
   kernel code.
 - **Transport is a seam**: each kernel supplies a thin adapter (Python `comm`,
-  `Deno.jupyter.broadcast`, IJulia, dotnet-interactive).
+  `Deno.jupyter.broadcast`, IJulia, dotnet-interactive). See
+  `docs/tutorials/integrating.qmd` for which one to use and how to embed a widget into
+  an existing tool (Quarto, JupyterBook, Voila, Clay, …).
 - **Contract is data**: `fixtures/*.json` are the cross-language guarantee.
 
 ## Status

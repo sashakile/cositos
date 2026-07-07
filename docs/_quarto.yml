@@ -5,6 +5,7 @@ project:
     - index.qmd
     - tutorials/quickstart.qmd
     - tutorials/authoring-widgets.qmd
+    - tutorials/integrating.qmd
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
     - tutorials/polyglot-parity.qmd
@@ -30,6 +31,7 @@ website:
         menu:
           - tutorials/quickstart.qmd
           - tutorials/authoring-widgets.qmd
+          - tutorials/integrating.qmd
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
           - tutorials/polyglot-parity.qmd
