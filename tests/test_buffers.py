@@ -69,3 +69,42 @@ def test_put_buffers_raises_when_more_buffers_than_paths():
         pass
     else:
         raise AssertionError("expected ValueError for more buffers than paths")
+
+
+def test_remove_buffers_detects_cycle():
+    # Regression (cositos-915): a self-referential container must raise a clear error,
+    # not recurse forever into a RecursionError.
+    state = {"a": 1}
+    state["self"] = state
+    try:
+        remove_buffers(state)
+    except ValueError as e:
+        assert "cycl" in str(e).lower()
+    else:
+        raise AssertionError("expected ValueError for a cyclic container")
+
+
+def test_remove_buffers_caps_deep_nesting():
+    # Deep but acyclic nesting must yield a clear error naming the depth, not an opaque
+    # RecursionError around the interpreter's stack limit (~500 levels).
+    state: dict = {}
+    node = state
+    for _ in range(2000):
+        child: dict = {}
+        node["n"] = child
+        node = child
+    try:
+        remove_buffers(state)
+    except ValueError as e:
+        assert "nesting" in str(e).lower() or "depth" in str(e).lower()
+    else:
+        raise AssertionError("expected ValueError for excessively deep nesting")
+
+
+def test_remove_buffers_allows_shared_acyclic_subtrees():
+    # A DAG (same dict referenced twice, no cycle) must NOT be misreported as a cycle.
+    shared = {"v": 1}
+    state = {"a": shared, "b": shared}
+    stripped, paths, buffers = remove_buffers(state)
+    assert stripped == {"a": {"v": 1}, "b": {"v": 1}}
+    assert paths == [] and buffers == []
