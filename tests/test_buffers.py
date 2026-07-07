@@ -1,5 +1,7 @@
 """Tests for binary-buffer split/merge (protocol v2 nested rules)."""
 
+import sys
+
 from cositos.buffers import put_buffers, remove_buffers
 
 
@@ -108,3 +110,17 @@ def test_remove_buffers_allows_shared_acyclic_subtrees():
     stripped, paths, buffers = remove_buffers(state)
     assert stripped == {"a": {"v": 1}, "b": {"v": 1}}
     assert paths == [] and buffers == []
+
+
+def test_remove_buffers_raises_recursion_limit_when_below_needed():
+    # When the interpreter's recursion limit is below what deep nesting needs,
+    # remove_buffers must temporarily raise it (so the _MAX_DEPTH cap trips as a
+    # clear ValueError before a raw RecursionError) and restore it afterwards.
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(800)  # below `needed` (~1204), safely above test stack depth
+    try:
+        stripped, paths, buffers = remove_buffers({"a": b"x"})
+    finally:
+        sys.setrecursionlimit(old)
+    assert stripped == {}
+    assert paths == [["a"]] and buffers == [b"x"]

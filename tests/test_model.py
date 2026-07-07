@@ -197,3 +197,27 @@ def test_repr_mimebundle_does_not_reopen_when_already_open():
     n = len(t.sent)
     w._repr_mimebundle_()
     assert len(t.sent) == n  # no second comm_open
+
+
+def test_open_skips_on_message_when_transport_cannot_receive():
+    # A broadcast-only transport (supports_receive=False, e.g. early Deno) must still
+    # open the comm but must not register an inbound handler.
+    class OneWayTransport:
+        supports_receive = False
+
+        def __init__(self) -> None:
+            self.sent: list = []
+            self.on_message_called = False
+
+        def send(self, msg_type, content, buffers=None, metadata=None):
+            self.sent.append((msg_type, content))
+
+        def on_message(self, callback):
+            self.on_message_called = True
+
+    t = OneWayTransport()
+    w = Widget(t, get_state=lambda: {"value": 1}, set_state=lambda d: None, model_id="m1")
+    w.open()
+
+    assert t.sent[0][0] == "comm_open"
+    assert t.on_message_called is False
