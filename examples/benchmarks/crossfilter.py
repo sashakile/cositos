@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import ipywidgets as W
+from reactive import Computed, Effect, Signal
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,8 @@ SCALES: dict[str, Config] = {
     "complex": Config(dims=8, cats=6, views=24, depth=6, shared=6, rows=2000),
     "big": Config(dims=16, cats=8, views=100, depth=8, shared=20, rows=8000),
 }
+
+VARIANTS = ("A", "B", "C")  # also has a reactive-DAG variant
 
 
 def _dataset(cfg: Config) -> list[tuple[int, ...]]:
@@ -73,7 +76,8 @@ def _nest(items: list[Any], depth: int) -> Any:
 
 
 def build(variant: str, scale: str) -> tuple[Any, list[tuple[str, str]], Any]:
-    return (_build_naive if variant == "A" else _build_mvu)(SCALES[scale])
+    builder = {"A": _build_naive, "B": _build_mvu, "C": _build_reactive}[variant]
+    return builder(SCALES[scale])
 
 
 def _build_naive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
@@ -176,5 +180,57 @@ def _build_mvu(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
         before = fires["n"]
         dispatch(0, (0, 1))  # same user action as variant A
         return fires["n"] - before, False
+
+    return root, edges, one_action
+
+
+def _build_reactive(cfg: Config) -> tuple[Any, list[tuple[str, str]], Any]:
+    """Variant C: filters are signals; each view is a computed over them.
+
+    Every view genuinely depends on every filter, so the tracked graph is dense and one
+    filter change recomputes all views (like B) — but it stays acyclic and single-source,
+    unlike A. An honest result: reactivity is not incremental when the dependency is real.
+    """
+    data = _dataset(cfg)
+    edges: list[tuple[str, str]] = []
+    counter = {"n": 0}
+
+    filter_sigs = [Signal(frozenset(), edges, name=f"filter{d}") for d in range(cfg.dims)]
+    filter_widgets = [
+        W.SelectMultiple(options=list(range(cfg.cats)), description=f"d{d}")
+        for d in range(cfg.dims)
+    ]
+    for d, w in enumerate(filter_widgets):
+        w.observe(lambda ch, d=d: filter_sigs[d].set(frozenset(ch["new"])), names="value")
+
+    shared_legends = [W.HTML(value=f"legend {i}") for i in range(cfg.shared)]
+    views: list[Any] = []
+    brushes: list[W.SelectMultiple] = []
+    for v in range(cfg.views):
+        summary = W.Label()
+        brush = W.SelectMultiple(options=list(range(cfg.cats)))
+        brushes.append(brush)
+
+        def compute(v: int = v) -> str:
+            active = {d: set(s.get()) for d, s in enumerate(filter_sigs) if s.get()}
+            return f"view{v}: {_count(data, active)} rows"
+
+        c = Computed(compute, name=f"view{v}", counter=counter, edges=edges)
+        Effect(
+            lambda summary=summary, c=c: setattr(summary, "value", c.get()),
+            name=f"viewe{v}", counter=counter,
+        )
+        # cross-filter: brushing a view is just setting a filter signal (single source)
+        brush.observe(
+            lambda ch, v=v: filter_sigs[v % cfg.dims].set(frozenset(ch["new"])), names="value"
+        )
+        views.append(W.VBox([summary, brush, shared_legends[v % cfg.shared]]))
+
+    root = W.VBox([W.VBox(filter_widgets), _nest(views, cfg.depth)])
+
+    def one_action() -> tuple[int, bool]:
+        before = counter["n"]
+        filter_sigs[0].set(frozenset({0, 1}))
+        return counter["n"] - before, False
 
     return root, edges, one_action

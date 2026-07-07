@@ -10,8 +10,8 @@ logical app two ways and measures the structural cost:
   **pure projections** re-rendered in a single pass.
 - **variant C (reactive DAG)** — a tracked signal graph (`reactive.py`): reading a value
   inside a computation records a dependency, so one edit recomputes *only* the downstream
-  nodes, and the graph is acyclic by construction. Currently wired for the `form` scenario
-  (where the trade-off is sharpest); scenarios opt in via a `VARIANTS` attribute.
+  nodes, and the graph is acyclic by construction. Wired for the `form` and `crossfilter`
+  scenarios; scenarios opt in via a `VARIANTS` attribute.
 
 The *rendered* widget tree (deep nesting, many elements, shared/repeated widgets) is the
 same in both — only the **wiring** differs — so serialization is apples-to-apples.
@@ -62,6 +62,11 @@ views):
 - wiring: A = 2000 edges (≈ views×dims) vs B = 118 (≈ views) — super-linear vs linear;
 - one click: A = 1700 recomputes vs B = 100 (a single projection pass);
 - A's data-flow graph is **always cyclic**, B's never is.
+
+Variant C here recomputes 200 (every view genuinely depends on every filter, so there is no
+incremental subgraph to exploit — an honest null result) but stays **acyclic** and avoids
+A's 1700-recompute cross-write cascade entirely. So even when reactivity cannot beat MVU on
+work, it still eliminates the cyclic explosion. Reactive DAG never loses across scenarios.
 
 **Master-detail (pure fan-out) is benign — an important contrast.** A and B come out nearly
 identical (`storm` equal; `data_edges` differ only by the master clique). Fan-out alone

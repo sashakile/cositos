@@ -11,6 +11,7 @@ Same logical app per scenario, built two ways (A = naive peer-to-peer ipywidgets
 ```
 A      | widgets=33    depth=5  shared=2   | data_edges=42    HAS CYCLE | storm=30    | 87 models, links_kept=0
 B      | widgets=27    depth=5  shared=2   | data_edges=12    acyclic   | storm=6     | 66 models, links_kept=0
+C      | widgets=33    depth=5  shared=2   | data_edges=30    acyclic   | storm=12    | 84 models, links_kept=0
 ```
 
 ## crossfilter — scale = complex  (dims=8 cats=6 views=24 depth=6 shared=6)
@@ -18,6 +19,7 @@ B      | widgets=27    depth=5  shared=2   | data_edges=12    acyclic   | storm=
 ```
 A      | widgets=119   depth=7  shared=6   | data_edges=264   HAS CYCLE | storm=216   | 303 models, links_kept=0
 B      | widgets=95    depth=7  shared=6   | data_edges=34    acyclic   | storm=24    | 228 models, links_kept=0
+C      | widgets=119   depth=7  shared=6   | data_edges=216   acyclic   | storm=48    | 300 models, links_kept=0
 ```
 
 ## crossfilter — scale = big  (dims=16 cats=8 views=100 depth=8 shared=20)
@@ -25,6 +27,7 @@ B      | widgets=95    depth=7  shared=6   | data_edges=34    acyclic   | storm=
 ```
 A      | widgets=465   depth=9  shared=20  | data_edges=1900  HAS CYCLE | storm=1700  | 1169 models, links_kept=0
 B      | widgets=365   depth=9  shared=20  | data_edges=118   acyclic   | storm=100   | 866 models, links_kept=0
+C      | widgets=465   depth=9  shared=20  | data_edges=1700  acyclic   | storm=200   | 1166 models, links_kept=0
 ```
 
 ## masterdetail — scale = small  (items=10 details=6 masters=3 depth=3 shared=2)
