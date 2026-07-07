@@ -96,7 +96,11 @@ def embed_html(
     """Render ``document`` (a :func:`cositos.serialize.dump_document` result) to a full page.
 
     ``views`` selects which model ids get a rendered view (default: every model in the
-    document). The full state is always embedded so cross-widget references resolve.
+    document). The full state is always embedded so a referenced model is present for a
+    container to resolve. Note that a reference (``"IPY_MODEL_<id>"``) only resolves to a
+    child model when the *holding* model declares a widget-reference trait — plain
+    anywidget (``AnyModel``) widgets do not, so refs between them stay literal strings. See
+    ``examples/composition/`` for the controls-container recipe that does resolve.
     """
     snippet = embed_snippet(
         document, views=views, requirejs=requirejs, html_manager_version=html_manager_version

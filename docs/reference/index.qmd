@@ -45,7 +45,11 @@ model/view resolves from a CDN at display time, so no frontend is bundled. See t
 | `write_html` | `write_html(path, document, **kwargs) -> None` | Write `embed_html` output to `path`. |
 
 `views` selects which model ids get a rendered view (default: every model). The full
-state is always embedded so cross-widget references resolve. Embedded JSON is
+state is always embedded so a referenced model is present for a container to resolve.
+A reference (`"IPY_MODEL_<id>"`) only resolves to a child model when the *holding* model
+declares a widget-reference trait; plain anywidget (`AnyModel`) widgets do not, so refs
+between them stay literal strings (use a `@jupyter-widgets/controls` container to compose
+— see `examples/composition/`). Embedded JSON is
 script-escaped so a `</script>` inside widget state can't break out of the page.
 
 ```python
