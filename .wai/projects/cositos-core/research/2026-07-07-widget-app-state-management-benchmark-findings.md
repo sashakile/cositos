@@ -42,20 +42,25 @@ claim:01KWX4ES0FR9HW0VWX724E28KC (reactive DAG incremental and acyclic).
 | crossfilter | storm 1700 scans 1700, **cyclic** | storm 100 scans 1, acyclic | storm 100 scans 100, acyclic | storm 100 scans 1, acyclic |
 | masterdetail | storm 150, **cyclic** | storm 150, acyclic | storm 151, acyclic | — |
 | form | storm 23, **cyclic** | storm 86, acyclic | storm 23, acyclic | — |
+| dynamic (add rows) | created 60 storm 1, acyclic | created 360 storm 120, acyclic | created 60 storm 1, acyclic | — |
+
+Measured `obs` (real traitlets change-handlers) corroborates the declared edges: crossfilter
+big A=2750 vs B=466, confirming the peer-wiring tangle is real, not a modelling artifact.
 
 **Consolidated conclusion (corrected after Rule-of-5 review).**
-- A is always cyclic (needs guards, risks loops, never serializes its links) and
-  catastrophic on cost under cross-writes (1700 scans for one action).
-- B is always acyclic; it recomputes the whole projection but shares the expensive scan
-  (scans=1), so it is cheap.
-- C matches A's incrementality on the form (storm 23) while staying acyclic — the genuine
-  win. But on cross-filter C does one O(rows) scan **per view** (scans=100) even though its
-  refresh count matches B: fine-grained reactivity does **not** share derivations for free.
-- D (reactive with a shared memoized Computed) restores scans=1, truly tying B on cost.
+- A is cyclic under cross-writes (needs guards, never serializes its links) and
+  catastrophic on cost there (1700 scans for one action). But naive is *not* inherently
+  cyclic — the dynamic scenario's fan-in A is acyclic; cross-writes are the hazard.
+- B is always acyclic and cheap for value changes (shares the scan), but its
+  whole-projection rebuild pays O(N) reconciliation cost for **structural** changes
+  (dynamic: rebuilds all 360 widgets to add 20).
+- C matches A's incrementality on the form (storm 23) and on dynamic structure (created 60)
+  while staying acyclic. But on cross-filter C does one O(rows) scan **per view**
+  (scans=100) — fine-grained reactivity does not share derivations for free.
+- D (reactive + shared memoized Computed) restores scans=1, tying B on cost.
 
-So the earlier "C ties B under dense deps" was right on refresh *count* but wrong on
-*cost*; the honest rule is: a tracked DAG needs **shared derivations** to match a
-well-written MVU render.
+So no single style wins everywhere: cross-writes favour any acyclic model; value-heavy work
+favours reactive/shared; structural churn favours incremental/reactive over rebuild-MVU.
 
 ## Design implication for cositos
 Recommend a documented discipline (not a runtime in the pure core): one domain Model as the
@@ -63,17 +68,17 @@ single source of truth; views as projections; cross-part behavior through the mo
 tracked DAG with **shared derivations**, never peer `link`/`observe`. This keeps apps
 acyclic, serializable, AND cheap.
 
-## Known limitations of this study (from Rule-of-5 review)
-- `data_edges` and cyclicity are computed from the *declared* edge list in each builder,
-  not measured from the real traitlets observer registry — they model the wiring rather
-  than measure it.
-- Variant A is engineered to expose the tangle (write-back cycles + link clique); it is a
-  plausible-worst-case, not a measured-typical, baseline.
-- `scans` is a proxy; no wall-clock timing was taken.
-- All scenarios use a *static* widget tree; dynamic structure (add/remove/reorder widgets)
-  is untested and may change the verdict.
-- `reactive.py` is a naive push propagator: not glitch-free on diamonds and has no cycle
-  guard.
+## Known limitations of this study (Rule-of-5 review; some now addressed)
+- `data_edges` and cyclicity come from the *declared* edge list, but a *measured* `obs`
+  (real traitlets change-handlers) now corroborates wiring density (CORR-002 addressed for
+  magnitude; cyclicity remains a model property).
+- Variant A is engineered to expose the tangle (write-back cycles + link clique) — a
+  plausible-worst-case, not a measured-typical, baseline. *(open)*
+- `scans`/`created` are cost proxies; no wall-clock timing was taken. *(open)*
+- Dynamic structure is now covered by the `dynamic` scenario and it flips the MVU verdict
+  (EDGE-001 addressed).
+- `reactive.py` is now glitch-free (mark-and-pull, memoized) with a cycle guard, proven by
+  `reactive_selftest.py` (CORR-003/EXCL-003 addressed).
 
 ## Related
 - Reuse question: do NOT reimplement anywidget's descriptor in Python — depend on it (still
