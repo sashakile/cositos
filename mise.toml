@@ -42,6 +42,10 @@ run = "uv run --extra dev --extra oracle pytest -m 'not e2e' --cov=cositos --cov
 description = "End-to-end test against a real Jupyter kernel (slow, opt-in)"
 run = "uv run --extra dev --extra oracle --extra e2e pytest -m e2e -v"
 
+[tasks.e2e-all]
+description = "Run every per-language e2e example in isolation (OK/SKIP/FAIL summary; see examples/e2e/README.md)"
+run = "python3 scripts/e2e_all.py"
+
 [tasks.probe]
 description = "Classify a kernel's widget-comm capability (Tier 1/2/3). Usage: mise run probe -- <kernel>"
 run = "uv run --extra e2e --extra docs python probe/kernel_probe.py"

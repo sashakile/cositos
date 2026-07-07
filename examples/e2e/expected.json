@@ -1,0 +1,15 @@
+{
+  "state": {
+    "counter": {
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "model_name": "AnyModel",
+      "state": {
+        "_esm": "export default { render({ model, el }) { el.textContent = model.get(\"value\"); } }",
+        "value": 42
+      }
+    }
+  },
+  "version_major": 2,
+  "version_minor": 0
+}
