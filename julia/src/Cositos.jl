@@ -124,6 +124,10 @@ Inverse of [`remove_buffers`](@ref); mutates `state` in place. Integer path segm
 treated as 0-based (wire) indices and translated to Julia's 1-based indexing.
 """
 function put_buffers!(state, buffer_paths, buffers)
+    length(buffer_paths) == length(buffers) || error(
+        "buffer_paths and buffers length mismatch: " *
+        "$(length(buffer_paths)) != $(length(buffers))",
+    )
     for (path, buf) in zip(buffer_paths, buffers)
         obj = state
         for key in path[1:(end - 1)]

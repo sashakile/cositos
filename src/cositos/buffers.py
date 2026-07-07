@@ -82,8 +82,13 @@ def remove_buffers(state: Any) -> tuple[Any, list[list[Any]], list[Any]]:
 
 
 def put_buffers(state: Any, buffer_paths: list[list[Any]], buffers: list[Any]) -> None:
-    """Inverse of :func:`remove_buffers`; mutates ``state`` in place."""
-    for path, buffer in zip(buffer_paths, buffers):
+    """Inverse of :func:`remove_buffers`; mutates ``state`` in place.
+
+    ``buffer_paths`` and ``buffers`` must be the same length (``strict=True``); a mismatch
+    raises :class:`ValueError` rather than silently leaving a placeholder in ``state`` or
+    dropping a buffer (cositos-y07). This matches :func:`encode_buffers_base64`.
+    """
+    for path, buffer in zip(buffer_paths, buffers, strict=True):
         obj = state
         for key in path[:-1]:
             obj = obj[key]

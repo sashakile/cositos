@@ -189,6 +189,16 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test_throws ErrorException load_model(("m", record))
     end
 
+    @testset "put_buffers! rejects a buffer_paths/buffers length mismatch (cositos-y07)" begin
+        # A mismatch must error, not silently leave a placeholder or drop a buffer.
+        @test_throws ErrorException put_buffers!(
+            Dict{String,Any}("a" => nothing, "b" => nothing), Any[["a"], ["b"]], Any[UInt8[1]]
+        )
+        @test_throws ErrorException put_buffers!(
+            Dict{String,Any}("a" => nothing), Any[["a"]], Any[UInt8[1], UInt8[2]]
+        )
+    end
+
     @testset "Pluto extension: Bonds + HTML render contract" begin
         esm = "export default { render({model, el}) {} }"
         w = PlutoWidget(; esm=esm, state=Dict{String,Any}("value" => 0, "min" => 0, "max" => 100))

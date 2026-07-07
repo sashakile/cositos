@@ -47,3 +47,25 @@ def test_put_buffers_deeply_nested_path():
     state = {"a": {"b": [{}, {"c": None}]}}
     put_buffers(state, [["a", "b", 1, "c"]], [b"deep"])
     assert state["a"]["b"][1]["c"] == b"deep"
+
+
+def test_put_buffers_raises_when_fewer_buffers_than_paths():
+    # Regression (cositos-y07): a length mismatch must error, not silently leave a
+    # placeholder (None) merged into host state on the inbound path.
+    state = {"a": None, "b": None}
+    try:
+        put_buffers(state, [["a"], ["b"]], [b"X"])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for fewer buffers than paths")
+
+
+def test_put_buffers_raises_when_more_buffers_than_paths():
+    state = {"a": None}
+    try:
+        put_buffers(state, [["a"]], [b"X", b"Y"])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected ValueError for more buffers than paths")
