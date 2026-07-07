@@ -13,6 +13,7 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 | `plots/` | harvest an existing Plotly `FigureWidget` into a static export via `cositos.contrib.harvest` | no | **works today** (`uv run --with plotly python examples/plots/build.py`) |
 | `binder/` | live widgets on myBinder + Voila (kernel-backed) | yes | recipe (env + docs); live path is e2e-tested |
 | `notebooks/python_counter.ipynb` | Jupyter (live comm via `CommTransport`) | yes | **works today** (needs `anywidget` in the frontend) |
+| `notebooks/julia_counter.ipynb` | IJulia (live comm via `CositosIJuliaExt`) | yes | **works today** (Cositos-enabled IJulia kernel + `anywidget` in the frontend) |
 | `parity/` | Julia port emits the same widget document as Python (drives the parity docs page) | no | **works today** (run `dump.jl`) |
 | `widgets/*.js` | anywidget-style ESM used by the above and by tests | — | reference widgets |
 
@@ -33,6 +34,11 @@ Open `notebooks/python_counter.ipynb` in a JupyterLab/Notebook whose kernel can
 `import cositos` and whose frontend has `anywidget` installed (cositos emits
 `_model_module="anywidget"`, so the anywidget frontend renders it). Run all cells; click
 **increment**; read `state['count']` back from the kernel.
+
+`notebooks/julia_counter.ipynb` is the Julia twin: the same counter over IJulia's comm via
+the `CositosIJuliaExt` extension. It needs an IJulia kernel bound to a project where
+`Cositos` and `IJulia` are available (see the notebook's prerequisites). The live
+round-trip is covered automatically by `tests/test_e2e_julia.py` (`mise run e2e`).
 
 ## Static HTML export
 
@@ -60,4 +66,5 @@ static export — linking needs a live kernel.
 
 ## Not yet
 
-- **Pluto notebook** needs a Julia host adapter (the Julia port is protocol-core only).
+- **Pluto notebook** uses the Julia `PlutoWidget` host (`CositosPlutoExt`); a runnable
+  Pluto example is not yet checked in.

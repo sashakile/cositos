@@ -259,6 +259,24 @@ the CRLF shim (`sed -i '' 's/\r$//' ~/.local/bin/grep` or delete it); prefer `rg
 
 ---
 
+**F26 · `dont ground` rejects `<`, `/`, and other characters as "shell metacharacters"
+inside the claim *statement*, even though the statement is a normal CLI string argument.**
+Grounding the Clay finding this session, `dont ground "...envelope (text frame 'cositos
+<json>')..." --file ... --lines ...` failed with `error: statement: must not contain shell
+metacharacters or path separators; found '<'; expected printable prose characters only`.
+A second attempt using `state/frontend` (a slash) hit the same wall on `/`. Expected: the
+statement is passed as a single already-quoted `argv` element, so the shell never sees it;
+technical prose about wire formats legitimately contains `<json>`, `A/B`, `kernel->front`,
+etc. Actual: an over-broad input filter treats ordinary prose punctuation as dangerous,
+forcing lossy rewrites of the very claim being recorded (I had to drop the `'cositos
+<json>'` notation and rephrase `browser<->JVM`). Impact: the epistemic record is degraded
+to satisfy a filter that guards against an injection that cannot occur (the value is never
+re-interpreted by a shell). 🟡 friction. Suggested fix: scope the metacharacter rejection
+to fields that are actually interpolated into shells/paths (e.g. `--file`), not to free-text
+prose; or allow `< > / -` in statements and escape only at genuine sinks.
+
+---
+
 ## Enforcement — making the tools impossible to silently drop
 
 The pattern behind F19/F20: **a tool stays used only if a gate fails when it isn't.**
