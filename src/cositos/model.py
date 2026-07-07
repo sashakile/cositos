@@ -46,7 +46,13 @@ class Widget:
         self._opened = False
 
     def open(self) -> None:
-        """Send the ``comm_open`` and start listening for inbound messages."""
+        """Send the ``comm_open`` and start listening for inbound messages.
+
+        Idempotent: a second call while already open is a no-op (no duplicate
+        ``comm_open``), matching :meth:`close`.
+        """
+        if self._opened:
+            return
         data, buffers, metadata = protocol.build_comm_open(self._get_state())
         self._transport.send("comm_open", data, buffers=buffers, metadata=metadata)
         self._opened = True
@@ -59,7 +65,11 @@ class Widget:
             self._transport.on_message(self._handle)
 
     def send_state(self, include: set[str] | None = None) -> None:
-        """Send an ``update`` with the full state, or only ``include`` keys."""
+        """Send an ``update`` with the full state, or only ``include`` keys.
+
+        Requires an open comm; call :meth:`open` (or display the widget) first.
+        """
+        self._require_open("send_state")
         state = self._get_state()
         if include is not None:
             state = {k: v for k, v in state.items() if k in include}
@@ -67,8 +77,19 @@ class Widget:
         self._transport.send("comm_msg", data, buffers=buffers)
 
     def send_custom(self, content: Any, buffers: list[Any] | None = None) -> None:
-        """Send a ``custom`` message to the frontend (``model.on('msg:custom')``)."""
+        """Send a ``custom`` message to the frontend (``model.on('msg:custom')``).
+
+        Requires an open comm; call :meth:`open` (or display the widget) first.
+        """
+        self._require_open("send_custom")
         self._transport.send("comm_msg", protocol.build_custom(content), buffers=buffers or [])
+
+    def _require_open(self, action: str) -> None:
+        """Raise a clear error if ``action`` is attempted before the comm is opened."""
+        if not self._opened:
+            raise RuntimeError(
+                f"{action}() requires an open comm; call open() (or display the widget) first"
+            )
 
     def _handle(self, data: dict[str, Any], buffers: list[Any]) -> None:
         """Dispatch an inbound message from the frontend."""

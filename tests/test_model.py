@@ -132,6 +132,36 @@ def test_close_sends_comm_close_once():
     assert len(t.sent) == n
 
 
+def test_open_is_idempotent():
+    # Regression (cositos-und): a second open() must not send a duplicate comm_open.
+    w, t, _ = make_widget({"_esm": "x", "value": 0})
+    w.open()
+    n = len(t.sent)
+    w.open()
+    assert len(t.sent) == n
+
+
+def test_send_state_before_open_raises_clear_error():
+    # A clear, documented error beats the transport's low-level 'comm not opened'.
+    w, _t, _ = make_widget({"value": 0})
+    try:
+        w.send_state()
+    except RuntimeError as e:
+        assert "open" in str(e).lower()
+    else:
+        raise AssertionError("expected RuntimeError for send_state before open()")
+
+
+def test_send_custom_before_open_raises_clear_error():
+    w, _t, _ = make_widget({"value": 0})
+    try:
+        w.send_custom({"kind": "ping"})
+    except RuntimeError as e:
+        assert "open" in str(e).lower()
+    else:
+        raise AssertionError("expected RuntimeError for send_custom before open()")
+
+
 class CommIdTransport(FakeTransport):
     """A transport that exposes a server-generated comm id, like CommTransport."""
 
