@@ -71,4 +71,5 @@ Quality gates run on every commit/push via lefthook — see [docs/hooks.md](docs
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MITu2014see [LICENSE](LICENSE). No anywidget/ipywidgets source is vendoredu2014see [NOTICE](NOTICE)
+for how cositos reuses those projects' protocol and frontend without copying source.

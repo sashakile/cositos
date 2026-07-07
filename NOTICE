@@ -1,0 +1,51 @@
+NOTICE
+======
+
+cositos doesn't vendor any source code from the anywidget or ipywidgets
+projects.
+
+What's reused, and how
+------------------------
+
+- **Protocol, not code.** `src/cositos/` (Python) is an independent
+  implementation of the ipywidgets widget-messaging protocol (v2.1.0) and of
+  anywidget's immutable model/view identity fields. It's written and tested
+  against public fixtures (`fixtures/*.json`) and the published protocol
+  schema at
+  https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md
+ —no ipywidgets or anywidget source is copied into this tree.
+- **Runtime resolution, not a bundled dependency.** cositos identifies
+  widgets with anywidget's `_model_module`/`_view_module` fields
+  (`"anywidget"`). When a widget is actually rendered, the surrounding
+  Jupyter widget manager (or, for static export, the jsDelivr-hosted
+  `@jupyter-widgets/html-manager`—see `src/cositos/embed.py`) resolves and
+  loads the real, published `anywidget` frontend package at that point, over
+  the network or from the user's own environment. cositos never packages,
+  redistributes, or modifies that frontend code itself.
+- **`front/src/` is a separate, original implementation.** `@cositos/front`
+  (see `front/package.json`) is described as a "standalone anywidget-
+  compatible AnyModel runtime"u2014it implements the same client-side contract
+  anywidget's frontend expects (`AnyModel`/`AnyView`, the `_esm`/`render`
+  convention) so that widgets authored for anywidget also work with
+  cositos's Channel/Transport seam. It's written from the public protocol
+  and interface documentation, not by copying anywidget's frontend source.
+
+Why this matters
+-----------------
+
+cositos exists specifically to let non-Python Jupyter kernels (Julia, C#, R,
+Clojure, ...) speak the same wire protocol anywidget widgets expect, without
+requiring a JavaScript rewrite per language. That only works if cositos's own
+code is a clean-room reimplementation of the protocol—this file exists so
+that's a stated fact, not something a reviewer or downstream packager has to
+infer.
+
+See also
+--------
+
+- `README.md`u2014project overview and architecture
+- `docs/porting.md`—what a new-language port actually implements
+  (a `Transport` adapter plus protocol builders certified against
+  `fixtures/*.json`)
+- `LICENSE`—cositos's own MIT license, which covers only the code in this
+  repository
