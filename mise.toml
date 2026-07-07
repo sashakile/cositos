@@ -139,7 +139,7 @@ run = "open docs/_site/index.html"
 
 [tasks.qa-notebook]
 description = "QA: launch JupyterLab on the live counter notebook (needs a kernel)"
-run = "uv run --extra oracle --with jupyterlab jupyter lab examples/notebooks/python_counter.ipynb"
+run = "uv run --extra oracle --extra notebook jupyter lab examples/notebooks/python_counter.ipynb"
 
 [tasks.setup]
 description = "Install all Python + JS dependencies"

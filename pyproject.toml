@@ -29,6 +29,12 @@ export = [
     "nbconvert>=7",
     "nbformat>=5",
 ]
+# JupyterLab must live in the SAME env as the anywidget/ipywidgets labextensions (from
+# `oracle`), else JupyterLab runs from an overlay env that can't discover them and widgets
+# fall back to text/plain (cositos-pvi). Use `--extra oracle --extra notebook` together.
+notebook = [
+    "jupyterlab>=4",
+]
 docs = [
     "ipykernel>=6",
     "jupyter-client>=8",
