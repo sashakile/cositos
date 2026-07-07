@@ -1,0 +1,36 @@
+# coverage-manifest.toml — quality-tool coverage for every backend directory.
+#
+# Enforced by `mise run coverage-audit` (in `mise run verify`). Purpose: stop the
+# silent coverage drift recorded as F19 in TOOL_EVALUATION.md, where `pretender`
+# scanned the four non-Python backends, parsed zero files, and exited green — so the
+# complexity gate quietly covered only the Python+JS core.
+#
+# Rule: every backend directory on disk MUST appear here with either
+#   - a `pretender = true` / `espectacular = true` binding (the tool covers it), or
+#   - `exempt = "<reason>"` (a deliberate, reviewed decision to NOT cover it).
+# The audit fails on any undeclared directory, and on any dir that claims
+# `pretender = true` but yields zero parsed files (proving the coverage is real).
+
+[cores.src]              # Python core
+pretender = true         # `pretender check src` parses these
+espectacular = true      # openspec/specs contracts run against Python via pytest
+
+[cores."front/src"]      # JavaScript frontend
+pretender = true         # `pretender check front/src` parses these
+
+[cores.julia]
+# pretender ships no Julia grammar (C/C++/Go/Java/JS/Py/Ruby/Rust/TS only); ah has no
+# Julia runner. Covered by fixture certification instead (`mise run julia-test`).
+exempt = "pretender/espectacular unsupported for Julia; certified via julia-test fixtures"
+
+[cores.csharp]
+exempt = "pretender/espectacular unsupported for C#; certified via csharp-test fixtures"
+
+[cores.r]
+exempt = "pretender/espectacular unsupported for R; certified via r-test fixtures"
+
+[cores.clojure]
+exempt = "pretender/espectacular unsupported for Clojure; certified via clojure-test fixtures"
+
+[cores.probe]
+exempt = "capability probe (Python script + per-kernel programs); covered by tests/test_kernel_probe.py"

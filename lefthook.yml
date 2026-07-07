@@ -25,6 +25,8 @@ pre-commit:
     complexity:
       glob: "*.{py,js}"
       run: mise run complexity
+    coverage-audit:
+      run: mise run coverage-audit
 
 pre-push:
   parallel: false

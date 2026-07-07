@@ -149,6 +149,73 @@ worked — so one unrenderable input aborts the whole batch without naming the f
 identical. (Quarto 1.9.38.) Fix: non-zero exit and/or a message naming the offending
 file. Worked around by scoping `project.render:`.
 
+**F19 · Quality-tool coverage silently froze at the Python core while the project grew
+to five backend languages — `pretender` no-ops on unsupported languages instead of
+warning.** `pretender` bundles tree-sitter grammars only for C/C++/Go/Java/JS/Python/
+Ruby/Rust/TS. The four backend cores added later — `julia/`, `csharp/`, `r/`, `clojure/`
+— are none of those, so `pretender check julia/src csharp r clojure/src` returns
+`{"files": []}` and **exit 0**: it scans zero files, reports nothing, and passes. The
+complexity gate (`mise run complexity` → `pretender check src front/src`) is therefore
+pinned forever to the original Python+JS core. Likewise `ah check` (espectacular) only
+scans `openspec/specs`, and no spec references any of the four new backends or the
+`probe/`. Net effect: `mise run verify` *looks* comprehensive (it lists `julia-test`,
+`clojure-test`, `r-test`, `csharp-test`) but the two dedicated quality tools see only the
+Python+JS core — the new code is validated solely by hand-rolled fixture tests. 🟡
+friction (false confidence). Root defect: a complexity checker that is handed real source
+files in an unsupported language should **warn/exit non-zero ("0 files matched a
+supported grammar")**, not silently succeed. Suggested fixes: (a) pretender emits a
+non-zero "no supported files" signal when given explicit paths that yield zero parsed
+files; (b) the *project* adds a coverage-manifest gate so any new backend directory must
+declare its quality-tool binding (or an explicit exemption) — implemented here as
+`mise run coverage-audit` (see Enforcement below).
+
+**F20 · `dont` was abandoned after day-1 init and has no enforcing gate, so it decayed to
+zero use.** `.dont/tx.seq` = 3 and `.dont/events.jsonl` holds only the
+`project.initialized` event; the two claims in the ledger were both created in the same
+second on 2026-07-03 (`17:18:33Z`) and one of them is a dummy (`"good clean claim about
+protocol version two point one"`). Sessions 2–3 (serialization/embed/docs, then the
+multi-language + kernel-probe expansion) produced exactly the empirical, citable claims
+`dont` exists to ground — "IRkernel 1.3.2's kernel-initiated `comm$open()` is broken",
+".NET Interactive doesn't answer `comm_info_request`", "clojupyter can receive but exposes
+no comm-open API", and the P0 `cositos-mx7` that *contradicts* shipped docs — yet **none**
+were recorded in `dont`; they went into handoff prose and beads instead. 🟡 friction.
+Root-cause chain: **F1** (dont refuses to cite the vendored `anywidget/`/`ipywidgets/`
+reference repos, the actual source of truth) made grounding painful on first contact →
+unlike `pretender`/`ah`, `dont` was never wired into lefthook/`verify` → with no gate and
+real friction it decayed to zero. The two tools that survived did so *because* they were
+gated. Suggested fix: (a) unblock F1 upstream; (b) meanwhile, add dont to the session
+ritual so capability findings that *can* cite in-project evidence (research docs,
+`probe/README.md`) get grounded, and gate on `dont` being clean once F1 is fixed (see
+Enforcement below).
+
+---
+
+## Enforcement — making the tools impossible to silently drop
+
+The pattern behind F19/F20: **a tool stays used only if a gate fails when it isn't.**
+`pretender` and `ah` survived every session because they sit in `lefthook` + `mise run
+verify`; `dont` evaporated because nothing failed without it. Fixes, tiered by what is
+achievable now vs. after upstream changes.
+
+**E1 · Coverage-manifest gate (closes F19 now).** A new `mise run coverage-audit` task
+(wired into `verify`) reads `coverage-manifest.toml`, which must list every backend
+directory and, for each, either the quality tool that covers it or an explicit
+`exempt = "<reason>"`. The audit fails if (a) a backend dir on disk is missing from the
+manifest, or (b) a dir claims `pretender` coverage but `pretender check <dir>` parses
+zero files (catching the silent-no-op in F19). This converts "quietly uncovered" into a
+loud, deliberate, reviewed decision — adding a new language *forces* a coverage entry.
+
+**E2 · dont in the handoff ritual (mitigates F20 now).** Until F1 is fixed, a hard
+pre-commit `dont` gate would just reproduce the F17 all-skip friction, so instead the
+`wai` handoff checklist requires: list each capability finding and whether it was grounded
+in `dont` (citing in-project evidence, which *is* allowed). Soft, but it re-introduces the
+claim→ground habit the tool is for.
+
+**E3 · dont hard gate (after F1).** Once `dont` can cite vendored reference repos, add
+`dont verify` (no unverified/ungrounded claims) to `mise run verify` and pre-push, so a
+session that makes empirical claims but grounds none fails the gate — the same mechanism
+that kept `pretender`/`ah` alive.
+
 ### 👍 What worked well (kept for balance)
 
 - **`wai way`** is an excellent, actionable repo-hygiene checklist; it drove most of the

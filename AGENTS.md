@@ -152,3 +152,22 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+<!-- COVERAGE & GROUNDING RITUALS (not tool-managed) -->
+## Quality-tool coverage & grounding rituals
+
+These enforce that the charly-vibes tools stay used as the project grows
+(see `TOOL_EVALUATION.md` F19/F20 and the "Enforcement" section).
+
+- **Coverage manifest (E1).** Every backend directory must be declared in
+  `coverage-manifest.toml` with a `pretender`/`espectacular` binding or an explicit
+  `exempt = "<reason>"`. `mise run coverage-audit` (in `verify` + pre-commit) fails on
+  any undeclared dir and on any `pretender = true` dir that parses zero files. **When you
+  add a new language backend, add its manifest entry in the same commit.**
+- **Grounding (E2).** For every empirical capability finding (kernel behaviour, upstream
+  bug, protocol quirk), record a `dont` claim grounded in in-project evidence (research
+  docs, `probe/README.md`, source). At handoff, the summary must list each finding and
+  whether it was grounded. Citing the vendored `anywidget/`/`ipywidgets/` repos is still
+  blocked upstream (F1); ground against in-project artifacts until that is fixed.
+- **After F1 is fixed (E3):** add `dont verify` (no ungrounded/unverified claims) to
+  `mise run verify` and pre-push, mirroring how `pretender`/`ah` are gated.
