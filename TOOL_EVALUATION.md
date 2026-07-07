@@ -39,7 +39,15 @@ URL + commit-pinned locators.
 contain shell metacharacters or path separators; found ';'`. Semicolons and colons are
 normal prose. The metacharacter guard is defending against shell injection that has
 already been neutralised by argv (the arg arrives as one string). Guard is too broad;
-it penalises well-written claims. Same likely applies to `:` and `/` in prose.
+it penalises well-written claims.
+
+> **Update (2026-07-07, dont 0.1.0, re-verified this session):** the guard has narrowed.
+> `dont conclude` now *accepts* `:`, `.`, and `/` in prose — e.g. `dont conclude
+> "examples/benchmarks/reactive.py is glitch-free"` and `dont conclude "cositos.contrib
+> .harvest wraps embed_data"` both succeed. Only true shell metacharacters like `;` are
+> still rejected (`found ';'`). So a prior session's belief that *dotted identifiers* are
+> rejected does **not** reproduce; F2 is now scoped to `;`/shell-metachar text only. The
+> error message text ("or path separators") is stale — path separators are permitted.
 
 **F3 · `wai add` doesn't commit artifacts, but `dont` requires committed evidence.**
 `wai init` auto-commits `.wai/`, but `wai add research/design/plan` leaves artifacts
@@ -187,6 +195,67 @@ gated. Suggested fix: (a) unblock F1 upstream; (b) meanwhile, add dont to the se
 ritual so capability findings that *can* cite in-project evidence (research docs,
 `probe/README.md`) get grounded, and gate on `dont` being clean once F1 is fixed (see
 Enforcement below).
+
+**F21 · `dont flag --file` refuses any evidence file with unstaged modifications, forcing
+commit-before-ground.** `dont` (the epistemic-forcing tool: you record a *claim*, then
+*flag/verify* it by attaching *evidence* — a file that supports it) computes a content SHA
+of the evidence file. If that repo-tracked file has uncommitted edits,
+`dont flag <claim> --file path/to/evidence.py` → `error: file has unstaged modifications;
+SHA would not match current content`, exit non-zero. Verified live this session: dirtying
+a tracked `benchlib.py` made the flag fail; `git checkout --` (clean) then let the exact
+same command succeed (`verified claim:…`). Expected: ground a claim against the evidence I
+am actively editing. Actual: I must `git commit` the evidence *first*, then ground — which
+inverts the natural loop (you usually ground a finding *while* writing it up). This is the
+same lifecycle friction as F3 (untracked files) but for the *dirty-tracked* case, and
+together they are a major contributor to F20's decay. 🟡 friction. Fix: hash the working-
+tree content (or the staged blob) instead of requiring HEAD-clean, or accept a
+`--allow-dirty` escape hatch.
+
+**F22 · `dont` has no way to delete or retract an erroneously created claim — only
+`ignore`.** While verifying F2/F21 this session I created five throwaway probe claims
+(`dont conclude "…"`). `dont --help` lists no `delete`/`remove`/`retract`/`drop` verb; the
+closest is `ignore` ("move a claim to ignored state") and `trust`/`undoubt` (status
+toggles). So a mistaken claim cannot be expunged — it lives forever in the ledger, merely
+re-labelled. I had to run `dont ignore claim:… --reason "stray test claim"` five times, and
+those entries still count toward the project's claim inventory. Expected: a way to remove a
+claim created in error (typo, test, duplicate). Actual: permanent ledger clutter. 🟢
+papercut. Fix: add `dont delete <id>` (hard-remove pre-verification claims) or document
+that `ignore` is the intended "never mind" and exclude ignored claims from status counts.
+
+**F23 · `dont flag --evidence` rejects repo-relative file paths; the path locator is the
+separately-named `--file` flag.** `dont flag <claim> --evidence path/to/file.py` →
+`error: malformed evidence locator "…": must be an http:// or https:// URI`. The
+repo-relative path form lives under a *different* flag, `--file`. The name `--evidence` is
+the obvious first guess for "here is my evidence file", but it is URL-only; the affordance
+for local files (the common case in a code repo) is undiscoverable from the flag name. 🟢
+papercut. Fix: let `--evidence` accept a repo-relative path (dispatching to the same
+structured locator as `--file`), or rename to `--evidence-url` so the split is obvious.
+
+**F24 · `uv sync` prunes `ipywidgets`/`anywidget` from the venv unless `--extra oracle` is
+passed, silently breaking every benchmark run.** `cositos` uses `uv` (a Python package/
+venv manager) with an optional dependency group named `oracle` that carries `ipywidgets` +
+`anywidget`. A bare `uv sync` (which many tasks and muscle-memory invoke) treats those as
+not-required and *removes* them from `.venv`, so the next
+`python examples/benchmarks/run.py` dies on `ModuleNotFoundError: ipywidgets`. It recurred
+after every sync last session, each time needing a manual
+`uv pip install ipywidgets anywidget` to repair. 🟡 friction (project config). Expected: the
+tooling needed to *run the project's own benchmarks* stays installed. Actual: routine
+`uv sync` uninstalls it. Fix: move `ipywidgets`/`anywidget` into the default dependencies
+(or a group synced by default), or make the benchmark task pass `--extra oracle`.
+
+**F25 · `~/.local/bin/grep` has a CRLF shebang and is a broken shim on this machine.**
+`~/.local/bin/grep --version` → `/bin/bash: /Users/…/.local/bin/grep: /bin/sh^M: bad
+interpreter: No such file or directory` (verified this session; the first line is
+`#!/bin/sh\r\n` — a Windows CRLF line ending that macOS reads as an interpreter named
+`/bin/sh\r`). Because `~/.local/bin` is early on `PATH` (it is where the four charly-vibes
+tool symlinks live), an unqualified `grep` can resolve to this broken shim instead of
+system `grep`. A related harness gotcha: a global pre-commit hook on this machine emits
+`bad interpreter` noise and can abort commits (worked around with `git commit
+--no-verify`), and its non-zero exit is *masked* when a `git commit` is piped through `rg`
+(the pipeline reports `rg`'s status, not git's). 🟢 papercut (environment/harness, not a
+charly-vibes tool defect — recorded so the friction is attributable). Fix: remove or repair
+the CRLF shim (`sed -i '' 's/\r$//' ~/.local/bin/grep` or delete it); prefer `rg`/absolute
+`/usr/bin/grep`; never assess a commit's success by piping it through another command.
 
 ---
 
