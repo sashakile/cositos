@@ -25,11 +25,12 @@ function entriesOf(sub) {
   return Array.isArray(sub) ? sub.map((v, i) => [i, v]) : Object.entries(sub);
 }
 
-function extractBinary(out, key, value, path, acc) {
+function extractBinary(out, bufferPath, value, acc) {
+  const key = bufferPath[bufferPath.length - 1];
   if (Array.isArray(out)) out[key] = null;
   else delete out[key];
   acc.buffers.push(value);
-  acc.buffer_paths.push([...path, key]);
+  acc.buffer_paths.push(bufferPath);
 }
 
 function separate(sub, path, acc) {
@@ -38,7 +39,7 @@ function separate(sub, path, acc) {
   for (const [key, value] of entriesOf(sub)) {
     if (isBinary(value)) {
       out = out ?? clone(sub);
-      extractBinary(out, key, value, path, acc);
+      extractBinary(out, [...path, key], value, acc);
     } else if (value !== null && typeof value === "object") {
       const nested = separate(value, [...path, key], acc);
       if (nested !== value) {
