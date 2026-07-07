@@ -55,3 +55,30 @@ write_html("counter.html", doc)   # open in any browser (needs internet for the 
 
 The same mechanism underlies the Quarto/JupyterBook/nbconvert recipes in the repo's
 `examples/static-export/`.
+
+## Composing widgets (references)
+
+A plain cositos widget is emitted as anywidget's `AnyModel`. `AnyModel` declares no
+*widget-reference* traits, so an `"IPY_MODEL_<id>"` string in its state (for example a
+`children` list) reaches the frontend as a **literal string, not a resolved child
+model** — reference-based composition does **not** work against plain anywidget widgets.
+
+Composition works when the container is a real ipywidgets **controls** model, because
+those declare their reference traits with `widget_serialization` (the `unpack_models`
+deserializer). Emit a `VBoxModel` (`@jupyter-widgets/controls`) plus a companion
+`LayoutModel` (`@jupyter-widgets/base`) — both at module version `2.0.0`, **not**
+anywidget's `~0.11.*` — whose `children` reference the anywidget children:
+
+```python
+from examples.composition.build import build_html  # runnable, browser-verified
+open("vbox.html", "w").write(build_html())          # VBox renders both children
+```
+
+See `examples/composition/build.py` for the full recipe.
+
+### Limitation: `jslink` does not work in static export
+
+`jslink`/`dlink` create a `LinkModel` that the html-manager only instantiates when a view
+references it. In a backend-less static export the `LinkModel` is viewless and
+unreferenced, so it is never created and **link updates do not propagate**. Linking
+widgets requires a live kernel.

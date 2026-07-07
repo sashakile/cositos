@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>cositos — composition (VBox)</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@1/dist/embed-amd.js" crossorigin="anonymous"></script>
+<script type="application/vnd.jupyter.widget-state+json">
+{
+  "version_major": 2,
+  "version_minor": 0,
+  "state": {
+    "vbox": {
+      "model_name": "VBoxModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": "VBoxView",
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "VBoxModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0",
+        "children": [
+          "IPY_MODEL_child_a",
+          "IPY_MODEL_child_b"
+        ],
+        "layout": "IPY_MODEL_layout"
+      }
+    },
+    "layout": {
+      "model_name": "LayoutModel",
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/base",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "LayoutModel",
+        "_model_module": "@jupyter-widgets/base",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "child_a": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_view_module": "anywidget",
+        "_view_name": "AnyView",
+        "_view_module_version": "~0.11.*",
+        "_view_count": null,
+        "_esm": "export default { render({ model, el }) { el.textContent = 'child: ' + model.get('label'); } }",
+        "label": "one"
+      }
+    },
+    "child_b": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_view_module": "anywidget",
+        "_view_name": "AnyView",
+        "_view_module_version": "~0.11.*",
+        "_view_count": null,
+        "_esm": "export default { render({ model, el }) { el.textContent = 'child: ' + model.get('label'); } }",
+        "label": "two"
+      }
+    }
+  }
+}
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"version_major": 2, "version_minor": 0, "model_id": "vbox"}
+</script>
+</body>
+</html>

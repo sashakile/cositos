@@ -1,10 +1,16 @@
 """Tests for static-HTML export of a serialized widget Document (embed capability)."""
 
+import importlib.util
 import json
 import re
+from pathlib import Path
 
 from cositos.embed import embed_html, embed_snippet, write_html
 from cositos.serialize import dump_document
+
+_COMPOSITION_BUILD = (
+    Path(__file__).resolve().parent.parent / "examples" / "composition" / "build.py"
+)
 
 VIEW_MIME = "application/vnd.jupyter.widget-view+json"
 STATE_MIME = "application/vnd.jupyter.widget-state+json"
@@ -118,3 +124,36 @@ def test_embed_html_wraps_the_snippet() -> None:
     snippet = embed_snippet(doc)
     assert "<!DOCTYPE html>" in html
     assert snippet in html
+
+
+def _composition_build():
+    spec = importlib.util.spec_from_file_location("cositos_composition_build", _COMPOSITION_BUILD)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    return module
+
+
+def test_composition_export_carries_resolvable_controls_container() -> None:
+    # Reference-based composition (cositos-v38 decision b): plain anywidget widgets do NOT
+    # resolve IPY_MODEL refs, but a real @jupyter-widgets/controls container does. This
+    # asserts the exported document carries that container so the children resolve on the
+    # frontend (browser-verified: VBox renders 'child: one'/'child: two', no JS error).
+    build = _composition_build()
+    doc = build.build_document()
+    html = build.build_html()
+    (embedded,) = _script_json(html, STATE_MIME)
+    state = embedded["state"]
+
+    vbox = state["vbox"]
+    assert vbox["model_name"] == "VBoxModel"
+    assert vbox["model_module"] == "@jupyter-widgets/controls"
+    # ipywidgets module version, NOT anywidget's ~0.11.* (which would fail to load).
+    assert vbox["model_module_version"] == "2.0.0"
+    assert vbox["state"]["children"] == ["IPY_MODEL_child_a", "IPY_MODEL_child_b"]
+    # The container keeps its own view identity; embed must not overwrite it with AnyView.
+    assert vbox["state"]["_view_name"] == "VBoxView"
+
+    assert state["layout"]["model_module"] == "@jupyter-widgets/base"
+    # The referenced anywidget children are present so the refs resolve to real models.
+    assert {"child_a", "child_b"} <= set(state)
+    assert doc["state"]["vbox"]["state"]["children"] == ["IPY_MODEL_child_a", "IPY_MODEL_child_b"]
