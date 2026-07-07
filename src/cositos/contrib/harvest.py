@@ -44,7 +44,8 @@ def _embed_data(widgets: tuple[Any, ...]) -> dict[str, Any]:
             "cositos.contrib.harvest requires ipywidgets; install it with "
             "`pip install ipywidgets` (or the cositos 'oracle' extra)"
         ) from exc
-    return embed_data(views=list(widgets))
+    data: dict[str, Any] = embed_data(views=list(widgets))
+    return data
 
 
 def harvest(*widgets: Widget) -> Document:
@@ -59,7 +60,8 @@ def harvest(*widgets: Widget) -> Document:
     For static export prefer :func:`harvest_html`, which renders only the top-level
     widgets as views (a widget expands to extra layout/style models that have no view).
     """
-    return _embed_data(widgets)["manager_state"]
+    document: Document = _embed_data(widgets)["manager_state"]
+    return document
 
 
 def harvest_html(*widgets: Widget, **embed_kwargs: Any) -> str:
