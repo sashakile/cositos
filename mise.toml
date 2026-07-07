@@ -46,6 +46,10 @@ run = "uv run --extra dev --extra oracle --extra e2e pytest -m e2e -v"
 description = "Run every per-language e2e example in isolation (OK/SKIP/FAIL summary; see examples/e2e/README.md)"
 run = "python3 scripts/e2e_all.py"
 
+[tasks.e2e-python]
+description = "Python e2e example: reference emitter/checker for the cross-language contract (cositos-1wi.2)"
+run = "uv run --extra dev python examples/e2e/python_e2e.py"
+
 [tasks.probe]
 description = "Classify a kernel's widget-comm capability (Tier 1/2/3). Usage: mise run probe -- <kernel>"
 run = "uv run --extra e2e --extra docs python probe/kernel_probe.py"
