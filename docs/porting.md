@@ -67,7 +67,9 @@ Certify against `fixtures/widget-state.json`:
   version numbers:** the state-format version is `2.0`, distinct from the protocol version
   `2.1.0`. Binary buffers become `{path, encoding:"base64", data}` records; omit the
   `buffers` key when a model has none.
-- `load_document(document) -> entries` — the exact inverse. References between widgets are
+- `load_document(document) -> entries` — the exact inverse. Validate the envelope at the
+  boundary: reject a missing/non-mapping `state` and an unsupported `version_major` with a
+  clear error (a higher `version_minor` is accepted). References between widgets are
   plain `"IPY_MODEL_<id>"` strings, so loading is a flat id-keyed pass (reference cycles
   are safe).
 - Reject empty or duplicate `model_id`s when building a document (it is the primary key).

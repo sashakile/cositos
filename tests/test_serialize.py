@@ -75,6 +75,43 @@ def test_no_buffers_round_trips() -> None:
     assert buffers2 == []
 
 
+def test_load_document_rejects_missing_state_key() -> None:
+    # Regression (cositos-qhx): a malformed envelope missing 'state' must raise a clear
+    # ValueError, not a bare KeyError leaking the internal dict access.
+    try:
+        load_document({})  # type: ignore[typeddict-item]
+    except ValueError as e:
+        assert "state" in str(e)
+    else:
+        raise AssertionError("expected ValueError for a document missing 'state'")
+
+
+def test_load_document_rejects_non_mapping_state() -> None:
+    try:
+        load_document({"version_major": 2, "version_minor": 0, "state": [1, 2]})  # type: ignore[typeddict-item]
+    except ValueError as e:
+        assert "state" in str(e)
+    else:
+        raise AssertionError("expected ValueError for a non-mapping 'state'")
+
+
+def test_load_document_rejects_unsupported_version() -> None:
+    # A document from a different state-format major version must not be silently
+    # accepted (it previously returned [] with no signal).
+    try:
+        load_document({"version_major": 99, "version_minor": 0, "state": {}})
+    except ValueError as e:
+        assert "99" in str(e) and "version" in str(e).lower()
+    else:
+        raise AssertionError("expected ValueError for an unsupported state-format version")
+
+
+def test_load_document_accepts_supported_version() -> None:
+    # The supported major version still loads (minor is allowed to differ upward).
+    doc = dump_document([("m", {"value": 1})])
+    assert load_document(doc) == [("m", {"value": 1})]
+
+
 def test_decode_rejects_unknown_encoding() -> None:
     bad = ({}, [{"path": ["x"], "encoding": "hex", "data": "6162"}])
     try:

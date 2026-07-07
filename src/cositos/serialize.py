@@ -157,10 +157,28 @@ def dump_document(
 def load_document(doc: Document) -> list[ModelEntry]:
     """Inverse of :func:`dump_document`: rebuild the list of ``(model_id, state)``.
 
+    Validates the v2 envelope at the boundary (parse, don't validate): a missing or
+    non-mapping ``state`` and an unsupported ``version_major`` raise a clear
+    :class:`ValueError` rather than leaking a bare ``KeyError`` or silently returning an
+    empty list (cositos-qhx). A higher ``version_minor`` is accepted (forward-compatible).
+
     References between models are plain ``"IPY_MODEL_<id>"`` strings, so loading is a flat
     id-keyed pass — reference cycles are safe (no recursive inlining).
     """
-    return [load_model(item) for item in doc["state"].items()]
+    if "state" not in doc:
+        raise ValueError("invalid widget-state document: missing 'state' key")
+    version_major = doc.get("version_major")
+    if version_major != STATE_VERSION_MAJOR:
+        raise ValueError(
+            f"unsupported widget-state format version_major {version_major!r} "
+            f"(this build reads version {STATE_VERSION_MAJOR}.x)"
+        )
+    state = doc["state"]
+    if not isinstance(state, dict):
+        raise ValueError(
+            f"invalid widget-state document: 'state' must be a mapping, got {type(state).__name__}"
+        )
+    return [load_model(item) for item in state.items()]
 
 
 #: A widget reference is a string value of exactly ``"IPY_MODEL_<model_id>"``.
