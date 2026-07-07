@@ -33,6 +33,7 @@ depends on the kernel's comm support, which is a separate, per-kernel question �
 | Clojure | 🚧 protocol core only — blocked upstream (clojupyter has no public comm-open API) | [`clojure/README.md`](clojure/README.md) |
 
 Full tier classification and how kernels were tested: [`probe/README.md`](probe/README.md).
+Shortest runnable path per language: [`docs/tutorials/quickstart.qmd`](docs/tutorials/quickstart.qmd).
 
 ## Architecture
 

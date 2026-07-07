@@ -1,0 +1,119 @@
+---
+title: "Quickstart: your first live cositos widget"
+---
+
+This page answers one question per language: **what is the shortest path to a live
+cositos widget in my kernel, today?** For the full backend-maturity picture (why only
+some languages are listed as "live" below) see the "Backend maturity" table in the root
+`README.md` and the tier classification in `probe/README.md`.
+
+Every snippet below renders the *same* counter widget — one anywidget-style ESM file,
+reused verbatim, with **no new JavaScript** regardless of host language. The full
+runnable notebooks these snippets are extracted from live in `examples/notebooks/`.
+
+> Repo-relative paths on this page (`README.md`, `probe/README.md`,
+> `examples/notebooks/`) are given as plain text, not links: this page renders one
+> directory level deeper than its source (`docs/_site/tutorials/`), so a relative link
+> to a file outside `docs/` would 404 in the built site (see `cositos-7co`).
+
+## Python
+
+Live today (Tier 1, ipykernel). Full notebook: `examples/notebooks/python_counter.ipynb`.
+
+Prerequisites: `cositos` importable in the kernel; `anywidget` installed in the
+*frontend* (JupyterLab/Notebook) — cositos emits `_model_module="anywidget"`, so the
+already-installed anywidget frontend renders it.
+
+```{python}
+# | eval: false
+ESM = """
+export default {
+  render({ model, el }) {
+    const btn = document.createElement("button");
+    const out = document.createElement("span");
+    const paint = () => { out.textContent = " count = " + model.get("count"); };
+    btn.textContent = "increment";
+    btn.addEventListener("click", () => {
+      model.set("count", model.get("count") + 1);
+      model.save_changes();
+    });
+    model.on("change:count", paint);
+    paint();
+    el.appendChild(btn); el.appendChild(out);
+  }
+}
+"""
+
+from cositos import Widget
+from cositos.jupyter import CommTransport
+
+# The host owns the state; cositos is the protocol glue (no observer magic).
+state = {"_esm": ESM, "count": 0}
+widget = Widget(
+    CommTransport(),
+    get_state=lambda: dict(state),
+    set_state=state.update,  # inbound updates from the frontend land here
+)
+widget  # last line of a cell: renders live, opens the comm on first display
+```
+
+Click **increment** in the rendered widget, then read the count back from the kernel:
+`state['count']`.
+
+## Julia
+
+Live today (Tier 1, IJulia). Full notebook: `examples/notebooks/julia_counter.ipynb`.
+
+Prerequisites: an IJulia kernel bound to a project where `Cositos` and `IJulia` are
+available; `anywidget` installed in the frontend (same reason as Python, above).
+
+```julia
+using Cositos, IJulia
+
+ESM = raw"""
+export default {
+  render({ model, el }) {
+    const btn = document.createElement("button");
+    const out = document.createElement("span");
+    const paint = () => { out.textContent = " count = " + model.get("count"); };
+    btn.textContent = "increment";
+    btn.addEventListener("click", () => {
+      model.set("count", model.get("count") + 1);
+      model.save_changes();
+    });
+    model.on("change:count", paint);
+    paint();
+    el.appendChild(btn); el.appendChild(out);
+  }
+}
+"""
+
+# The host owns the state; cositos is the protocol glue (no observer magic).
+state = Dict{String,Any}("_esm" => ESM, "count" => 0)
+widget = Widget(
+    Cositos.ijulia_transport();
+    get_state = () -> copy(state),
+    set_state = (d) -> merge!(state, d),  # inbound updates from the frontend land here
+);
+
+widget  # last line of a cell: renders live, opens the comm on first display
+```
+
+Click **increment**, then read the count back: `state["count"]`.
+
+## R, C#, Clojure — not yet available
+
+These three backends are **protocol-core only**: the message-building and
+buffer-split/merge logic is ported and fixture-certified, but there is no live-widget
+path yet because the *kernel's* comm support is blocked upstream — not a gap in
+cositos itself. See `probe/README.md` for how each was classified.
+
+| Language | Blocked on | Tracking |
+|---|---|---|
+| R | IRkernel 1.3.2's `comm$open()` throws an internal `send_response` arity error | `cositos-059.4` |
+| C# | .NET Interactive doesn't answer `comm_info_request` — it uses a bespoke kernel protocol, not the standard ipywidgets comm surface | `cositos-059.6` |
+| Clojure | clojupyter has comm-message plumbing but no public API to open a comm from user code (Clay is a viable non-kernel alternative — see [`docs/hosts.md`](../hosts.md#clay-claychannel)) | `cositos-059.5` |
+
+If you're evaluating a language for a polyglot team today, treat this table as
+current status, not a roadmap commitment — each is blocked on an upstream kernel fix,
+not on cositos work.

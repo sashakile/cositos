@@ -3,6 +3,7 @@ project:
   output-dir: _site
   render:
     - index.qmd
+    - tutorials/quickstart.qmd
     - tutorials/save-restore.qmd
     - tutorials/static-export.qmd
     - tutorials/polyglot-parity.qmd
@@ -26,6 +27,7 @@ website:
         text: Home
       - text: Tutorials
         menu:
+          - tutorials/quickstart.qmd
           - tutorials/save-restore.qmd
           - tutorials/static-export.qmd
           - tutorials/polyglot-parity.qmd

@@ -1,6 +1,8 @@
 # cositos examples
 
-Runnable demos of cositos widgets across hosts. See
+Runnable demos of cositos widgets across hosts. New to cositos? Start with
+[`docs/tutorials/quickstart.qmd`](../docs/tutorials/quickstart.qmd) for the shortest
+runnable snippet per language before diving into these. See
 `.wai/projects/cositos-core/designs/` for the integration design (live vs. static
 rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 
