@@ -17,6 +17,23 @@ maintainer) is keeping the *core* free of per-language bindings. `cositos` is th
 binding-free core plus a **conformance fixture suite**, so ecosystem experts can port a
 backend to their language and self-certify against golden messages.
 
+## Backend maturity
+
+The protocol *core* ports to a language in ~150 lines and is fixture-certified for all
+five backends below (see `docs/porting.md`). Whether you get **live** widgets also
+depends on the kernel's comm support, which is a separate, per-kernel question — see
+`probe/README.md` for how each was classified.
+
+| Language | Live widgets today? | Detail |
+|---|---|---|
+| Python | ✅ yes (Tier 1, ipykernel) | [`src/cositos/`](src/cositos/) |
+| Julia | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](julia/README.md) |
+| R | 🚧 protocol core only — blocked upstream (IRkernel comm-open bug) | [`r/README.md`](r/README.md) |
+| C# | 🚧 protocol core only — blocked upstream (.NET Interactive's non-standard protocol) | [`csharp/README.md`](csharp/README.md) |
+| Clojure | 🚧 protocol core only — blocked upstream (clojupyter has no public comm-open API) | [`clojure/README.md`](clojure/README.md) |
+
+Full tier classification and how kernels were tested: [`probe/README.md`](probe/README.md).
+
 ## Architecture
 
 ```
