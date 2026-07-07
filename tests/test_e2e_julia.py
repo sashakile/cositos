@@ -128,3 +128,31 @@ def test_end_to_end_comm_lifecycle_over_real_ijulia_kernel(kernel):
     state_replies = [m for m in replies if m["content"]["data"].get("method") == "update"]
     assert state_replies, "kernel should answer request_state with an update"
     assert state_replies[-1]["content"]["data"]["state"]["value"] == 42
+
+
+@pytest.mark.e2e
+def test_display_emits_widget_view_mimebundle(kernel):
+    # A fresh widget displayed on a cell's last line must auto-open its comm and emit the
+    # anywidget widget-view mimetype as a JSON object (model_id matching the opened comm),
+    # so it renders live — the Julia analogue of Python's Widget._repr_mimebundle_.
+    kc = kernel
+    setup = (
+        "using Cositos, IJulia\n"
+        '_s2 = Dict{String,Any}("_esm" => "export default { render() {} }", "count" => 0)\n'
+        "_w2 = Widget(Cositos.ijulia_transport(); get_state = () -> copy(_s2))\n"
+        "display(_w2)\n"
+    )
+    _run(kc, setup)
+    msgs = _drain_iopub(kc)
+
+    mime = "application/vnd.jupyter.widget-view+json"
+    displays = [m for m in _by_type(msgs, "display_data") if mime in m["content"]["data"]]
+    assert displays, "expected a display_data carrying the widget-view mimetype"
+    view = displays[-1]["content"]["data"][mime]
+    assert view["version_major"] == 2
+    assert view["version_minor"] == 1
+
+    # The displayed model_id must match the comm the display auto-opened.
+    opens = _by_type(msgs, "comm_open")
+    assert opens, "display must auto-open the comm"
+    assert view["model_id"] == opens[-1]["content"]["comm_id"]

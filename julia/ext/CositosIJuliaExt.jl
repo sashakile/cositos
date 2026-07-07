@@ -17,6 +17,15 @@ using Cositos: Cositos
 import IJulia
 import IJulia.CommManager
 
+const _WIDGET_VIEW_MIME = MIME{Symbol(Cositos.WIDGET_VIEW_MIMETYPE)}
+
+function __init__()
+    # Tell IJulia to embed this mimetype's `show` output as raw JSON in the display bundle
+    # (not a stringified string), so the frontend's widget manager receives a JSON object.
+    IJulia.register_jsonmime(MIME(Cositos.WIDGET_VIEW_MIMETYPE))
+    return nothing
+end
+
 """IJulia comm transport: adapts `CommManager.Comm` to the cositos Transport contract."""
 mutable struct IJuliaCommTransport
     comm::Union{CommManager.Comm,Nothing}
@@ -83,5 +92,24 @@ function _require_comm(t::IJuliaCommTransport)
 end
 
 _bufvec(buffers) = Vector{UInt8}[Vector{UInt8}(b) for b in buffers]
+
+# -- display: render a Widget as the anywidget view mimebundle -------------
+# Julia analogue of Python's Widget._repr_mimebundle_: displaying the widget opens its
+# comm (if needed) and emits the widget-view mimetype, so `w` on a cell's last line
+# renders live. `register_jsonmime` (in __init__) makes IJulia embed this as raw JSON.
+
+Base.showable(::_WIDGET_VIEW_MIME, ::Cositos.Widget) = true
+
+function Base.show(io::IO, ::_WIDGET_VIEW_MIME, w::Cositos.Widget)
+    w.opened || Cositos.open!(w)
+    view = Cositos.mimebundle(w)[Cositos.WIDGET_VIEW_MIMETYPE]
+    print(
+        io,
+        "{\"version_major\":", view["version_major"],
+        ",\"version_minor\":", view["version_minor"],
+        ",\"model_id\":", repr(view["model_id"]::AbstractString), "}",
+    )
+    return nothing
+end
 
 end # module
