@@ -21,6 +21,7 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     parse_message, Update, RequestState, Custom,
     remove_buffers, put_buffers!,
     dump_model, load_model, dump_document, load_document,
+    view_identity, with_view_identity,
     PlutoWidget
 
 const PROTOCOL_VERSION_MAJOR = 2
@@ -40,17 +41,31 @@ const ANYWIDGET_MODULE_VERSION = "~0.11.*"
 isbinary(x) = x isa Vector{UInt8}
 iscontainer(x) = (x isa AbstractDict || x isa AbstractVector) && !isbinary(x)
 
-function _immutable_fields(version::AbstractString)
+function model_identity(version::AbstractString)
     return Dict{String,Any}(
         "_model_module" => "anywidget",
         "_model_name" => "AnyModel",
         "_model_module_version" => version,
+    )
+end
+
+"""
+    view_identity(version) -> Dict
+
+anywidget's immutable *view* fields — the identity the html-manager needs to pick a view
+class. In schema v2 these live inside each model's `state`.
+"""
+function view_identity(version::AbstractString)
+    return Dict{String,Any}(
         "_view_module" => "anywidget",
         "_view_name" => "AnyView",
         "_view_module_version" => version,
         "_view_count" => nothing,
     )
 end
+
+_immutable_fields(version::AbstractString) =
+    merge(model_identity(version), view_identity(version))
 
 # ---- buffer split / merge (protocol v2 nested rules) ----
 
@@ -237,6 +252,30 @@ between models are plain `"IPY_MODEL_<id>"` strings, so loading is a flat id-key
 (reference cycles are safe — no recursive inlining).
 """
 load_document(doc) = [load_model(item) for item in doc["state"]]
+
+"""
+    with_view_identity(document) -> Document
+
+Return a copy of `document` with anywidget *view* identity merged into each model's
+`state` — the form the CDN html-manager needs to render.
+
+Parity with Python's `cositos.embed.with_view_identity`. [`dump_document`](@ref) stays a
+lossless codec that certifies byte-for-byte against the shared golden fixture; view
+identity is a static-*rendering* concern, so it is injected here (the analog of the live
+`build_comm_open` path) rather than in the serialized document. Host-set state wins over
+the injected defaults. Julia has no static-export/embed host yet; this provides the
+enrichment a future one would apply before handing state to the html-manager.
+"""
+function with_view_identity(document)
+    records = get(document, "state", Dict{String,Any}())
+    enriched = Dict{String,Any}()
+    for (model_id, record) in records
+        version = get(record, "model_module_version", ANYWIDGET_MODULE_VERSION)
+        state = merge(view_identity(version), get(record, "state", Dict{String,Any}()))
+        enriched[model_id] = merge(record, Dict{String,Any}("state" => state))
+    end
+    return merge(document, Dict{String,Any}("state" => enriched))
+end
 
 "Build the widget-view mimebundle used for display."
 function mimebundle(model_id::AbstractString, repr_text::AbstractString="")

@@ -151,6 +151,28 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test jsonequal(dump_document(load_document(doc)), doc)
     end
 
+    @testset "embed: with_view_identity injects anywidget view identity (cositos-e4j)" begin
+        # Parity with Python's cositos.embed.with_view_identity: static rendering (the CDN
+        # html-manager) needs each model's state to carry the anywidget view identity, or
+        # it cannot pick a view class. dump_document stays a pure lossless codec (certified
+        # vs the golden fixture above); the view identity is injected at this embed layer.
+        entries = [("counter", Dict{String,Any}("_esm" => "e", "n" => 3))]
+        doc = dump_document(entries)
+        # dump stays pure: no view identity leaked into the serialized document.
+        @test !haskey(doc["state"]["counter"]["state"], "_view_name")
+        enriched = with_view_identity(doc)
+        st = enriched["state"]["counter"]["state"]
+        @test st["_view_name"] == "AnyView"
+        @test st["_view_module"] == "anywidget"
+        @test haskey(st, "_view_module_version")
+        @test haskey(st, "_view_count")
+        @test st["n"] == 3               # user state preserved
+        # Host-set view identity wins over the injected defaults.
+        entries2 = [("vbox", Dict{String,Any}("_view_name" => "VBoxView"))]
+        st2 = with_view_identity(dump_document(entries2))["state"]["vbox"]["state"]
+        @test st2["_view_name"] == "VBoxView"
+    end
+
     @testset "serialize: dump_document validates model ids" begin
         @test_throws ErrorException dump_document([("", Dict{String,Any}("value" => 1))])
         @test_throws ErrorException dump_document([
