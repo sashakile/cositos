@@ -10,5 +10,5 @@
  */
 
 export { Model } from "./model.js";
-export { MemoryChannel, LocalChannel, PlutoChannel } from "./channels.js";
+export { MemoryChannel, LocalChannel, PlutoChannel, ClayChannel } from "./channels.js";
 export { loadWidget, renderWidget } from "./runtime.js";
