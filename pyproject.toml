@@ -74,3 +74,13 @@ python_version = "3.10"
 strict = true
 warn_unused_configs = true
 no_implicit_reexport = false
+
+[[tool.mypy.overrides]]
+# Optional contrib deps carry no usable type information under our 3.10 target:
+# ipywidgets ships no py.typed marker/stubs, and numpy's bundled stubs use 3.12-only
+# `type` statements that mypy rejects at python_version 3.10. contrib/harvest.py is a
+# thin, optional wrapper, so treat these third-party modules as untyped (Any) instead of
+# analyzing their stubs — the first-party 3.10 check is preserved.
+module = ["ipywidgets.*", "numpy.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
