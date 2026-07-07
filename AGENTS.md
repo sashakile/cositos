@@ -153,6 +153,29 @@ bd prime                # Refresh Beads context
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
 
+<!-- TICKET WORKFLOW (not tool-managed) -->
+## Ticket implementation workflow
+
+**This is the main development loop.** For every ticket (beads issue): implement
+using TDD (red → green → refactor) → invoke `/rule-of-5-universal` → fix all
+findings → commit → move to the next ticket. Do not start the next ticket until the
+current one is committed and clean. **No batching across tickets.**
+
+Concretely, per ticket:
+
+1. **Claim** — `bd update <id> --claim` (check `metadata.files` for conflicts first).
+2. **TDD** — write a failing test, make it pass, refactor. ARRANGE-ACT-ASSERT
+   (unit/integration) or GIVEN-WHEN-THEN (behaviour). No mocks — prefer real
+   fakes/fixtures.
+3. **Review** — invoke `/rule-of-5-universal` on the result and fix every finding
+   before committing.
+4. **Gate** — `mise run verify` must pass (lint, typecheck, coverage, complexity,
+   specs, coverage-audit). Structural changes commit separately from behaviour changes
+   (Tidy First).
+5. **Commit** — atomic and revertible; stage explicitly by path (never `git add -A`).
+6. **Close** — `bd close <id>`, then start the next ticket. If the ticket surfaced
+   tooling friction, log it as an `F#` finding in `TOOL_EVALUATION.md`.
+
 <!-- COVERAGE & GROUNDING RITUALS (not tool-managed) -->
 ## Quality-tool coverage & grounding rituals
 
