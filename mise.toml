@@ -106,6 +106,10 @@ run = "ah check"
 description = "Fail if a backend dir has no declared quality-tool coverage (see F19)"
 run = "python3 scripts/coverage_audit.py"
 
+[tasks.claims]
+description = "Fail if any dont claim is unverified/ungrounded (see F1/E3, cositos-83x)"
+run = "dont check --ungrounded"
+
 [tasks.docs]
 description = "Render the Quarto documentation site (needs quarto on PATH)"
 run = [
@@ -190,4 +194,5 @@ depends = [
     "complexity",
     "coverage-audit",
     "specs",
+    "claims",
 ]

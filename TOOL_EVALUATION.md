@@ -353,10 +353,17 @@ pre-commit `dont` gate would just reproduce the F17 all-skip friction, so instea
 in `dont` (citing in-project evidence, which *is* allowed). Soft, but it re-introduces the
 claim→ground habit the tool is for.
 
-**E3 · dont hard gate (after F1).** Once `dont` can cite vendored reference repos, add
-`dont verify` (no unverified/ungrounded claims) to `mise run verify` and pre-push, so a
-session that makes empirical claims but grounds none fails the gate — the same mechanism
-that kept `pretender`/`ah` alive.
+**E3 · dont hard gate (after F1) — now enabled.** `dont check --ungrounded` (exits 1 when
+any claim is unverified, 0 when all are grounded) is wired into a new `mise run claims`
+task, which is now a `[tasks.verify]` dependency and a `lefthook.yml` `pre-push` command
+(mirroring how `complexity`/`specs` are gated). The two stray unverified claims found at
+wiring time were resolved rather than papered over: the day-1 dummy claim ("good clean
+claim about protocol version two point one") was `ignore`d as a smoke-test artifact, and
+a duplicate ungrounded benchmarks claim was `ignore`d in favour of its already-grounded
+twin (`claim:01KWX49WFJ1F31348M12R2S93E`, same statement, verified with real evidence).
+Verified live: `dont conclude "..."` (an ungrounded claim) now fails `mise run claims` /
+`mise run verify` / `lefthook run pre-push` with exit 1 — the exact mechanism that kept
+`pretender`/`ah` alive is now protecting `dont` too.
 
 ### 👍 What worked well (kept for balance)
 

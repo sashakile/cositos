@@ -39,3 +39,5 @@ pre-push:
       run: mise run julia-test
     specs:
       run: mise run specs
+    claims:
+      run: mise run claims
