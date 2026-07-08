@@ -73,11 +73,14 @@ def test_send_state_uses_comm_send(fake_comm):
     w.open()
     store["value"] = 9
     w.send_state()
-    assert fake_comm["comm"].sends[-1]["data"] == {
-        "method": "update",
-        "state": {"value": 9},
-        "buffer_paths": [],
-    }
+    sent = fake_comm["comm"].sends[-1]["data"]
+    assert sent["method"] == "update"
+    assert sent["buffer_paths"] == []
+    # A full send_state() carries anywidget's identity fields alongside the changed
+    # state (cositos-k43): JupyterLab's reload-without-kernel-restart restore path
+    # reads model_name/model_module off this exact update message.
+    assert sent["state"]["value"] == 9
+    assert sent["state"]["_model_name"] == "AnyModel"
 
 
 def test_inbound_update_flows_to_set_state(fake_comm):

@@ -67,11 +67,26 @@ class Widget:
     def send_state(self, include: set[str] | None = None) -> None:
         """Send an ``update`` with the full state, or only ``include`` keys.
 
+        A full send (``include=None``) also carries anywidget's immutable
+        ``_model_name``/``_model_module``/``_view_name`` identity fields, matching
+        real ipywidgets' always-synced traits. Without them, JupyterLab's
+        reload-without-kernel-restart restore path (``WidgetManager.
+        _loadFromKernelModels``) sends ``request_state`` and reads ``model_name``/
+        ``model_module`` straight off the resulting ``update`` state; if absent, it
+        instantiates the model with both undefined and the widget never re-renders
+        (cositos-k43).
+
         Requires an open comm; call :meth:`open` (or display the widget) first.
         """
         self._require_open("send_state")
         state = self._get_state()
-        if include is not None:
+        if include is None:
+            state = {
+                **protocol.model_identity(protocol.ANYWIDGET_MODULE_VERSION),
+                **protocol.view_identity(protocol.ANYWIDGET_MODULE_VERSION),
+                **state,
+            }
+        else:
             state = {k: v for k, v in state.items() if k in include}
         data, buffers = protocol.build_update(state)
         self._transport.send("comm_msg", data, buffers=buffers)

@@ -74,6 +74,35 @@ def test_request_state_triggers_full_update():
     assert content["state"]["value"] == 5
 
 
+def test_request_state_includes_anywidget_identity():
+    # Regression (cositos-k43): on browser reload without a kernel restart,
+    # JupyterLab's WidgetManager._loadFromKernelModels() sends 'request_state' and
+    # reads model_name/model_module straight off the resulting 'update' message's
+    # state. Without the identity fields there, it instantiates the model with
+    # model_name=undefined/model_module=undefined and 'Failed to load model class
+    # undefined' is raised — the widget never re-renders after reload.
+    w, t, _ = make_widget({"value": 5})
+    w.open()
+    t.deliver({"method": "request_state"})
+    _mt, content, _b, _m = t.sent[-1]
+    state = content["state"]
+    assert state["_model_name"] == "AnyModel"
+    assert state["_model_module"] == "anywidget"
+    assert state["_model_module_version"]
+    assert state["_view_name"] == "AnyView"
+    assert state["_view_module"] == "anywidget"
+
+
+def test_send_state_full_includes_anywidget_identity():
+    # A plain full send_state() (no include filter) must carry the same identity
+    # fields as comm_open, since real ipywidgets treats them as always-synced traits.
+    w, t, _ = make_widget({"value": 0})
+    w.open()
+    w.send_state()
+    _mt, content, _b, _m = t.sent[-1]
+    assert content["state"]["_model_name"] == "AnyModel"
+
+
 def test_inbound_update_merges_buffers():
     w, t, store = make_widget({"img": None})
     w.open()
