@@ -28,6 +28,9 @@ node_modules/
 # dont mutable state (embedded Cozo DB, no version-controlled/remote-sync engine
 # like Dolt — see TOOL_EVALUATION.md F27, cositos-dad.1/.10). Keep config.toml,
 # AGENTS.md, and seed/ tracked; the database itself is local-only per machine.
+
+# create-handoff skill output: local session artifacts, not project source.
+handoffs/
 .dont/db.cozo
 .dont/db.cozo.lock
 .dont/tx.seq
