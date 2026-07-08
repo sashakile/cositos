@@ -122,7 +122,8 @@ run = '''QUARTO_PYTHON="$PWD/.venv/bin/python" quarto preview docs/'''
 description = "Print the manual-QA checklist (which qa-* task exercises what)"
 run = '''
 echo "Manual QA — run each, then look for the described behaviour:"
-echo "  mise run qa-export    open the checked-in static export (serialized state -> widget, no kernel; needs internet for CDN)"
+echo "  mise run qa-export    open the checked-in static export (serialized state -> widget, no kernel; needs internet for CDN). Renders BLANK by design -- see the task description."
+echo "  mise run qa-composition  open the checked-in composed-widget static export (VBox + two anywidget children actually render, no kernel)"
 echo "  mise run qa-web        serve the backend-less browser demo (LocalChannel; interact -> live state, no kernel)"
 echo "  mise run qa-docs       build + open the Quarto docs site (tutorials render; embedded widget shows statically)"
 echo "  mise run qa-notebook   launch JupyterLab on the counter notebook (run cells, click increment, read state['count'] back)"
@@ -130,8 +131,22 @@ echo "  mise run qa-notebook-julia  same, for the Julia (IJulia) counter noteboo
 '''
 
 [tasks.qa-export]
-description = "QA: open the checked-in static-HTML export (serialized Document -> widget, no kernel)"
+description = '''
+QA: open the checked-in static-HTML export (serialized Document -> widget, no kernel).
+Expect a BLANK page -- this is intentional, not a bug (cositos-mbp): the two widgets'
+`_esm` strings are reused verbatim from fixtures/widget-state.json, the cross-language
+golden serialization fixture certified byte-for-byte against Python/Julia/R/C#/Clojure
+test suites, so their render() bodies are comment-only placeholders ('/* VBox */',
+'/* float32 plot */') by design -- editing them would ripple into every language port's
+test fixtures. This task only confirms the export LOADS cleanly (requirejs + html-manager
++ anywidget CDN scripts 200, no console errors, no jupyter-widgets-error-widget). For a
+static export that actually RENDERS something, use `mise run qa-composition`.
+'''
 run = "open examples/web/exported-widget-state.html"
+
+[tasks.qa-composition]
+description = "QA: open the checked-in composed-widget static export (VBox + two anywidget children, no kernel) -- the visual counterpart to qa-export"
+run = "open examples/composition/vbox.html"
 
 [tasks.qa-web]
 description = "QA: serve the backend-less browser demo (LocalChannel, no kernel)"
