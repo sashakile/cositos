@@ -65,9 +65,11 @@ visualization tool. It is **not** a Jupyter kernel and has no comm protocol — 
 a **full-duplex public websocket** (`scicloj.clay.v2.server`: `broadcast!` /
 `scittle-eval-string!` push to the browser; `install-websocket-handler! :on-receive`
 receives from it). That is exactly enough to host a widget, with no kernel and no upstream
-patch. (Clojure's kernel, clojupyter, is blocked: it can receive comms but exposes no
-user-facing API to *open* one — so Clay is the recommended Clojure host. See
-`probe/README.md`.)
+patch. (Clojure's kernel, clojupyter, exposes no *public* API to *open* a comm from user
+code; a live comm round trip is reachable via an internal, version-coupled crack
+(`clojupyter.state/current-context`, confirmed live in `cositos-059.9` -- see
+`cositos.clojupyter-transport` and `probe/README.md` "clojupyter comm surface"). Clay is
+the recommended Clojure host regardless: same end result, no internal-API risk.)
 
 **Wire format.** Clay frames are text, and cositos shares the socket with Clay's own
 control frames (`refresh` / `loading` / `scittle-eval-string`), so cositos frames are

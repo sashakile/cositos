@@ -32,9 +32,10 @@ touching the protocol core.
 | Native Jupyter comm (`CommTransport`) | Python backend | You have a live Python kernel (JupyterLab, Notebook, Voila, myBinder). |
 | `CositosIJuliaExt` (`ijulia_transport`) | Julia backend | You have a live IJulia kernel. |
 | `CositosPlutoExt` (`PlutoWidget`) | Julia backend | You're in Pluto.jl — not Jupyter, no comm protocol; state flows through `@bind` instead. See `pluto.md`. |
+| `cositos.clojupyter-transport` (`open!`/`send-state!`/`on-update!`) | Clojure backend | You have a live clojupyter kernel and accept an internal-API crack (`cositos-059.9`); no buffers/`custom` support. See `docs/hosts.md`. |
 | `LocalChannel` | JS frontend | A plain web page or WASM app with no backend at all — client-only widget state. |
 | `MemoryChannel` | JS frontend | Tests, or a JS "kernel" co-located with a JS "frontend" in the same process. |
-| `ClayChannel` | JS frontend | Clojure, via Clay's public websocket — clojupyter's own kernel has no user-facing comm-open API (see the maturity table in the root `README.md`), so Clay is the recommended Clojure host. |
+| `ClayChannel` | JS frontend | Clojure, via Clay's public websocket — the recommended Clojure host (no internal APIs, full buffer/custom-message support unlike the clojupyter crack above). |
 | Static export (`dump_document` + `embed_html`/`write_html`) | Python backend, no transport | No live process at all — a saved document rendered once. See `tutorials/static-export.qmd`. |
 
 Writing a new one (a Channel or a Transport) is documented step by step in `hosts.md`

@@ -30,7 +30,7 @@ depends on the kernel's comm support, which is a separate, per-kernel question �
 | Julia | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](julia/README.md) |
 | R | 🚧 protocol core only — blocked upstream (IRkernel comm-open bug) | [`r/README.md`](r/README.md) |
 | C# | 🚧 protocol core only — blocked upstream (.NET Interactive's non-standard protocol) | [`csharp/README.md`](csharp/README.md) |
-| Clojure | 🚧 protocol core only — blocked upstream (clojupyter has no public comm-open API) | [`clojure/README.md`](clojure/README.md) |
+| Clojure | ✅ yes (Tier 1 via an internal-API crack, clojupyter) or via Clay (recommended, public API) | [`clojure/README.md`](clojure/README.md), [`docs/hosts.md`](docs/hosts.md#clay-claychannel) |
 
 Full tier classification and how kernels were tested: [`probe/README.md`](probe/README.md).
 Shortest runnable path per language: [`docs/tutorials/quickstart.qmd`](docs/tutorials/quickstart.qmd).

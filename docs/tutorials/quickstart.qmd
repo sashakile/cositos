@@ -101,21 +101,51 @@ widget  # last line of a cell: renders live, opens the comm on first display
 
 Click **increment**, then read the count back: `state["count"]`.
 
-## R, C#, Clojure — not yet available
+## Clojure
 
-These three backends are **protocol-core only**: the message-building and
+Two live paths, deliberately different trade-offs:
+
+- **Clay (recommended)** -- not a Jupyter kernel, but a full-duplex public websocket, no
+  internal APIs. See [`docs/hosts.md`](../hosts.md#clay-claychannel) and
+  `clojure -M:clay-notebook`.
+- **clojupyter, via an internal-API crack** -- confirmed live (Tier 1, `cositos-059.9`),
+  but reaches `clojupyter.state/current-context`, an internal, version-coupled
+  implementation detail with no buffer or `custom`-message support. Full notebook:
+  `examples/notebooks/clojure_counter.ipynb`.
+
+```clojure
+(require '[cemerick.pomegranate :as pom])
+(pom/add-classpath "clojure/src")   ; cositos.core is not preinstalled on the kernel
+(pom/add-classpath "clojure/dev")   ; cositos.clojupyter-transport ditto
+(require '[cositos.clojupyter-transport :as tx] '[clojupyter.display :as display])
+
+(def esm "export default { render({ model, el }) { /* ... same counter ... */ } }")
+
+;; The host owns the state; cositos is the protocol glue (no observer magic).
+(def state (atom {"_esm" esm "count" 0}))
+(def transport (tx/open! @state))
+(tx/on-update! transport (fn [new-state] (reset! state new-state)))
+
+;; clojupyter has no auto-display hook, so rendering is one explicit call:
+(display/render-mime tx/widget-view-mimetype (tx/widget-view transport))
+```
+
+Click **increment**, then read the count back: `(get @state "count")`.
+
+## R, C# -- not yet available
+
+These two backends are **protocol-core only**: the message-building and
 buffer-split/merge logic is ported and fixture-certified, but there is no live-widget
-path yet because the *kernel's* comm support is blocked upstream — not a gap in
+path yet because the *kernel's* comm support is blocked upstream -- not a gap in
 cositos itself. See `probe/README.md` for how each was classified.
 
 | Language | Blocked on | Tracking |
 |---|---|---|
 | R | IRkernel 1.3.2's `comm$open()` throws an internal `send_response` arity error | `cositos-059.4` |
-| C# | .NET Interactive doesn't answer `comm_info_request` — it uses a bespoke kernel protocol, not the standard ipywidgets comm surface | `cositos-059.6` |
-| Clojure | clojupyter has comm-message plumbing but no public API to open a comm from user code (Clay is a viable non-kernel alternative — see [`docs/hosts.md`](../hosts.md#clay-claychannel)) | `cositos-059.5` |
+| C# | .NET Interactive doesn't answer `comm_info_request` -- it uses a bespoke kernel protocol, not the standard ipywidgets comm surface | `cositos-059.6` |
 
 If you're evaluating a language for a polyglot team today, treat this table as
-current status, not a roadmap commitment — each is blocked on an upstream kernel fix,
+current status, not a roadmap commitment -- each is blocked on an upstream kernel fix,
 not on cositos work.
 
 ## Next steps

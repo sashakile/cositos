@@ -97,3 +97,48 @@ def test_julia_counter_notebook_executes_and_renders(julia_notebook_kernel):
     # Cositos-enabled kernel the fixture built instead.
     nb = _execute(NOTEBOOKS / "julia_counter.ipynb", julia_notebook_kernel)
     _assert_clean_render(nb)
+
+
+@pytest.fixture(scope="module")
+def clojure_notebook_kernel():
+    if shutil.which("clojure") is None:
+        pytest.skip("clojure not on PATH")
+    pytest.importorskip("jupyter_client")
+    import json
+
+    from jupyter_client.kernelspec import KernelSpecManager
+
+    name = "cositos-nb-clojure"
+    kernel_json = {
+        "argv": [
+            "clojure",
+            "-Sdeps",
+            '{:deps {clojupyter/clojupyter {:mvn/version "0.4.332"}} '
+            ':mvn/repos {"clojars" {:url "https://repo.clojars.org/"}}}',
+            "-M",
+            "-m",
+            "clojupyter.kernel.core",
+            "{connection_file}",
+        ],
+        "display_name": "Clojure (cositos e2e)",
+        "language": "clojure",
+    }
+    ksm = KernelSpecManager()
+    with contextlib.suppress(Exception):
+        ksm.remove_kernel_spec(name)
+    tmp_dir = Path(ksm.user_kernel_dir) / name
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_dir / "kernel.json").write_text(json.dumps(kernel_json))
+    yield name
+    with contextlib.suppress(Exception):
+        ksm.remove_kernel_spec(name)
+
+
+@pytest.mark.e2e
+def test_clojure_counter_notebook_executes_and_renders(clojure_notebook_kernel):
+    # The checked-in notebook pins kernel name "cositos-clj" (a developer's local
+    # clojupyter install); execute against the throwaway bare-clojupyter kernel the
+    # fixture built instead. The notebook's own first cell adds cositos to the classpath
+    # at runtime via pomegranate, so a bare kernel is all this needs.
+    nb = _execute(NOTEBOOKS / "clojure_counter.ipynb", clojure_notebook_kernel)
+    _assert_clean_render(nb)
