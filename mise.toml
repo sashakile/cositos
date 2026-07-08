@@ -55,6 +55,10 @@ description = "Clojure e2e example: cross-language contract round-trip check (co
 dir = "examples/e2e/clojure"
 run = "clojure -M:dump"
 
+[tasks.e2e-julia]
+description = "Julia e2e example: cross-language contract round-trip check (cositos-1wi.3)"
+run = "julia --project=examples/e2e/julia examples/e2e/julia/dump.jl"
+
 [tasks.probe]
 description = "Classify a kernel's widget-comm capability (Tier 1/2/3). Usage: mise run probe -- <kernel>"
 run = "uv run --extra e2e --extra docs python probe/kernel_probe.py"
