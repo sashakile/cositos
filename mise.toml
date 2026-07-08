@@ -135,9 +135,11 @@ run = "open examples/web/exported-widget-state.html"
 
 [tasks.qa-web]
 description = "QA: serve the backend-less browser demo (LocalChannel, no kernel)"
-dir = "examples"
+# Must serve from the repo root, not examples/: examples/web/index.html imports the
+# frontend via '../../front/src/index.js', which only resolves if front/ (a sibling of
+# examples/ at the repo root) is inside the served tree (cositos-0e8).
 run = [
-    "echo 'Open http://localhost:8000/web/  (Ctrl-C to stop)'",
+    "echo 'Open http://localhost:8000/examples/web/  (Ctrl-C to stop)'",
     "python3 -m http.server 8000",
 ]
 

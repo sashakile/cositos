@@ -22,9 +22,11 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 ## Backend-less web demo
 
 ```bash
-cd examples          # ES module imports need HTTP, not file://
-python3 -m http.server
-# open http://localhost:8000/web/
+# Serve from the repo root, not examples/: index.html imports the frontend via
+# ../../front/src/index.js, which only resolves if front/ (a sibling of examples/ at
+# the repo root) is inside the served tree (cositos-0e8).
+python3 -m http.server 8000     # run from the repo root; ES module imports need HTTP, not file://
+# open http://localhost:8000/examples/web/
 ```
 
 The same ESM that runs in Jupyter renders here with no kernel; widget state lives in the
