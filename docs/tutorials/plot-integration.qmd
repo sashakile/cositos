@@ -42,7 +42,7 @@ open("plot.html", "w").write(harvest_html(fig, title="my plot"))
 ```
 
 A complete, runnable version is
-[`examples/plots/build.py`](../../examples/plots/build.py):
+[`examples/plots/build.py`](../../../examples/plots/build.py):
 
 ```bash
 uv run --with plotly python examples/plots/build.py

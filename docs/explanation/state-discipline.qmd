@@ -9,8 +9,8 @@ are just opinions — grounds every one of them in a measured benchmark.
 
 The benchmarks build the *same logical app* several ways and measure the structural cost of
 each wiring style. The full apparatus lives in
-[`examples/benchmarks/`](../../examples/benchmarks/README.md); the raw numbers are in
-[`examples/benchmarks/RESULTS.md`](../../examples/benchmarks/RESULTS.md). This page is the
+[`examples/benchmarks/`](../../../examples/benchmarks/README.md); the raw numbers are in
+[`examples/benchmarks/RESULTS.md`](../../../examples/benchmarks/RESULTS.md). This page is the
 distillation.
 
 ## The one-sentence discipline
@@ -33,7 +33,7 @@ throughout, so they are defined once here:
   is a single `update` to the model; every view is a **pure projection** of the model,
   re-rendered in one pass. No widget observes another widget.
 - **C — reactive DAG.** A tracked signal graph (see
-  [`reactive.py`](../../examples/benchmarks/reactive.py)): *reading* a value inside a
+  [`reactive.py`](../../../examples/benchmarks/reactive.py)): *reading* a value inside a
   computation records a dependency, so one edit recomputes **only** the downstream nodes,
   and the graph is **acyclic by construction**.
 - **D — reactive + shared memo.** Like C, but an expensive shared computation (e.g. a scan
@@ -47,7 +47,7 @@ these rules are about.
 ## How to read the evidence
 
 Two measured quantities carry most of the argument (full definitions in the
-[benchmark README](../../examples/benchmarks/README.md#metrics)):
+[benchmark README](../../../examples/benchmarks/README.md#metrics)):
 
 - **`storm`** — the number of output refreshes (widget updates) triggered by **one** user
   action. Counted identically across variants, so A/B/C/D are directly comparable.
@@ -174,9 +174,9 @@ serializable, and cheap** as it grows.
 
 ## See also
 
-- [`examples/benchmarks/README.md`](../../examples/benchmarks/README.md) — the full apparatus,
+- [`examples/benchmarks/README.md`](../../../examples/benchmarks/README.md) — the full apparatus,
   scenarios, and metric definitions.
-- [`examples/benchmarks/RESULTS.md`](../../examples/benchmarks/RESULTS.md) — the complete
+- [`examples/benchmarks/RESULTS.md`](../../../examples/benchmarks/RESULTS.md) — the complete
   A/B/C/D results across scenarios and scales.
 - [Architecture](architecture.qmd) — why the Document (not live widget links) is the unit of
   persistence.
