@@ -50,6 +50,11 @@ run = "python3 scripts/e2e_all.py"
 description = "Python e2e example: reference emitter/checker for the cross-language contract (cositos-1wi.2)"
 run = "uv run --extra dev python examples/e2e/python_e2e.py"
 
+[tasks.e2e-clojure]
+description = "Clojure e2e example: cross-language contract round-trip check (cositos-1wi.6)"
+dir = "examples/e2e/clojure"
+run = "clojure -M:dump"
+
 [tasks.probe]
 description = "Classify a kernel's widget-comm capability (Tier 1/2/3). Usage: mise run probe -- <kernel>"
 run = "uv run --extra e2e --extra docs python probe/kernel_probe.py"
