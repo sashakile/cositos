@@ -28,6 +28,16 @@ __all__ = ["harvest", "harvest_html"]
 def _embed_data(widgets: tuple[Any, ...]) -> dict[str, Any]:
     """Call ``ipywidgets.embed.embed_data`` for ``widgets`` with clear failures.
 
+    Always passes ``drop_defaults=False``. ``embed_data``'s own default
+    (``drop_defaults=True``) compares each synced trait's *current* value against its
+    *class-level default* and omits it when they match — but a widget that bundles its
+    own frontend commonly declares that content (``_esm``/``_css``) as the trait's class
+    default rather than setting it per instance (Plotly's ``FigureWidget`` and Altair's
+    ``JupyterChart`` both do this). ``drop_defaults=True`` then silently drops ``_esm``
+    from the harvested state, and the CDN anywidget runtime's ``AnyView`` throws
+    (``isHref(undefined)``) instead of rendering (cositos-b2t). ``harvest``'s own
+    docstring promise — a verbatim capture — requires the non-dropping default anyway.
+
     Raises
     ------
     ImportError
@@ -44,7 +54,7 @@ def _embed_data(widgets: tuple[Any, ...]) -> dict[str, Any]:
             "cositos.contrib.harvest requires ipywidgets; install it with "
             "`pip install ipywidgets` (or the cositos 'oracle' extra)"
         ) from exc
-    data: dict[str, Any] = embed_data(views=list(widgets))
+    data: dict[str, Any] = embed_data(views=list(widgets), drop_defaults=False)
     return data
 
 

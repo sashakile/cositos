@@ -84,3 +84,40 @@ def test_harvest_html_renders_only_top_level_widgets_as_views():
 def test_harvest_requires_at_least_one_widget():
     with pytest.raises(ValueError, match="at least one widget"):
         harvest()
+
+
+anywidget = pytest.importorskip("anywidget")
+traitlets = pytest.importorskip("traitlets")
+
+
+class _ConstEsmWidget(anywidget.AnyWidget):
+    """An anywidget subclass that declares ``_esm`` as a *class-level* default — the
+    common pattern for widgets that bundle their own frontend (e.g. Plotly's
+    ``FigureWidget``, which bakes its ~5MB bundled JS module in as the trait's default
+    value rather than setting it per instance).
+    """
+
+    _esm = "export default { render({ model, el }) { el.innerText = model.get('value'); } }"
+    value = traitlets.Int(0).tag(sync=True)
+
+
+def test_harvest_preserves_esm_declared_as_a_class_level_trait_default():
+    # Regression (cositos-b2t): ipywidgets.embed.embed_data defaults to
+    # drop_defaults=True, which compares each trait's *current* value against its
+    # *class-level default* and omits it if they match. A widget that bundles its
+    # frontend by setting `_esm` as the trait's default (not a per-instance override,
+    # as real anywidget-based Plotly FigureWidget/Altair JupyterChart do) therefore has
+    # `_esm` silently dropped from the harvested state. The CDN anywidget runtime's
+    # AnyView then calls `isHref(undefined)` and throws
+    # "Cannot read properties of undefined (reading 'startsWith')" instead of rendering.
+    widget = _ConstEsmWidget()
+    doc = harvest(widget)
+    state = doc["state"][widget.model_id]["state"]
+    assert "_esm" in state
+    assert state["_esm"] == _ConstEsmWidget._esm
+
+
+def test_harvest_html_embeds_esm_declared_as_a_class_level_trait_default():
+    widget = _ConstEsmWidget()
+    html = harvest_html(widget)
+    assert "_esm" in html
