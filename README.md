@@ -35,6 +35,22 @@ depends on the kernel's comm support, which is a separate, per-kernel question â
 Full tier classification and how kernels were tested: [`probe/README.md`](probe/README.md).
 Shortest runnable path per language: [`docs/tutorials/quickstart.qmd`](docs/tutorials/quickstart.qmd).
 
+## Documentation site
+
+The tutorials, reference, and explanation docs under `docs/` build into a Quarto
+website (tutorials execute live, so a broken example fails the build, not just a lint):
+
+```bash
+mise run docs           # build docs/_site/
+mise run qa-docs        # build + open it
+mise run docs-preview   # live-reload preview while editing
+```
+
+Start at [`docs/index.qmd`](docs/index.qmd) (a live-rendered widget) or
+[`docs/status.md`](docs/status.md) for the implementation-status overview (per-language
+and per-host maturity). The site is not published yet (no hosting decision made) â€” build
+it locally.
+
 ## Architecture
 
 ```

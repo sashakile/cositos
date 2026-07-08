@@ -22,6 +22,8 @@ src/cositos/
   model.py       Widget façade: open/send_state/handle/close over a Transport
   transport.py   Transport protocol (send, on_message, supports_receive)
 fixtures/        golden JSON messages — the cross-language contract
+docs/            Quarto docs site (tutorials, reference, explanation); build: `mise run docs`
+docs/status.md   implementation-status overview (per-language + per-host maturity)
 docs/porting.md  how to certify a new-language backend
 ```
 

@@ -310,6 +310,28 @@ prose; or allow `< > / -` in statements and escape only at genuine sinks.
 
 ---
 
+**F27 · `wai way` reports "Specs in deployed docs: openspec not included in deployed
+docs" even when the specs already ARE in the deployed docs, just not via a file-copy
+step.** Working `cositos-483.5` (wire the docs site into README/llm.txt + fix `wai way`
+docs findings), `wai way` flagged: *"Your docs workflow doesn't include openspec/ in the
+build... Add a step to your docs CI workflow that copies openspec/specs/ into the docs
+source tree before building."* But `cositos`'s Quarto site already weaves
+`openspec/specs/*/spec.md` verbatim into `docs/reference/specs.qmd` via Quarto's
+`{{< include ../../openspec/specs/protocol/spec.md >}}` directive (confirmed: the built
+`docs/_site/reference/specs.html` contains the full spec text, requirement IDs and all).
+Expected: the check recognizes any mechanism that gets spec content into the rendered
+output. Actual: the heuristic apparently only looks for a literal `cp`/copy step in a CI
+workflow file, so an equally-valid (arguably better, since it can't drift) include-based
+approach is invisible to it and produces a false positive nudging users toward a strictly
+worse pattern (a copy that can go stale) over the one they already have (a live include
+that can't). 🟢 papercut/docs. Impact: low (one wasted investigation per project), but it's
+the same failure shape as F10/F11 (the tool's presence-detection is too narrow, converting
+a correct different implementation into a false "missing" finding). Suggested fix: also
+check for template-include directives referencing an `openspec/` (or configurable) path,
+not only literal copy commands in CI config.
+
+---
+
 ## Enforcement — making the tools impossible to silently drop
 
 The pattern behind F19/F20: **a tool stays used only if a gate fails when it isn't.**

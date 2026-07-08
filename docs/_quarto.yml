@@ -3,6 +3,7 @@ project:
   output-dir: _site
   render:
     - index.qmd
+    - status.md
     - tutorials/quickstart.qmd
     - tutorials/authoring-widgets.qmd
     - tutorials/integrating.qmd
@@ -28,6 +29,8 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - href: status.md
+        text: Status
       - text: Tutorials
         menu:
           - tutorials/quickstart.qmd
