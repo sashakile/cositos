@@ -21,6 +21,17 @@ clojure -M:test        # run the fixture-conformance test suite
 
 ## Status
 
-Protocol core only. The `Transport` adapter over clojupyter's comm API + a live e2e round
-trip is tracked separately (`cositos-ex2.5`) and gated on the kernel capability probe
-(`cositos-ex2.1`) — clojupyter's comm support is not yet verified.
+Protocol core (`src/`): fixture-certified, no kernel dependency.
+
+Two live-widget transports exist, dev-only (not part of the certified core, since both
+need a live kernel/host to run at all):
+
+- **`cositos.clay`** (`src/cositos/clay.clj`) + `dev/cositos/clay_demo.clj` /
+  `clay_notebook.clj` -- Clay's public full-duplex websocket. **Recommended**: no internal
+  APIs, full buffer/`custom`-message support. See `docs/hosts.md`.
+- **`cositos.clojupyter-transport`** (`dev/cositos/clojupyter_transport.clj`) -- a live
+  comm round trip against clojupyter itself, confirmed in `cositos-059.9` via
+  `clojupyter.state/current-context`, an internal, version-coupled implementation detail
+  (not a public/upstream API). Supports the `update` (state-sync) round trip only: no
+  binary buffers, no `custom` messages. Notebook: `examples/notebooks/clojure_counter.ipynb`;
+  live-kernel test: `tests/test_e2e_clojure.py`.

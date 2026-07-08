@@ -22,14 +22,25 @@ is optional ergonomics you can add later.
 
 Your kernel exposes some comm surface. Map it to:
 
-| Core needs | Python (`comm`) | Deno | IJulia | dotnet-interactive |
-|---|---|---|---|---|
-| open + send | `comm.create_comm` / `comm.send` | `Deno.jupyter.broadcast("comm_open"/"comm_msg", …)` | `Comm(...)` / `send` | `Kernel.SendAsync` |
-| receive | `comm.on_msg` | (limited) | `comm.on_msg` | comm handler |
-| `supports_receive` | `True` | often `False` | `True` | `True` |
+| Core needs | Python (`comm`) | Deno | IJulia | dotnet-interactive | clojupyter (crack, see caveat) |
+|---|---|---|---|---|---|
+| open + send | `comm.create_comm` / `comm.send` | `Deno.jupyter.broadcast("comm_open"/"comm_msg", …)` | `Comm(...)` / `send` | `Kernel.SendAsync` | `comm-atom/create-and-insert` + `state-update!` |
+| receive | `comm.on_msg` | (limited) | `comm.on_msg` | comm handler | `comm-atom/watch` |
+| `supports_receive` | `True` | often `False` | `True` | `True` | `True` (state-sync only — no buffers, no `custom`) |
 
 If your kernel is broadcast-only (can't route frontend→kernel replies), set
 `supports_receive = False`; the core degrades to one-way widgets.
+
+**clojupyter caveat.** Unlike the other four, clojupyter ships no *public* comm-open API
+at all — the columns above describe `cositos.clojupyter-transport`
+(`clojure/dev/cositos/clojupyter_transport.clj`), which reaches
+`clojupyter.state/current-context`, an internal, version-coupled implementation detail
+(confirmed live in `cositos-059.9`). It supports the `update` round trip only: no binary
+buffers, no `custom` messages (every sender on clojupyter's `comm-atom`, public or
+private, hard-wraps its argument as an `update`). If you don't need those, and accept
+the internal-API risk, it works; otherwise use **Clay** (`docs/hosts.md`) instead — a
+genuinely public API with full buffer/custom-message support, at the cost of not being
+a Jupyter kernel.
 
 ## Step 2 — Reproduce the protocol
 
