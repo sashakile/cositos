@@ -1,6 +1,7 @@
 /_site/
 /.quarto/
 /_freeze/
+/vendor/
 *_files/
 *.quarto_ipynb
 

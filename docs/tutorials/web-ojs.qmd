@@ -1,0 +1,72 @@
+---
+title: "Backend-less widget in Observable JS (OJS)"
+---
+
+Every other tutorial that renders a widget with **no kernel** does it from Python
+(`docs/tutorials/save-restore.qmd`, this site's [home page](../index.qmd)) or a plain
+browser page (`examples/web/index.html`). This page demonstrates a *third* angle on the
+same claim — "the frontend is just JavaScript, run it anywhere" — using Quarto's
+built-in **OJS (Observable JS) engine**, which executes JS *in the reader's browser* when
+they view this page, with **no Python and no kernel** involved in rendering the widget
+below.
+
+`@cositos/front` (the standalone `Model`/`Channel`/`loadWidget`/`renderWidget` runtime
+behind `examples/web/index.html`, see [`docs/hosts.md`](../hosts.md)) has zero external
+dependencies — only relative imports between its own files — so this project's
+`pre-render` step (see `docs/_quarto.yml`) copies `front/src/*.js` verbatim into
+`docs/vendor/cositos-front/` before every build, and the OJS cells below `import()` it
+from there. `docs/vendor/` is regenerated on every render (gitignored, like `_site/`), so
+there is nothing to keep in sync by hand.
+
+**Note the `../../`:** a dynamic `import()` inside a compiled OJS cell resolves relative
+to Quarto's own runtime module (`site_libs/quarto-ojs/…`), not to this page's URL — two
+levels up lands back at the site root regardless of how deeply this page is nested, so
+`../../vendor/...` is correct here (and everywhere else an OJS cell needs a site asset).
+
+```{ojs}
+//| echo: false
+front = await import("../../vendor/cositos-front/index.js")
+```
+
+```{ojs}
+//| echo: false
+counterEsm = `
+export default {
+  render({ model, el }) {
+    const btn = document.createElement("button");
+    const out = document.createElement("span");
+    const paint = () => { out.textContent = " count = " + model.get("n"); };
+    btn.textContent = "increment";
+    btn.addEventListener("click", () => {
+      model.set("n", model.get("n") + 1);
+      model.save_changes();
+    });
+    model.on("change:n", paint);
+    paint();
+    el.appendChild(btn);
+    el.appendChild(out);
+  }
+}
+`
+```
+
+```{ojs}
+counter = {
+  const { Model, LocalChannel, loadWidget, renderWidget } = front;
+  const el = DOM.element("div", {
+    style: "border:1px solid #ddd;border-radius:8px;padding:1rem;max-width:16rem;",
+  });
+  const model = new Model({ n: 0 }, new LocalChannel());
+  const widget = await loadWidget(counterEsm);
+  await renderWidget(widget, { model, el });
+  return el;
+}
+```
+
+Clicking **increment** above runs entirely client-side: `LocalChannel` is a loopback
+channel with no backend (see [`docs/hosts.md`](../hosts.md#localchannel--client-only-widgets)),
+so `model.save_changes()` updates in-browser state and nothing else. The button's ESM
+(the `counterEsm` string above) is the *same* shape of module a Jupyter-kernel widget
+would ship — `export default { render({ model, el }) { ... } }` — nothing OJS-specific
+about it; only the `Channel` differs per host (see [status](../status.md) for the full
+per-host matrix).
