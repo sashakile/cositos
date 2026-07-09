@@ -236,4 +236,5 @@ b64(buffers) = [base64encode(b) for b in buffers]
     end
 
     include("host_tests.jl")
+    include("controls_tests.jl")
 end

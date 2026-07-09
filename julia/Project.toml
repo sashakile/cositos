@@ -1,10 +1,11 @@
 name = "Cositos"
 uuid = "01e4b146-d225-4b8c-b033-d37308b9b41a"
-authors = ["cositos contributors"]
 version = "0.0.1"
+authors = ["cositos contributors"]
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [weakdeps]
 AbstractPlutoDingetjes = "6e696c72-6542-2067-7265-42206c756150"
@@ -14,8 +15,10 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 [extensions]
 CositosIJuliaExt = "IJulia"
 CositosPlutoExt = ["AbstractPlutoDingetjes", "JSON"]
+CositosControlsExt = "JSON"
 
 [compat]
+UUIDs = "1"
 julia = "1.10"
 
 [extras]

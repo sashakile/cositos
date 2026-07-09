@@ -24,7 +24,8 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     view_identity, with_view_identity,
     Widget, open!, close!, send_state!, send_custom!,
     supports_receive, comm_id, transport_send, transport_on_message, ijulia_transport,
-    PlutoWidget
+    PlutoWidget,
+    int_slider, dropdown, vbox, hbox
 
 const PROTOCOL_VERSION_MAJOR = 2
 const PROTOCOL_VERSION_MINOR = 1
@@ -489,6 +490,73 @@ end
 The widget-view mimebundle for display, referencing the widget's `model_id`.
 """
 mimebundle(w::Widget, repr_text::AbstractString="") = mimebundle(w.model_id, repr_text)
+
+# ---- Real @jupyter-widgets/controls catalog (see ext/CositosControlsExt.jl) ----
+
+# The Julia port of Python's `cositos.contrib.controls` (cositos-70b.7): thin builders
+# over the SAME shared catalog (`../fixtures/controls-catalog.json`), reusing the real
+# ipywidgets frontend zoo's own identity verbatim, with zero core changes — mirrors the
+# `ijulia_transport` stub-in-core/implementation-in-extension pattern above so the JSON
+# dependency stays optional. Loads once `using JSON` activates `CositosControlsExt`.
+
+"""
+    int_slider(; value=0, min=0, max=100, kwargs...) -> Vector{Tuple{String,Dict}}
+
+A real `@jupyter-widgets/controls` `IntSliderModel` + its style/layout companions, built
+from the shared catalog `fixtures/controls-catalog.json`. Requires `JSON` to be loaded
+(the `CositosControlsExt` package extension provides the implementation): `using JSON`.
+"""
+function int_slider(args...; kwargs...)
+    return error(
+        "int_slider() requires JSON to be loaded; run `using JSON` first " *
+        "(the CositosControlsExt package extension provides the implementation).",
+    )
+end
+
+"""
+    dropdown(options; value=nothing, kwargs...) -> Vector{Tuple{String,Dict}}
+
+A real `@jupyter-widgets/controls` `DropdownModel` + its style/layout companions.
+`options`/`value` are the ergonomic constructor-shaped inputs; on the wire only
+`_options_labels` (label strings) and a 0-based `index` are synced traits — pass
+`index=` directly to bypass the `value`-to-`index` lookup. Requires `JSON` to be loaded
+(the `CositosControlsExt` package extension provides the implementation): `using JSON`.
+"""
+function dropdown(args...; kwargs...)
+    return error(
+        "dropdown() requires JSON to be loaded; run `using JSON` first " *
+        "(the CositosControlsExt package extension provides the implementation).",
+    )
+end
+
+"""
+    vbox(children; kwargs...) -> Vector{Tuple{String,Dict}}
+
+A real `@jupyter-widgets/controls` `VBoxModel` laying out `children` (previously built
+entries-lists) vertically; the returned entries flatten every descendant into one list.
+Requires `JSON` to be loaded (the `CositosControlsExt` package extension provides the
+implementation): `using JSON`.
+"""
+function vbox(args...; kwargs...)
+    return error(
+        "vbox() requires JSON to be loaded; run `using JSON` first " *
+        "(the CositosControlsExt package extension provides the implementation).",
+    )
+end
+
+"""
+    hbox(children; kwargs...) -> Vector{Tuple{String,Dict}}
+
+See [`vbox`](@ref) for the `children` composition contract (identical, horizontal layout
+only). Requires `JSON` to be loaded (the `CositosControlsExt` package extension provides
+the implementation): `using JSON`.
+"""
+function hbox(args...; kwargs...)
+    return error(
+        "hbox() requires JSON to be loaded; run `using JSON` first " *
+        "(the CositosControlsExt package extension provides the implementation).",
+    )
+end
 
 # ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----
 
