@@ -1,4 +1,4 @@
-"""LIVE-KERNEL check for the dashboard example (cositos-70b.4).
+"""LIVE-KERNEL check for the dashboard example (cositos-70b.4 / cositos-70b.5).
 
 Mirrors tests/test_e2e_controls.py's harness (subprocess ipykernel + jupyter_client) but
 proves the actual acceptance gate: sending a real inbound `update` comm_msg to the
@@ -9,12 +9,16 @@ at all in this path; it's the same `cositos.contrib.controls` + `Dashboard` MVU 
 `tests/test_example_dashboard.py` certifies against a fake transport, exercised here
 against a REAL comm channel and a real subprocess kernel).
 
+A second test does the same for the download button (cositos-70b.5): a slider update
+must refresh the download button's `json` over a real comm, exactly like the summary.
+
 Skipped unless the e2e extras (ipykernel + jupyter_client) are installed.
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 from pathlib import Path
 from queue import Empty
 
@@ -46,6 +50,23 @@ _companion_entries = _dash._slider_entries[1:] + _dash._dropdown_entries[1:]
 _companion_ts = [CommTransport() for _ in _companion_entries]
 _dash.wire(_slider_t, _dropdown_t, _summary_t, companion_transports=_companion_ts)
 print("IDS", _slider_t.comm_id, _dropdown_t.comm_id, _summary_t.comm_id)
+"""
+
+DOWNLOAD_SETUP_CODE = f"""
+import importlib.util
+from cositos.jupyter import CommTransport
+
+spec = importlib.util.spec_from_file_location("cositos_dashboard_build", {str(_BUILD_PATH)!r})
+_build = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(_build)
+
+_dash = _build.Dashboard(options=["low", "medium", "high"], value=25, index=0)
+_slider_t = CommTransport()
+_dropdown_t = CommTransport()
+_summary_t = CommTransport()
+_download_t = CommTransport()
+_dash.wire(_slider_t, _dropdown_t, _summary_t, download_transport=_download_t)
+print("IDS", _slider_t.comm_id, _download_t.comm_id)
 """
 
 
@@ -118,3 +139,37 @@ def test_slider_update_reaches_the_summary_only_over_a_real_kernel(kernel):
     # ...and the dropdown's comm received NOTHING (no peer link/observe fan-out).
     dropdown_updates = [m for m in update_msgs if m["content"]["comm_id"] == dropdown_comm_id]
     assert dropdown_updates == []
+
+
+@pytest.mark.e2e
+def test_download_json_refreshes_over_a_real_kernel_after_a_slider_update(kernel):
+    kc = kernel
+
+    _run(kc, DOWNLOAD_SETUP_CODE)
+    opens = _by_type(_drain_iopub(kc), "comm_open")
+    assert len(opens) == 4, "expected slider, dropdown, summary, download comm_opens"
+    slider_comm_id, _dropdown_comm_id, _summary_comm_id, download_comm_id = (
+        o["content"]["comm_id"] for o in opens
+    )
+
+    req = kc.session.msg(
+        "comm_msg",
+        {"comm_id": slider_comm_id, "data": {"method": "update", "state": {"value": 99}}},
+    )
+    kc.shell_channel.send(req)
+    _run(kc, "pass")
+
+    updates = _by_type(_drain_iopub(kc), "comm_msg")
+    update_msgs = [m for m in updates if m["content"]["data"].get("method") == "update"]
+    download_updates = [m for m in update_msgs if m["content"]["comm_id"] == download_comm_id]
+
+    assert len(download_updates) == 1
+    saved_json = download_updates[0]["content"]["data"]["state"]["json"]
+    saved_doc = json.loads(saved_json)
+    # The saved document's own state map carries the refreshed slider value.
+    values = [
+        record["state"]["value"]
+        for record in saved_doc["state"].values()
+        if record["model_name"] == "IntSliderModel"
+    ]
+    assert values == [99]

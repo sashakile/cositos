@@ -28,10 +28,21 @@ serializes — `links_kept=0` in every benchmark scenario that avoids it).
 Run: ``uv run python examples/dashboard/build.py`` writes `dashboard.html` (a static
 snapshot — see `docs/tutorials/static-export.qmd` for what static export can and cannot
 show: the widgets render, but only a live kernel can dispatch new slider/dropdown values).
+
+## Download & restore (cositos-70b.5)
+
+The dashboard also carries a `download_button.js` widget (`examples/widgets/`) whose
+`json` state field is always the CURRENT `dump_document(...)` of the slider/dropdown/
+summary tree — computed the same MVU way as the summary text: `Dashboard._render` pushes
+it on every model change, never by the download button observing anything itself.
+Clicking it triggers a real browser download of that JSON
+(`docs/tutorials/save-restore.qmd#download-restore-a-dashboards-state` covers the restore
+side: `load_document` the downloaded file in a fresh session and rebuild).
 """
 
 from __future__ import annotations
 
+import json as json_module
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +51,13 @@ from cositos.embed import embed_html
 from cositos.model import Widget
 from cositos.serialize import Document, ModelEntry, dump_document
 from cositos.transport import Transport
+
+#: The unmodified download-state widget ESM (cositos-70b.5) — read from the shared
+#: examples/widgets/ directory rather than duplicated inline, so the Python glue here and
+#: the JS gallery test (front/test/gallery.test.js) exercise the exact same file.
+DOWNLOAD_BUTTON_ESM = (
+    Path(__file__).resolve().parent.parent / "widgets" / "download_button.js"
+).read_text()
 
 #: The summary view is a plain, minimal anywidget — cositos' own "build a widget" path
 #: (see `docs/widgets.md`), deliberately NOT another real-controls model: the point of
@@ -81,6 +99,8 @@ class Dashboard:
         self.slider_widget: Widget | None = None
         self.dropdown_widget: Widget | None = None
         self.summary_widget: Widget | None = None
+        self.download_id = f"{self.slider_id}-download"
+        self.download_widget: Widget | None = None
         #: Static companion models (`LayoutModel`, `SliderStyleModel`,
         #: `DescriptionStyleModel`) referenced by the slider/dropdown's `IPY_MODEL_<id>`
         #: fields. A live kernel comm only carries ONE model's state; the frontend
@@ -102,9 +122,17 @@ class Dashboard:
         return f"value={self.model['value']}, selection={label}"
 
     def _render(self) -> None:
-        """Push the recomputed summary. The only place any widget is told to update."""
+        """Push the recomputed summary + the refreshed download JSON.
+
+        The ONLY place any widget is told to update — the download button's `json` is
+        recomputed here exactly like the summary text, via `self.model`, never by
+        observing the slider/dropdown itself (the same MUST-NOT gate `cositos-70b.4`
+        set applies here: a stale download button is the whole reason that gate exists).
+        """
         if self.summary_widget is not None:
             self.summary_widget.send_state()
+        if self.download_widget is not None:
+            self.download_widget.send_state()
 
     # ---- slider: reads/writes ONLY self.model["value"] ----
 
@@ -133,21 +161,52 @@ class Dashboard:
     def _get_summary_state(self) -> dict[str, Any]:
         return {"_esm": SUMMARY_ESM, "text": self._summary_text()}
 
+    # ---- download button: read-only projection of the OTHER three widgets' Document ----
+
+    def _dashboard_document_json(self) -> str:
+        """The current slider/dropdown/summary state, serialized — what Download saves.
+
+        Deliberately excludes the download button's OWN entry (there would be nothing
+        useful to restore from a document that references itself before it exists).
+        Reads the slider/dropdown state through `_get_slider_state`/`_get_dropdown_state`
+        (through `self.model`), not the static `_slider_entries[0]`/`_dropdown_entries[0]`
+        captured at construction time — otherwise a downloaded file would always save the
+        dashboard's INITIAL values, never whatever the user actually set (the exact
+        staleness bug the MUST-NOT gate on cositos-70b.4 exists to prevent, just in the
+        Python glue instead of a widget link).
+        """
+        slider_entry: ModelEntry = (self.slider_id, self._get_slider_state())
+        dropdown_entry: ModelEntry = (self.dropdown_id, self._get_dropdown_state())
+        summary_entry: ModelEntry = (self.summary_id, self._get_summary_state())
+        companion_entries = self._slider_entries[1:] + self._dropdown_entries[1:]
+        entries = [slider_entry, dropdown_entry, summary_entry, *companion_entries]
+        return json_module.dumps(dump_document(entries))
+
+    def _get_download_state(self) -> dict[str, Any]:
+        return {
+            "_esm": DOWNLOAD_BUTTON_ESM,
+            "json": self._dashboard_document_json(),
+            "filename": "dashboard-state.json",
+            "label": "Download dashboard state",
+        }
+
     def wire(
         self,
         slider_transport: Transport,
         dropdown_transport: Transport,
         summary_transport: Transport,
         companion_transports: list[Transport] | None = None,
+        download_transport: Transport | None = None,
     ) -> None:
-        """Open all three interactive widgets, and every static companion model.
+        """Open all interactive/read-only widgets, and every static companion model.
 
         ``companion_transports`` must supply one transport per companion in
         `self._slider_entries[1:] + self._dropdown_entries[1:]` (in that order) — each
         companion is a distinct model and needs its own comm to be resolvable by a real
         frontend. Omit it only for tests that don't care about companion resolution
         (e.g. a fake-transport unit test asserting the slider/dropdown/summary dispatch
-        seam in isolation).
+        seam in isolation). ``download_transport`` opens the download-state button;
+        omit it if a test doesn't care about the download path either.
         """
         self.slider_widget = Widget(
             slider_transport,
@@ -170,6 +229,14 @@ class Dashboard:
         self.dropdown_widget.open()
         self.summary_widget.open()
 
+        if download_transport is not None:
+            self.download_widget = Widget(
+                download_transport,
+                get_state=self._get_download_state,
+                model_id=self.download_id,
+            )
+            self.download_widget.open()
+
         companion_entries = self._slider_entries[1:] + self._dropdown_entries[1:]
         if companion_transports is not None:
             if len(companion_transports) != len(companion_entries):
@@ -187,13 +254,21 @@ class Dashboard:
                 widget.open()
 
     def build_entries(self) -> list[ModelEntry]:
-        """A static snapshot: slider + dropdown + summary composed in one real VBox.
+        """A static snapshot: slider + dropdown + summary + download composed in one VBox.
 
         Uses the SAME companion-model ids minted in `__init__` (not fresh ones), so a
         static export and a live-wired dashboard describe the identical widget tree.
         """
         summary_entry: ModelEntry = (self.summary_id, self._get_summary_state())
-        return vbox(children=[self._slider_entries, self._dropdown_entries, [summary_entry]])
+        download_entry: ModelEntry = (self.download_id, self._get_download_state())
+        return vbox(
+            children=[
+                self._slider_entries,
+                self._dropdown_entries,
+                [summary_entry],
+                [download_entry],
+            ]
+        )
 
 
 def build_document(dashboard: Dashboard | None = None) -> Document:
@@ -209,6 +284,21 @@ def build_html(dashboard: Dashboard | None = None) -> str:
     doc = dump_document(entries)
     root_id = entries[0][0]
     return embed_html(doc, views=[root_id], title="cositos — dashboard (real controls + MVU)")
+
+
+def restore_document(json_text: str) -> Document:
+    """The other half of Download & restore (cositos-70b.5): parse a downloaded file.
+
+    ``json_text`` is exactly what `download_button.js`'s `json` state field held (and
+    what a real browser click saves to disk) — the plain-JSON encoding of a cositos
+    :data:`~cositos.serialize.Document`. This is a thin, obvious wrapper (`json.loads`)
+    that exists so the restore-from-file recipe in `docs/tutorials/save-restore.qmd` has
+    one call to point at, matching the ticket's "docs-only restore path, no new upload
+    widget" scope: there is nothing here to wire up live, just `load_document` on
+    whatever bytes the host's upload mechanism (a Jupyter file-upload cell,
+    `open(path).read()`, …) produced.
+    """
+    return json_module.loads(json_text)
 
 
 if __name__ == "__main__":

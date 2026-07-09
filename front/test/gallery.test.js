@@ -108,3 +108,53 @@ test("output: html renders and reacts to kernel updates", async () => {
   cleanup();
   unmount();
 });
+
+test("download: button triggers a real download and reports what it saved", async () => {
+  // Not one of the six ipywidgets categories (docs/widgets.md) — a cositos-only
+  // convenience for state persistence (cositos-70b.5): the host puts a serialized
+  // Document string into `json`; clicking builds a data: URI download, same "host owns
+  // state" discipline as every other widget here.
+  //
+  // NOTE: jsdom prints a harmless "Not implemented: navigation" console error here —
+  // jsdom doesn't implement anchor-click navigation at all (by design; see jsdom's own
+  // not-implemented.js), so clicking a real <a href="data:..."> logs that instead of
+  // silently no-op'ing. It does not fail this test and does not reflect a real browser
+  // (verified separately with chrome-dev-tools, see the ticket's commit message).
+  const { dom, model, kernel, el } = mount({
+    json: JSON.stringify({ hello: "world" }),
+    filename: "dashboard.json",
+  });
+  const custom = [];
+  kernel.onMessage((msg) => msg.method === "custom" && custom.push(msg.content));
+  const cleanup = await renderWidget(await loadWidget(load("download_button.js")), {
+    model,
+    el,
+  });
+  const button = el.querySelector("button");
+  assert.equal(button.disabled, false);
+
+  button.dispatchEvent(new dom.window.Event("click"));
+  await tick();
+
+  assert.equal(custom.length, 1);
+  assert.equal(custom[0].event, "download");
+  assert.equal(custom[0].filename, "dashboard.json");
+  assert.equal(
+    decodeURIComponent(custom[0].href.replace("data:application/json;charset=utf-8,", "")),
+    JSON.stringify({ hello: "world" }),
+  );
+  cleanup();
+  unmount();
+});
+
+test("download: button is disabled until json is set", async () => {
+  const { model, el } = mount({});
+  const cleanup = await renderWidget(await loadWidget(load("download_button.js")), {
+    model,
+    el,
+  });
+  const button = el.querySelector("button");
+  assert.equal(button.disabled, true);
+  cleanup();
+  unmount();
+});

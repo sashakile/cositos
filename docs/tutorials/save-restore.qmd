@@ -60,3 +60,45 @@ doc["state"]["plot"]["buffers"]
 That's the whole persistence model: `dump_document` / `load_document` (and the
 single-widget `dump_model` / `load_model`). See also [static export](static-export.qmd)
 to turn a saved document into a viewable HTML page.
+
+## Download & restore a dashboard's state
+
+The pattern above generalizes directly to a **real, running dashboard**:
+[`examples/dashboard/build.py`](../../examples/dashboard/build.py)'s `Dashboard`
+(`cositos-70b.4`) carries a `download_button.js` widget
+([`examples/widgets/`](../../examples/widgets/), `cositos-70b.5`) whose `json` state
+field is always `dump_document(...)` of the dashboard's current slider/dropdown/summary
+state -- refreshed on every model change the exact same way the summary text is (see the
+module's own docstring for why that MUST be through the shared host Model and never a
+widget observing another widget). Clicking the button triggers a real browser download of
+that JSON via a `data:` URI -- no server round-trip, no upload widget needed for the
+*save* half.
+
+**Restoring is docs-only in this pass** (deliberately: no new "upload" widget) -- exactly
+the two functions above, called on whatever bytes your host's upload mechanism produces
+(a Jupyter file-upload cell, `open(path).read()`, a browser `<input type="file">` handler
+that hands the kernel a string, ...):
+
+```python
+from cositos import load_document
+from examples.dashboard.build import Dashboard, restore_document
+
+# The "save" half: what clicking the download button in a running dashboard produces.
+dashboard = Dashboard(options=["low", "medium", "high"], value=42, index=2)
+downloaded_json_text = dashboard._get_download_state()["json"]  # normally: a real file
+
+# A FRESH session later: restore from the downloaded file's text.
+restored_doc = restore_document(downloaded_json_text)   # == json.loads(...)
+restored_entries = load_document(restored_doc)
+by_id = dict(restored_entries)
+by_id[dashboard.slider_id]["value"]      # 42 -- survives the round trip
+by_id[dashboard.dropdown_id]["index"]    # 2
+by_id[dashboard.summary_id]["text"]      # "value=42, selection=high"
+```
+
+Re-rendering the restored document (`embed_html(restored_doc, views=[...])`, per
+[static export](static-export.qmd)) reproduces the same on-screen dashboard -- the same
+real `@jupyter-widgets/controls` identity, the same values -- because `restored_doc` is a
+plain cositos `Document` like any other; nothing about restore is dashboard-specific.
+`tests/test_example_dashboard.py::test_restore_document_recovers_the_downloaded_state_in_a_fresh_session`
+certifies this exact recipe against a real temp file, not just an in-memory string.

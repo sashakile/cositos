@@ -257,3 +257,93 @@ def test_build_html_and_build_document_use_the_same_default_dashboard():
 
     assert STATE_MIMETYPE in html
     assert VIEW_MIMETYPE in html
+
+
+# ---- Download & restore (cositos-70b.5) ----
+
+
+def test_download_button_is_composed_into_build_entries_with_current_json():
+    build = _load_build()
+    dashboard = build.Dashboard(options=["low", "medium", "high"], value=25, index=0)
+    entries = dashboard.build_entries()
+    vbox_id, vbox_state = entries[0]
+    by_id = dict(entries)
+
+    child_ids = {ref.removeprefix("IPY_MODEL_") for ref in vbox_state["children"]}
+    assert dashboard.download_id in child_ids
+    download_state = by_id[dashboard.download_id]
+    assert download_state["_esm"] == build.DOWNLOAD_BUTTON_ESM
+    assert download_state["filename"] == "dashboard-state.json"
+
+    import json
+
+    saved_doc = json.loads(download_state["json"])
+    # The download's own JSON does NOT reference itself (no self-referential document).
+    assert dashboard.download_id not in saved_doc["state"]
+    assert dashboard.slider_id in saved_doc["state"]
+    assert saved_doc["state"][dashboard.slider_id]["state"]["value"] == 25
+
+
+def test_download_json_refreshes_on_every_render_like_the_summary():
+    build = _load_build()
+    dashboard = build.Dashboard(options=["low", "medium", "high"], value=25, index=0)
+    slider_t, dropdown_t, summary_t = FakeTransport(), FakeTransport(), FakeTransport()
+    download_t = FakeTransport()
+    dashboard.wire(slider_t, dropdown_t, summary_t, download_transport=download_t)
+    download_t.sent.clear()
+
+    slider_t.deliver({"method": "update", "state": {"value": 77}})
+
+    (download_update,) = download_t.updates()
+    import json
+
+    saved_doc = json.loads(download_update["json"])
+    assert saved_doc["state"][dashboard.slider_id]["state"]["value"] == 77
+
+
+def test_download_button_never_receives_inbound_state_from_slider_or_dropdown():
+    # Same MUST-NOT gate as cositos-70b.4: the download button is a pure projection,
+    # never a peer the slider/dropdown talk to directly.
+    build = _load_build()
+    dashboard = build.Dashboard(options=["a", "b"], value=0, index=0)
+    slider_t, dropdown_t, summary_t = FakeTransport(), FakeTransport(), FakeTransport()
+    download_t = FakeTransport()
+    dashboard.wire(slider_t, dropdown_t, summary_t, download_transport=download_t)
+
+    assert dashboard.download_widget is not None
+    assert dashboard.download_widget._set_state is None
+
+
+def test_restore_document_recovers_the_downloaded_state_in_a_fresh_session(tmp_path):
+    # The ticket's full end-to-end scenario: build -> "click download" (grab the JSON
+    # the button would have saved) -> write it to a real file -> read it back in a
+    # FRESH session (no shared Dashboard instance, no in-memory reuse) -> restore ->
+    # assert it equals what was downloaded -> rebuild and get the same on-screen values.
+    build = _load_build()
+    dashboard = build.Dashboard(options=["low", "medium", "high"], value=42, index=2)
+    download_state = dashboard._get_download_state()
+
+    saved_file = tmp_path / "dashboard-state.json"
+    saved_file.write_text(download_state["json"])  # simulates the real browser download
+
+    # Fresh session: only the file on disk, no reference to `dashboard` from here on.
+    downloaded_json_text = saved_file.read_text()
+    restored_doc = build.restore_document(downloaded_json_text)
+    restored_entries = load_document(restored_doc)
+    by_id = dict(restored_entries)
+
+    # Assert the restored state equals what was downloaded...
+    assert dump_document(restored_entries) == restored_doc
+    assert by_id[dashboard.slider_id]["value"] == 42
+    assert by_id[dashboard.dropdown_id]["index"] == 2
+    assert by_id[dashboard.summary_id]["text"] == "value=42, selection=high"
+
+    # ...and re-rendering (embed_html on the restored document) reproduces the same
+    # on-screen dashboard: the same real controls identity, the same values.
+    from cositos.embed import embed_html
+
+    html = embed_html(restored_doc, views=[dashboard.slider_id, dashboard.dropdown_id])
+    assert by_id[dashboard.slider_id]["_model_name"] == "IntSliderModel"
+    embedded_state = restored_doc["state"][dashboard.slider_id]["state"]
+    assert embedded_state["value"] == 42
+    assert html  # renders without raising
