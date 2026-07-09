@@ -1,0 +1,312 @@
+---
+title: "Widget gallery: live demos + how to launch each one per language"
+---
+
+[`docs/widgets.md`](widgets.md) lists the six ipywidgets categories cositos' example
+widgets cover. This page makes that list concrete: **a live, in-browser demo of each
+widget**, plus **the exact snippet that launches it from a real backend language**.
+
+Every demo below runs the *unmodified* ESM from `examples/widgets/*.js` — the same file
+Jupyter (via the anywidget frontend) and `@cositos/front` (web/WASM/Pluto) both load. The
+demos on this page render with zero kernel, using `LocalChannel` — a loopback channel with
+no backend (see [`docs/hosts.md`](hosts.md#localchannel--client-only-widgets)) — purely so
+this page doesn't need a running Jupyter kernel to show what clicking the widget does.
+**A real kernel changes only which `Channel` is plugged in** (`CommTransport` for Python,
+`ijulia_transport()` for Julia, …); the ESM and the widget's on-screen behavior are
+identical either way — see [`tutorials/polyglot-parity.qmd`](tutorials/polyglot-parity.qmd)
+for the proof that both backends serialize to the same document.
+
+```{ojs}
+//| echo: false
+// Note the "../../": a dynamic import() inside a compiled OJS cell resolves relative to
+// Quarto's own runtime module (site_libs/quarto-ojs/…), not to this page's URL — see
+// tutorials/web-ojs.qmd for the full explanation.
+front = await import("../../vendor/cositos-front/index.js")
+```
+
+```{ojs}
+//| echo: false
+function demo(esm, initialState) {
+  return async () => {
+    const { Model, LocalChannel, loadWidget, renderWidget } = front;
+    const el = DOM.element("div", {
+      style: "border:1px solid #ddd;border-radius:8px;padding:1rem;max-width:20rem;",
+    });
+    const model = new Model(initialState, new LocalChannel());
+    const widget = await loadWidget(esm);
+    await renderWidget(widget, { model, el });
+    return el;
+  };
+}
+```
+
+## The launch pattern
+
+Every widget below is launched the same way, in every backend language: the host owns a
+state object and the ESM string, and hands both to cositos, which wires up the comm
+protocol. Only the ESM and the initial state change between widgets — swap them into
+whichever snippet matches your kernel.
+
+::: {.panel-tabset}
+
+## Python
+
+```{python}
+# | eval: false
+from cositos import Widget
+from cositos.jupyter import CommTransport
+
+ESM = "..."  # one of the examples/widgets/*.js files below
+state = {"...": "..."}  # that widget's initial state, from the table below
+
+widget = Widget(
+    CommTransport(),
+    get_state=lambda: dict(state),
+    set_state=state.update,
+)
+widget  # last line of a cell: renders live
+```
+
+## Julia
+
+```julia
+using Cositos, IJulia
+
+ESM = raw"""..."""  # one of the examples/widgets/*.js files below
+
+state = Dict{String,Any}("..." => "...")  # that widget's initial state, from the table below
+widget = Widget(
+    Cositos.ijulia_transport();
+    get_state = () -> copy(state),
+    set_state = (d) -> merge!(state, d),
+);
+
+widget  # last line of a cell: renders live
+```
+
+:::
+
+Clojure (Clay or the clojupyter crack), and the R/C# protocol-core-only status, are
+covered per-language in [`tutorials/quickstart.qmd`](tutorials/quickstart.qmd) — that page
+walks the *counter* widget end to end for every backend; this page is the *widget
+catalog*, so each entry below only calls out the two live-today backends plus the ESM +
+state you'd plug into them (or into the Clojure/Clay pattern from quickstart).
+
+## The widgets
+
+### IntSlider — numeric (ipywidgets: `IntSlider`, `FloatSlider`)
+
+`examples/widgets/int_slider.js` — a range input whose `value` two-way-syncs with the
+host.
+
+```{ojs}
+//| echo: false
+intSliderEsm = `
+export default {
+  render({ model, el }) {
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = String(model.get("min") ?? 0);
+    input.max = String(model.get("max") ?? 100);
+    input.value = String(model.get("value") ?? 0);
+    const label = document.createElement("span");
+    const paint = () => {
+      input.value = String(model.get("value"));
+      label.textContent = " " + model.get("value");
+    };
+    paint();
+    input.addEventListener("input", () => {
+      model.set("value", Number(input.value));
+      model.save_changes();
+    });
+    model.on("change:value", paint);
+    el.appendChild(input);
+    el.appendChild(label);
+    return () => { input.remove(); label.remove(); };
+  },
+};
+`
+```
+
+```{ojs}
+intSlider = demo(intSliderEsm, { value: 10, min: 0, max: 100 })()
+```
+
+Initial state: `{ value: 10, min: 0, max: 100 }`.
+
+### Checkbox — boolean (ipywidgets: `Checkbox`, `ToggleButton`)
+
+`examples/widgets/checkbox.js` — a checkbox whose `value` two-way-syncs with the host.
+
+```{ojs}
+//| echo: false
+checkboxEsm = `
+export default {
+  render({ model, el }) {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    const paint = () => { input.checked = Boolean(model.get("value")); };
+    paint();
+    input.addEventListener("change", () => {
+      model.set("value", input.checked);
+      model.save_changes();
+    });
+    model.on("change:value", paint);
+    el.appendChild(input);
+    return () => input.remove();
+  },
+};
+`
+```
+
+```{ojs}
+checkbox = demo(checkboxEsm, { value: false })()
+```
+
+Initial state: `{ value: false }`.
+
+### Text — string (ipywidgets: `Text`, `Textarea`)
+
+`examples/widgets/text.js` — a text input whose `value` two-way-syncs with the host.
+
+```{ojs}
+//| echo: false
+textEsm = `
+export default {
+  render({ model, el }) {
+    const input = document.createElement("input");
+    input.type = "text";
+    const paint = () => {
+      if (input.value !== model.get("value")) input.value = model.get("value") ?? "";
+    };
+    paint();
+    input.addEventListener("input", () => {
+      model.set("value", input.value);
+      model.save_changes();
+    });
+    model.on("change:value", paint);
+    el.appendChild(input);
+    return () => input.remove();
+  },
+};
+`
+```
+
+```{ojs}
+text = demo(textEsm, { value: "hi" })()
+```
+
+Initial state: `{ value: "hi" }`.
+
+### Button — button/event (ipywidgets: `Button`)
+
+`examples/widgets/button.js` — clicking bumps a `clicks` state field *and* sends a
+`custom` event, mirroring how ipywidgets' `Button` emits `on_click` rather than state.
+
+```{ojs}
+//| echo: false
+buttonEsm = `
+export default {
+  render({ model, el }) {
+    const button = document.createElement("button");
+    const paint = () => { button.textContent = model.get("description") ?? "Click"; };
+    paint();
+    button.addEventListener("click", () => {
+      model.set("clicks", (model.get("clicks") ?? 0) + 1);
+      model.save_changes();
+      model.send({ event: "click" });
+    });
+    model.on("change:description", paint);
+    el.appendChild(button);
+    return () => button.remove();
+  },
+};
+`
+```
+
+```{ojs}
+button = demo(buttonEsm, { description: "Go", clicks: 0 })()
+```
+
+Initial state: `{ description: "Go", clicks: 0 }`. On a real backend, `clicks` and the
+`custom` `{event: "click"}` message both arrive at the kernel — the host decides which
+one it cares about.
+
+### Dropdown — selection (ipywidgets: `Dropdown`, `Select`, `RadioButtons`)
+
+`examples/widgets/dropdown.js` — a `<select>` whose `options` list and `value` both
+sync with the host.
+
+```{ojs}
+//| echo: false
+dropdownEsm = `
+export default {
+  render({ model, el }) {
+    const select = document.createElement("select");
+    const build = () => {
+      select.innerHTML = "";
+      for (const opt of model.get("options") ?? []) {
+        const o = document.createElement("option");
+        o.value = String(opt);
+        o.textContent = String(opt);
+        select.appendChild(o);
+      }
+      select.value = String(model.get("value"));
+    };
+    build();
+    select.addEventListener("change", () => {
+      model.set("value", select.value);
+      model.save_changes();
+    });
+    model.on("change:value", () => { select.value = String(model.get("value")); });
+    model.on("change:options", build);
+    el.appendChild(select);
+    return () => select.remove();
+  },
+};
+`
+```
+
+```{ojs}
+dropdown = demo(dropdownEsm, { options: ["a", "b", "c"], value: "a" })()
+```
+
+Initial state: `{ options: ["a", "b", "c"], value: "a" }`.
+
+### HTML — output/display (ipywidgets: `HTML`, `Label`, `Output`)
+
+`examples/widgets/html.js` — renders `value` as HTML; the host pushes updates, the
+widget never writes back.
+
+```{ojs}
+//| echo: false
+htmlEsm = `
+export default {
+  render({ model, el }) {
+    const div = document.createElement("div");
+    const paint = () => { div.innerHTML = model.get("value") ?? ""; };
+    paint();
+    model.on("change:value", paint);
+    el.appendChild(div);
+    return () => div.remove();
+  },
+};
+`
+```
+
+```{ojs}
+html = demo(htmlEsm, { value: "<b>hi</b>" })()
+```
+
+Initial state: `{ value: "<b>hi</b>" }`. This is kernel→view-only: nothing on screen
+writes back to the host, so there is nothing to click — the interesting part is that a
+real backend can push `set_state({"value": "<i>bye</i>"})` at any time and this box
+updates without a re-render.
+
+## Next steps
+
+- Full per-language launch walkthrough (all five backends, current live/blocked status):
+  [`tutorials/quickstart.qmd`](tutorials/quickstart.qmd).
+- Author a brand-new widget (not one of the six above):
+  [`tutorials/authoring-widgets.qmd`](tutorials/authoring-widgets.qmd).
+- Why these six cover the whole ipywidgets surface: [`widgets.md`](widgets.md).

@@ -25,6 +25,7 @@ project:
     - explanation/architecture.qmd
     - explanation/state-discipline.qmd
     - widgets.md
+    - widgets-gallery.qmd
     - pluto.md
     - porting.md
     - hooks.md
@@ -61,6 +62,7 @@ website:
       - text: Guides
         menu:
           - widgets.md
+          - widgets-gallery.qmd
           - pluto.md
           - porting.md
           - hooks.md

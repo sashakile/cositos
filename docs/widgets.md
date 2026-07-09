@@ -28,6 +28,10 @@ These six exercise every synchronization pattern the protocol supports: two-way 
 kernel→view push, dynamic option lists, and custom event messages. Anything else in
 ipywidgets is a variation on these — no new machinery required.
 
+**Want to see each one running, plus the snippet that launches it per language?**
+[`docs/widgets-gallery.qmd`](widgets-gallery.qmd) has a live, in-browser demo of every
+widget in the table above, next to the Python/Julia code that launches it for real.
+
 ## "But I want the actual ipywidgets widgets"
 
 Then use ipywidgets — it's installed alongside and speaks the same comm protocol. cositos
