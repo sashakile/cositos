@@ -12,6 +12,7 @@ rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
 | `web/exported-widget-state.html` | static export of a saved `Document` via `embed_html` (CDN html-manager) | no (needs internet for the CDN) | **loads cleanly, renders BLANK by design** (see note below) |
 | `static-export/` | notebook → static HTML via nbconvert; Quarto/JupyterBook recipes | no | nbconvert path **verified**; quarto/jb configs provided |
 | `composition/` | a controls `VBox` composing two anywidget children in a static export | no | **works today** (run `build.py`; references resolve via a controls container) |
+| `dashboard/` | real `IntSlider`+`Dropdown` (`cositos.contrib.controls`) driving an anywidget summary via one MVU host Model, composed in a real `VBox` | no for the static snapshot; yes for live dispatch | **works today** (run `build.py`; live-kernel wiring e2e-tested) |
 | `plots/` | harvest an existing Plotly `FigureWidget` into a static export via `cositos.contrib.harvest` | no | **works today** (`uv run --with plotly python examples/plots/build.py`) |
 | `binder/` | live widgets on myBinder + Voila (kernel-backed) | yes | recipe (env + docs); live path is e2e-tested |
 | `notebooks/python_counter.ipynb` | Jupyter (live comm via `CommTransport`) | yes | **works today** (needs `anywidget` in the frontend) |
