@@ -375,3 +375,4 @@ state you hand it does.
 - Author a brand-new widget (not one of the six above):
   [`tutorials/authoring-widgets.qmd`](tutorials/authoring-widgets.qmd).
 - Why these six cover the whole ipywidgets surface: [`widgets.md`](widgets.md).
+- The full build-download-restore walkthrough for a dashboard built from the real controls catalog above: [`tutorials/dashboard.qmd`](tutorials/dashboard.qmd).

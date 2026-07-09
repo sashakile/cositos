@@ -57,3 +57,5 @@ See [`docs/widgets-gallery.qmd`](widgets-gallery.qmd#real-ipywidgets-controls-no
 for a runnable example (`int_slider()`, `dropdown()`, `vbox()`) built from
 `cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](tutorials/plot-integration.qmd#about-cositos-contrib),
 this one needs neither `ipywidgets` nor `anywidget` installed.
+
+For the full scenario—building a small dashboard from these real controls, downloading its state, and restoring it in a fresh session—see [`tutorials/dashboard.qmd`](tutorials/dashboard.qmd).

@@ -102,3 +102,5 @@ real `@jupyter-widgets/controls` identity, the same values -- because `restored_
 plain cositos `Document` like any other; nothing about restore is dashboard-specific.
 `tests/test_example_dashboard.py::test_restore_document_recovers_the_downloaded_state_in_a_fresh_session`
 certifies this exact recipe against a real temp file, not just an in-memory string.
+
+See [`tutorials/dashboard.qmd`](dashboard.qmd) for the same recipe walked through as a runnable, rendered tutorial (build → download → restore → confirm identical), rather than as isolated code snippets.

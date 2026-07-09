@@ -15,6 +15,7 @@ project:
     - tutorials/authoring-widgets.qmd
     - tutorials/integrating.qmd
     - tutorials/save-restore.qmd
+    - tutorials/dashboard.qmd
     - tutorials/static-export.qmd
     - tutorials/polyglot-parity.qmd
     - tutorials/plot-integration.qmd
@@ -46,6 +47,7 @@ website:
           - tutorials/authoring-widgets.qmd
           - tutorials/integrating.qmd
           - tutorials/save-restore.qmd
+          - tutorials/dashboard.qmd
           - tutorials/static-export.qmd
           - tutorials/polyglot-parity.qmd
           - tutorials/plot-integration.qmd

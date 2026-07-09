@@ -1,0 +1,130 @@
+---
+title: "Tutorial: a dashboard from real controls, with download & restore"
+---
+
+This walks through building a small dashboard from real `@jupyter-widgets/controls`
+models — not a hand-rolled cositos widget — end to end: build it, download its state,
+and restore it in a fresh session. It ties together three pieces that each have their
+own deeper docs:
+
+- **The catalog** (`cositos.contrib.controls`): [`docs/widgets.md`'s "Reusing a real
+  ipywidgets control instead of building one"](../widgets.md#reusing-a-real-ipywidgets-control-instead-of-building-one)
+  and the runnable example on [`docs/widgets-gallery.qmd`](../widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required).
+- **The dashboard** (`examples/dashboard/build.py`'s `Dashboard`): a real `IntSlider` +
+  `Dropdown` drive a summary view, wired MVU-style through one host Model — no
+  `ipywidgets.link`/`jslink`/peer `.observe()`, ever (see the module's own docstring for
+  why that's a hard gate, not a style preference).
+- **Download & restore**: [`docs/tutorials/save-restore.qmd`'s "Download & restore a
+  dashboard's state"](save-restore.qmd#download-restore-a-dashboards-state) covers the
+  underlying `dump_document`/`load_document` mechanics this tutorial exercises live.
+
+## Build the dashboard
+
+```{python}
+import importlib.util
+from pathlib import Path
+
+# examples/ isn't an installed package — load its build.py the same way the test suite
+# does (importlib.util.spec_from_file_location), not a plain `import`. Walk up to the
+# repo root the same robust way tutorials/polyglot-parity.qmd does, rather than a
+# fixed-depth `.parent.parent` (fragile to exactly this page's own path depth — see
+# cositos-7co's docs/_site path-depth gotcha for why fixed-depth relative paths in docs/
+# are worth avoiding wherever there's a robust alternative).
+_root = Path.cwd()
+while not (_root / "mise.toml").exists():
+    _root = _root.parent
+
+_build_path = _root / "examples" / "dashboard" / "build.py"
+_spec = importlib.util.spec_from_file_location("cositos_dashboard_build", _build_path)
+dashboard_build = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(dashboard_build)
+
+dashboard = dashboard_build.Dashboard(options=["low", "medium", "high"], value=25, index=0)
+entries = dashboard.build_entries()
+print(f"{len(entries)} models: slider, dropdown, summary, download button, + companions")
+```
+
+Rendering it (via `embed_snippet`, the same static-render path
+[`docs/widgets-gallery.qmd`](../widgets-gallery.qmd) uses — no kernel needed to *display*
+a built document, only to *dispatch new values into it*):
+
+```{python}
+# | output: asis
+from IPython.display import HTML
+
+from cositos.embed import embed_snippet
+from cositos.serialize import dump_document
+
+doc = dump_document(entries)
+root_id = entries[0][0]
+HTML(embed_snippet(doc, views=[root_id]))
+```
+
+The slider (`25`), the dropdown (`low`), the summary text, and the download button are
+all real, live DOM controls right here on the page — drag the slider or change the
+dropdown and the summary updates, driven entirely by `Dashboard`'s MVU wiring, running
+client-side with no kernel (the same `LocalChannel`-free CDN html-manager path
+[`static export`](static-export.qmd) uses).
+
+## Download the state
+
+Clicking the button above triggers a real browser download. To make the *content* of
+that download inspectable in this tutorial (a live click can't easily be scripted into a
+rendered doc page), grab exactly what the button's `json` state field holds — this is
+the same string a real click would save to disk, verbatim:
+
+```{python}
+downloaded_json_text = dashboard._get_download_state()["json"]
+print(downloaded_json_text[:120] + " ...")
+```
+
+## Restore it — in a fresh session
+
+The whole point of `dump_document`/`load_document` being plain data (no live objects) is
+that restoring needs nothing dashboard-specific. `dashboard_build.restore_document` is a
+thin wrapper (see [`save-restore.qmd`](save-restore.qmd#download-restore-a-dashboards-state)
+for why it's *only* a wrapper — the ticket that added it deliberately kept the restore
+path docs-only, no new "upload" widget):
+
+```{python}
+from cositos.serialize import load_document
+
+# Nothing below references `dashboard` or `entries` above — only the downloaded text,
+# exactly like a genuinely fresh session/kernel restart would have.
+restored_doc = dashboard_build.restore_document(downloaded_json_text)
+restored_entries = load_document(restored_doc)
+by_id = dict(restored_entries)
+
+by_id[dashboard.slider_id]["value"], by_id[dashboard.dropdown_id]["index"]
+```
+
+## Confirm it's identical
+
+```{python}
+assert dump_document(restored_entries) == restored_doc
+assert by_id[dashboard.slider_id]["value"] == dashboard.model["value"]
+assert by_id[dashboard.dropdown_id]["index"] == dashboard.model["index"]
+assert by_id[dashboard.summary_id]["text"] == dashboard._summary_text()
+print("restored state matches the original, byte for byte")
+```
+
+And re-rendering the restored document reproduces the identical on-screen dashboard —
+same real `@jupyter-widgets/controls` identity, same values:
+
+```{python}
+# | output: asis
+restored_root_id = dashboard.slider_id  # any top-level id in restored_doc works as a view
+HTML(embed_snippet(restored_doc, views=[dashboard.slider_id, dashboard.dropdown_id]))
+```
+
+## Next steps
+
+- The MUST-NOT gate behind the MVU wiring (no `jslink`/`observe`) is unit- and
+  live-kernel-tested in `tests/test_example_dashboard.py` and `tests/test_e2e_dashboard.py`
+  — read those for the exact failure mode this design avoids.
+- [`docs/widgets.md`](../widgets.md) for the six build-your-own ipywidgets categories
+  this dashboard's summary/download widgets are built from (plain anywidget ESM, not the
+  real-controls catalog).
+- [`docs/tutorials/static-export.qmd`](static-export.qmd) for what a static export can
+  and cannot show (a live kernel is only needed to *dispatch new values*, not to *view*
+  a saved dashboard).
