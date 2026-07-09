@@ -303,6 +303,71 @@ writes back to the host, so there is nothing to click — the interesting part i
 real backend can push `set_state({"value": "<i>bye</i>"})` at any time and this box
 updates without a re-render.
 
+## Real ipywidgets controls (no reimplementation required)
+
+Everything above is a *build-your-own* widget: cositos' own minimal ESM, wired through
+`AnyModel`. There's a second path, for when you don't want to build a widget at all — you
+want the **real** `@jupyter-widgets/controls` frontend (`IntSlider`, `Dropdown`, `VBox`,
+…), unmodified, with **no `ipywidgets` (or `anywidget`) Python package installed**.
+
+`cositos.contrib.controls` builds the state for these real widgets directly — it's a
+small JSON catalog (their own `_model_name`/`_model_module`/`_view_name`/`_view_module`
+identity, pinned at `@jupyter-widgets/controls`/`base` version `2.0.0`) plus a thin
+Python builder. This needs **zero changes to cositos' core**: `Widget.send_state` already
+sends whatever identity the caller's state carries, so a real widget's own identity
+reaches the wire exactly like an anywidget-authored one would.
+
+The slider and dropdown below are rendered by the real `@jupyter-widgets/html-manager`
+(loaded from the CDN, same as [static export](tutorials/static-export.qmd)) — not by the
+LocalChannel/OJS demo harness the six widgets above use, because these are real
+ipywidgets controls models, not cositos anywidget models:
+
+```{python}
+# | output: asis
+from IPython.display import HTML
+
+from cositos.contrib.controls import dropdown, int_slider, vbox
+from cositos.embed import embed_snippet
+from cositos.serialize import dump_document
+
+entries = vbox(
+    children=[
+        int_slider(value=42, min=0, max=100),
+        dropdown(options=["a", "b", "c"], value="b"),
+    ]
+)
+doc = dump_document(entries)
+root_id = entries[0][0]
+HTML(embed_snippet(doc, views=[root_id]))
+```
+
+Both controls are interactive right here on the page (drag the slider, open the
+dropdown) — that interactivity is the real `IntSliderView`/`DropdownView` frontend code
+running, the exact same JS a live JupyterLab loads for `ipywidgets.IntSlider()`.
+
+```python
+from cositos.contrib.controls import dropdown, int_slider, vbox
+from cositos.serialize import dump_document
+
+entries = vbox(
+    children=[
+        int_slider(value=42, min=0, max=100),
+        dropdown(options=["a", "b", "c"], value="b"),
+    ]
+)
+doc = dump_document(entries)  # a normal cositos Document -- save/restore/embed all apply
+```
+
+`int_slider`/`dropdown`/`vbox`/`hbox` each return a `list[ModelEntry]`: the widget's own
+entry first, then a freshly id'd entry per companion model it needs (`LayoutModel`,
+`SliderStyleModel`, `DescriptionStyleModel`) — every call mints fresh companion ids, so
+building the same widget twice never collides on `model_id`. Pass the result straight to
+`dump_document`, exactly like any other cositos widget tree.
+
+On a live kernel, the same `entries[0]` state dict opens through the ordinary
+`Widget`/`CommTransport` pair (Python) — nothing about `Widget.open()` changes; only the
+state you hand it does.
+
 ## Next steps
 
 - Full per-language launch walkthrough (all five backends, current live/blocked status):

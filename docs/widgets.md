@@ -37,3 +37,23 @@ widget in the table above, next to the Python/Julia code that launches it for re
 Then use ipywidgets — it's installed alongside and speaks the same comm protocol. cositos
 is the *build-your-own* path: when you need a bespoke widget (a d3 chart, a custom form, a
 WASM-backed control), you write ESM instead of a new Python/JS widget class pair.
+
+## Reusing a real ipywidgets control instead of building one
+
+Sometimes you don't want to build a widget at all — you want the *real*
+`IntSlider`/`Dropdown`/`VBox` frontend, unmodified, without installing the `ipywidgets`
+Python package. `cositos.contrib.controls` provides exactly that: a small, optional
+catalog that builds state for the real `@jupyter-widgets/controls`/`base` frontend
+directly, with no `ipywidgets` (or `anywidget`) Python dependency.
+
+This works with **zero changes to cositos' core**: the wire-level builder
+(`build_comm_open`/`Widget.send_state`) already merges `{**anywidget_defaults, **state}`,
+so a caller that supplies a real widget's own identity
+(`_model_name`/`_model_module`/`_view_name`/`_view_module`, etc.) gets that identity on
+the wire as-is — the core never distinguishes an anywidget-authored widget from a real
+ipywidgets one.
+
+See [`docs/widgets-gallery.qmd`](widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required)
+for a runnable example (`int_slider()`, `dropdown()`, `vbox()`) built from
+`cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](tutorials/plot-integration.qmd#about-cositos-contrib),
+this one needs neither `ipywidgets` nor `anywidget` installed.
