@@ -30,17 +30,36 @@ NON_CORE = {
 }
 
 
+def _is_gitignored(path: Path) -> bool:
+    """True iff `path` is fully excluded by .gitignore (e.g. local-only scratch dirs
+    like `handoffs/`, see TOOL_EVALUATION.md F32). Never raises on a missing/broken git
+    binary — treated as "not ignored" so the audit still runs (fails safe, not silent).
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "check-ignore", "-q", str(path)], cwd=ROOT, capture_output=True,
+        )
+    except OSError:
+        return False
+    return proc.returncode == 0
+
+
 def discover_backend_dirs() -> set[str]:
     """Top-level code directories that ought to be covered.
 
     `front` is excluded here because its code lives at `front/src`, which the manifest
-    tracks by that nested key.
+    tracks by that nested key. Gitignored directories (local-only artifacts, never part
+    of the shipped source tree — e.g. the `create-handoff` skill's `handoffs/`) are
+    skipped too: they are not backend cores, and flagging them blocks unrelated commits
+    (F32).
     """
     found: set[str] = set()
     for entry in ROOT.iterdir():
         if not entry.is_dir() or entry.name.startswith("."):
             continue
         if entry.name in NON_CORE:
+            continue
+        if _is_gitignored(entry):
             continue
         found.add(entry.name)
     return found

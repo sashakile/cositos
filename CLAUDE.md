@@ -129,3 +129,45 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 - Do not commit or push without clear authority from the active profile or the current user request.
 - If a required sync or push is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
+
+<!-- TICKET WORKFLOW (not tool-managed) -->
+## Ticket implementation workflow
+
+**This is the main development loop.** For every ticket (beads issue): implement
+using TDD (red → green → refactor) → invoke `/rule-of-5-universal` → fix all
+findings → commit → move to the next ticket. Do not start the next ticket until the
+current one is committed and clean. **No batching across tickets.**
+
+Concretely, per ticket:
+
+1. **Claim** — `bd update <id> --claim` (check `metadata.files` for conflicts first).
+2. **TDD** — write a failing test, make it pass, refactor. ARRANGE-ACT-ASSERT
+   (unit/integration) or GIVEN-WHEN-THEN (behaviour). No mocks — prefer real
+   fakes/fixtures.
+3. **Review** — invoke `/rule-of-5-universal` on the result and fix every finding
+   before committing.
+4. **Gate** — `mise run verify` must pass (lint, typecheck, coverage, complexity,
+   specs, coverage-audit). Structural changes commit separately from behaviour changes
+   (Tidy First).
+5. **Commit** — atomic and revertible; stage explicitly by path (never `git add -A`).
+6. **Close** — `bd close <id>`, then start the next ticket. If the ticket surfaced
+   tooling friction, log it as an `F#` finding in `TOOL_EVALUATION.md`.
+
+<!-- COVERAGE & GROUNDING RITUALS (not tool-managed) -->
+## Quality-tool coverage & grounding rituals
+
+These enforce that the charly-vibes tools stay used as the project grows
+(see `TOOL_EVALUATION.md` F19/F20 and the "Enforcement" section).
+
+- **Coverage manifest (E1).** Every backend directory must be declared in
+  `coverage-manifest.toml` with a `pretender`/`espectacular` binding or an explicit
+  `exempt = "<reason>"`. `mise run coverage-audit` (in `verify` + pre-commit) fails on
+  any undeclared dir and on any `pretender = true` dir that parses zero files. **When you
+  add a new language backend, add its manifest entry in the same commit.**
+- **Grounding (E2).** For every empirical capability finding (kernel behaviour, upstream
+  bug, protocol quirk), record a `dont` claim grounded in in-project evidence (research
+  docs, `probe/README.md`, source). At handoff, the summary must list each finding and
+  whether it was grounded. Citing the vendored `anywidget/`/`ipywidgets/` repos is still
+  blocked upstream (F1); ground against in-project artifacts until that is fixed.
+- **After F1 is fixed (E3):** add `dont verify` (no ungrounded/unverified claims) to
+  `mise run verify` and pre-push, mirroring how `pretender`/`ah` are gated.
