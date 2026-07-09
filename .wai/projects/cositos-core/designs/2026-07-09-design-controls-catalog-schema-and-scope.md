@@ -160,12 +160,22 @@ default fall back to their trait type's zero value, for example `Bool()` -> `Fal
   `behavior="drag-tap"`, `description=""`, `description_allow_html=false`,
   `style=IPY_MODEL_<slider_style_id>`, `layout=IPY_MODEL_<layout_id>`.
 - **`dropdown`** (`_Selection`/`Dropdown`, `widget_selection.py` +
-  `widget_description.py`): `options=[]`, `index=null`, `value=null`, `label=null`,
-  `disabled=false`, `description=""`, `description_allow_html=false`,
-  `style=IPY_MODEL_<description_style_id>`, `layout=IPY_MODEL_<layout_id>`. The
-  builder (ticket 2) is expected to always override `options` (and typically `index`)
-  since an empty-options dropdown has nothing to select—that's a caller override, not
-  a catalog default change.
+  `widget_description.py`): `_options_labels=[]`, `index=null`, `disabled=false`,
+  `description=""`, `description_allow_html=false`,
+  `style=IPY_MODEL_<description_style_id>`, `layout=IPY_MODEL_<layout_id>`.
+  **Correction found empirically in `cositos-70b.2`'s real-browser check** (not visible
+  from the trait names alone without checking `.tag(sync=True)`): `_Selection`'s
+  `options`, `value`, and `label` traits carry **no** `sync=True` tag in ipywidgets—only
+  `_options_labels` (label strings) and `index` are ever on the wire. A first catalog
+  draft that put `options=[...]`/`value=...` straight into `default_state` built and
+  serialized without error, but rendered an **empty, unselectable** `<select>` in a real
+  browser (confirmed via the `chrome-dev-tools` skill, then via source:
+  `widget_selection.py` declares `options = Any((), ...)` and `value = Any(None, ...)`
+  with no `.tag(sync=True)` at all). The builder (ticket 2) exposes ergonomic
+  `options=`/`value=` parameters but translates them to `_options_labels`/`index` before
+  they reach `default_state`. The builder is expected to always override
+  `_options_labels` (and typically `index`) since an empty-options dropdown has nothing
+  to select—that's a caller override, not a catalog default change.
 - **`vbox`** / **`hbox`** (`Box`/`VBox`/`HBox`, `widget_box.py`): `children=[]`,
   `box_style=""`, `layout=IPY_MODEL_<layout_id>`. `children` is populated by the
   builder from the child widgets passed in, as a list of `IPY_MODEL_<child_id>`

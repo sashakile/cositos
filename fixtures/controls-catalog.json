@@ -1,0 +1,131 @@
+{
+  "int_slider": {
+    "model_name": "IntSliderModel",
+    "model_module": "@jupyter-widgets/controls",
+    "model_module_version": "2.0.0",
+    "view_name": "IntSliderView",
+    "view_module": "@jupyter-widgets/controls",
+    "view_module_version": "2.0.0",
+    "default_state": {
+      "value": 0,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "orientation": "horizontal",
+      "readout": true,
+      "readout_format": "d",
+      "continuous_update": true,
+      "disabled": false,
+      "behavior": "drag-tap",
+      "description": "",
+      "description_allow_html": false,
+      "style": "IPY_MODEL_<slider_style_id>",
+      "layout": "IPY_MODEL_<layout_id>"
+    },
+    "companions": [
+      {
+        "key_in_default_state": "style",
+        "model_name": "SliderStyleModel",
+        "model_module": "@jupyter-widgets/controls",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/controls",
+        "view_module_version": "2.0.0"
+      },
+      {
+        "key_in_default_state": "layout",
+        "model_name": "LayoutModel",
+        "model_module": "@jupyter-widgets/base",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/base",
+        "view_module_version": "2.0.0"
+      }
+    ]
+  },
+  "dropdown": {
+    "model_name": "DropdownModel",
+    "model_module": "@jupyter-widgets/controls",
+    "model_module_version": "2.0.0",
+    "view_name": "DropdownView",
+    "view_module": "@jupyter-widgets/controls",
+    "view_module_version": "2.0.0",
+    "default_state": {
+      "_options_labels": [],
+      "index": null,
+      "disabled": false,
+      "description": "",
+      "description_allow_html": false,
+      "style": "IPY_MODEL_<description_style_id>",
+      "layout": "IPY_MODEL_<layout_id>"
+    },
+    "companions": [
+      {
+        "key_in_default_state": "style",
+        "model_name": "DescriptionStyleModel",
+        "model_module": "@jupyter-widgets/controls",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/controls",
+        "view_module_version": "2.0.0"
+      },
+      {
+        "key_in_default_state": "layout",
+        "model_name": "LayoutModel",
+        "model_module": "@jupyter-widgets/base",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/base",
+        "view_module_version": "2.0.0"
+      }
+    ]
+  },
+  "vbox": {
+    "model_name": "VBoxModel",
+    "model_module": "@jupyter-widgets/controls",
+    "model_module_version": "2.0.0",
+    "view_name": "VBoxView",
+    "view_module": "@jupyter-widgets/controls",
+    "view_module_version": "2.0.0",
+    "default_state": {
+      "children": [],
+      "box_style": "",
+      "layout": "IPY_MODEL_<layout_id>"
+    },
+    "companions": [
+      {
+        "key_in_default_state": "layout",
+        "model_name": "LayoutModel",
+        "model_module": "@jupyter-widgets/base",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/base",
+        "view_module_version": "2.0.0"
+      }
+    ]
+  },
+  "hbox": {
+    "model_name": "HBoxModel",
+    "model_module": "@jupyter-widgets/controls",
+    "model_module_version": "2.0.0",
+    "view_name": "HBoxView",
+    "view_module": "@jupyter-widgets/controls",
+    "view_module_version": "2.0.0",
+    "default_state": {
+      "children": [],
+      "box_style": "",
+      "layout": "IPY_MODEL_<layout_id>"
+    },
+    "companions": [
+      {
+        "key_in_default_state": "layout",
+        "model_name": "LayoutModel",
+        "model_module": "@jupyter-widgets/base",
+        "model_module_version": "2.0.0",
+        "view_name": null,
+        "view_module": "@jupyter-widgets/base",
+        "view_module_version": "2.0.0"
+      }
+    ]
+  }
+}

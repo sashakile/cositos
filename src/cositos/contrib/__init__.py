@@ -7,6 +7,7 @@ cross-language-portable core stays free of those dependencies. Import from here 
     from cositos.contrib import harvest, harvest_html
 """
 
+from cositos.contrib.controls import dropdown, hbox, int_slider, vbox
 from cositos.contrib.harvest import harvest, harvest_html
 
-__all__ = ["harvest", "harvest_html"]
+__all__ = ["harvest", "harvest_html", "int_slider", "dropdown", "vbox", "hbox"]
