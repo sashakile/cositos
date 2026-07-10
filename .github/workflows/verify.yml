@@ -71,3 +71,26 @@ jobs:
       - run: mise run r-test
       - run: mise run csharp-test
       - run: mise run coverage-audit
+
+  # Builds the Quarto docs site to verify it renders cleanly.
+  # Runs in parallel with the main verify job.
+  docs-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version-file: ".python-version"
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Install project dependencies (Python + JS)
+        run: mise run setup
+
+      - name: Build Quarto documentation site
+        run: mise run docs

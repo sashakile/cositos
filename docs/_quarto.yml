@@ -35,6 +35,7 @@ project:
 website:
   title: "cositos"
   description: "A portable anywidget-inspired backend core for any Jupyter kernel language."
+  site-url: https://sashakile.github.io/cositos/
   navbar:
     left:
       - href: index.qmd

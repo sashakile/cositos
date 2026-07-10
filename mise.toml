@@ -205,3 +205,35 @@ depends = [
     "specs",
     "claims",
 ]
+
+# --- Release helpers ---
+[tasks.bump-version]
+description = "Bump the version everywhere. Usage: mise run bump-version X.Y.Z"
+run = """
+  version="$1"
+  if [ -z "$version" ]; then
+    echo "Usage: mise run bump-version X.Y.Z"
+    exit 1
+  fi
+  uvx --from=tomli-w toml set pyproject.toml project.version "$version"
+  npm version "$version" --no-git-tag-version --prefix front
+  echo "Version bumped to $version in pyproject.toml and front/package.json"
+  echo "Review the changes, then:"
+  echo "  git add -p pyproject.toml front/package.json"
+  echo "  git commit -m 'chore: bump version to $version'"
+  echo "  git tag v$version"
+"""
+
+[tasks.release-dry-run]
+description = "Dry-run the release: build packages, validate structure, no publish"
+run = """
+  echo "=== Python (PyPI) ==="
+  uv build --quiet
+  uv pip install --quiet dist/cositos-*.whl --force-reinstall
+  echo "  OK: wheel installs cleanly"
+  echo ""
+  echo "=== JS (npm) ==="
+  cd front && npm pack --dry-run 2>&1 | grep -E "^npm notice (package|total)" | head -5
+  echo ""
+  echo "Dry-run complete. Run 'git tag v...' to publish."
+"""

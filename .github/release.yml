@@ -1,0 +1,37 @@
+# Configuration for softprops/action-gh-release auto-generated release notes.
+# Categories group related PRs together in the release body.
+
+changelog:
+  categories:
+    - title: 🎉 New Features
+      labels:
+        - enhancement
+        - feature
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: 📚 Documentation
+      labels:
+        - documentation
+        - docs
+    - title: 🔧 Maintenance
+      labels:
+        - chore
+        - maintenance
+        - refactor
+    - title: 🧪 Testing
+      labels:
+        - testing
+        - test
+    - title: 🌐 New Language Backend
+      labels:
+        - language-backend
+        - port
+    - title: ⬆️ Dependencies
+      labels:
+        - dependencies
+        - deps
+    - title: Other Changes
+      labels:
+        - "*"

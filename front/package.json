@@ -12,6 +12,11 @@
     "coverage": "c8 --check-coverage --lines 90 --functions 90 --branches 85 node --test"
   },
   "license": "MIT",
+  "files": ["src"],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "devDependencies": {
     "@types/node": "^26.1.0",
     "c8": "^11.0.0",

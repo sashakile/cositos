@@ -1,0 +1,51 @@
+name: docs
+
+# Builds and deploys the Quarto documentation site to GitHub Pages
+# on every push to main.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version-file: ".python-version"
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Install project dependencies (Python + JS)
+        run: mise run setup
+
+      - name: Build Quarto documentation site
+        run: mise run docs
+
+      - name: Upload built site as Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
