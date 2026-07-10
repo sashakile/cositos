@@ -225,14 +225,25 @@ b64(buffers) = [base64encode(b) for b in buffers]
             Dict("value" => 55)
 
         # HTML render upholds the @bind contract: imports the runtime, embeds ESM +
-        # state, wires a PlutoChannel to the container element.
+        # state, wires a PlutoChannel to the container element. runtime_url was left at
+        # its DEFAULT_RUNTIME_URL sentinel, so the render auto-resolves it to the local,
+        # offline bundle (cositos-z76.7) -- no separate call needed for the common case.
         html = sprint(show, MIME("text/html"), w)
         @test occursin("document.currentScript.parentElement", html)
         @test occursin("PlutoChannel", html)
         @test occursin("loadWidget", html)
-        @test occursin(w.runtime_url, html)
+        @test occursin("data:text/javascript;base64,", html)
+        @test !occursin(w.runtime_url, html)  # the CDN placeholder itself never appears
         @test occursin("\"value\":0", replace(html, " " => ""))  # state embedded
         @test occursin("render({model, el})", html)                # esm embedded
+    end
+
+    @testset "Pluto extension: explicit runtime_url overrides the local-bundle default" begin
+        w = PlutoWidget(; esm="export default { render() {} }", state=Dict{String,Any}(),
+            runtime_url="https://example.test/front.js")
+        html = sprint(show, MIME("text/html"), w)
+        @test occursin("https://example.test/front.js", html)
+        @test !occursin("data:text/javascript;base64,", html)
     end
 
     @testset "Pluto extension: local_front_runtime_url bundles @cositos/front with no npm/CDN (cositos-z76.7)" begin

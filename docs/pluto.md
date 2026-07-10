@@ -59,31 +59,31 @@ export default { render({ model, el }) {
 
 ## Runtime hosting
 
-The generated HTML `import`s `@cositos/front` from `runtime_url`
-(default `https://cdn.jsdelivr.net/npm/@cositos/front/...`; override to a self-hosted
-copy until the package is published).
-
-**Local/offline, no npm publish or server (cositos-z76.7):**
-`Cositos.local_front_runtime_url()` (in `CositosPlutoExt`, requires `using JSON,
-AbstractPlutoDingetjes`) bundles `front/src/*.js` into one self-contained ESM — no
-relative imports left — and returns it as a `data:` URI. Pass it as `runtime_url`:
+The generated HTML `import`s `@cositos/front` from `runtime_url`. **You don't need to set
+it.** `PlutoWidget`'s default (cositos-z76.7) resolves automatically to
+[`Cositos.local_front_runtime_url()`](@ref) — a self-contained `data:` URI bundling
+`front/src/*.js`, with **no npm publish, CDN, or local server required**, fully offline:
 
 ```julia
-using Cositos, AbstractPlutoDingetjes, JSON
+using Cositos, AbstractPlutoDingetjes, JSON   # extension activates
 
-@bind s PlutoWidget(
-    esm=SLIDER, state=Dict("value"=>0, "min"=>0, "max"=>100),
-    runtime_url=Cositos.local_front_runtime_url(),
-)
+@bind s PlutoWidget(esm=SLIDER, state=Dict("value"=>0, "min"=>0, "max"=>100))
+# nothing else to configure — runtime_url defaults to the local bundle.
 ```
 
-Works fully offline: no npm publish, no CDN fetch, no local file server. This is what
-`examples/notebooks/pluto_demo.jl` uses, and was verified live end-to-end (a real Pluto
-server + browser interaction: dragging the slider drove the `@bind`ed Julia value through
-the locally-bundled runtime with no external resource). The bundling logic assumes
-`front/src`'s import graph stays simple (currently one internal edge, `model.js` ->
-`buffers.js`); if a future file adds a new relative import, add it to the bundle order in
-`CositosPlutoExt._bundle_front_source`.
+Override `runtime_url` explicitly only if you want something else — e.g. a real CDN URL
+once `@cositos/front` is published, or a self-hosted copy:
+
+```julia
+PlutoWidget(esm=SLIDER, state=..., runtime_url="https://cdn.jsdelivr.net/npm/@cositos/front/...")
+```
+
+This is what `examples/notebooks/pluto_demo.jl` uses, and was verified live end-to-end (a
+real Pluto server + browser interaction: dragging the slider drove the `@bind`ed Julia
+value through the locally-bundled runtime with no external resource). The bundling logic
+assumes `front/src`'s import graph stays simple (currently one internal edge, `model.js`
+depends on `buffers.js`); if a future file adds a new relative import, add it to the
+bundle order in `CositosPlutoExt._bundle_front_source`.
 
 ## Status / caveats
 

@@ -579,7 +579,11 @@ end
 
 # ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----
 
-"""Default ESM URL for `@cositos/front` used by [`PlutoWidget`](@ref) rendering."""
+"""Default ESM URL for `@cositos/front` used by [`PlutoWidget`](@ref) rendering. Acts
+as a sentinel: leaving `runtime_url` at this default makes `CositosPlutoExt` resolve it
+to [`local_front_runtime_url`](@ref) automatically (no npm publish/CDN/server needed,
+cositos-z76.7) — pass an explicit `runtime_url` to opt out (e.g. once the package is
+published, or to point at a self-hosted copy)."""
 const DEFAULT_RUNTIME_URL = "https://cdn.jsdelivr.net/npm/@cositos/front/src/index.js"
 
 """
@@ -591,10 +595,14 @@ methods live in the package extension `CositosPlutoExt`, which loads automatical
 `AbstractPlutoDingetjes` and `JSON` are available.
 
 ```julia
-using Cositos, AbstractPlutoDingetjes   # extension activates
+using Cositos, AbstractPlutoDingetjes, JSON   # extension activates
 @bind s PlutoWidget(esm=SLIDER_ESM, state=Dict("value" => 0, "min" => 0, "max" => 100))
 # `s` becomes the widget's full state Dict, updated reactively on interaction.
 ```
+
+That's the whole runtime-hosting story: `runtime_url` defaults to
+[`local_front_runtime_url`](@ref) (a self-contained, offline `data:` URI) unless you
+override it — no separate call needed.
 """
 struct PlutoWidget
     esm::String

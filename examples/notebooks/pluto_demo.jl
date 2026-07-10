@@ -16,7 +16,7 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ a860f54a-7c60-11f1-8410-1921fa53d0ae
+# ╔═╡ 87907f98-7c65-11f1-bc5c-2dbaa642ebb3
 begin
 	import Pkg
 	Pkg.activate(mktempdir())
@@ -25,29 +25,25 @@ begin
 	using Cositos, AbstractPlutoDingetjes, JSON
 end
 
-# ╔═╡ a86108a0-7c60-11f1-b8c1-052bf1c22b82
+# ╔═╡ 87909280-7c65-11f1-ab5d-abcb439a5798
 md"""
 # cositos widget in Pluto — no npm publish required
 
 Pluto is **not** Jupyter — see `docs/pluto.md` for how `PlutoWidget` maps anywidget's
 `AnyModel`/`@bind` reactivity onto Pluto's model. This notebook reuses the exact same
 anywidget ESM the Python/Julia/Clojure Jupyter counters use for the slider category
-(`examples/widgets/int_slider.js`) and drives it with `Cositos.local_front_runtime_url()`
-— a `data:` URI bundling `@cositos/front` (`front/src/*.js`) with **zero** npm publish,
-CDN, or local server (cositos-z76.7). Works fully offline.
+(`examples/widgets/int_slider.js`). `PlutoWidget`'s `runtime_url` defaults to a
+self-contained, offline `data:` URI bundling `@cositos/front` (`front/src/*.js`) — no
+npm publish, CDN, or local server required (cositos-z76.7); nothing to configure below.
 """
 
-# ╔═╡ a8612c36-7c60-11f1-9e8f-3f24b35eb6e3
+# ╔═╡ 8790a496-7c65-11f1-b5ef-152829f72351
 const SLIDER_ESM = read(joinpath(@__DIR__, "..", "widgets", "int_slider.js"), String)
 
-# ╔═╡ a86154ea-7c60-11f1-9306-3791da66fbd8
-@bind widget_state PlutoWidget(
-	esm=SLIDER_ESM,
-	state=Dict("value" => 20, "min" => 0, "max" => 100),
-	runtime_url=Cositos.local_front_runtime_url(),
-)
+# ╔═╡ 8790b224-7c65-11f1-b8c1-b18b22751bc6
+@bind widget_state PlutoWidget(esm=SLIDER_ESM, state=Dict("value" => 20, "min" => 0, "max" => 100))
 
-# ╔═╡ a8616764-7c60-11f1-87b2-71aa460983c3
+# ╔═╡ 8790be1a-7c65-11f1-939b-d3366e48ada0
 md"""
 Dragging the slider above re-runs this cell reactively — `widget_state` is the widget's
 full state `Dict`, exactly as `@bind` promises:
@@ -56,8 +52,8 @@ full state `Dict`, exactly as `@bind` promises:
 """
 
 # ╔═╡ Cell order:
-# ╠═a860f54a-7c60-11f1-8410-1921fa53d0ae
-# ╠═a86108a0-7c60-11f1-b8c1-052bf1c22b82
-# ╠═a8612c36-7c60-11f1-9e8f-3f24b35eb6e3
-# ╠═a86154ea-7c60-11f1-9306-3791da66fbd8
-# ╠═a8616764-7c60-11f1-87b2-71aa460983c3
+# ╠═87907f98-7c65-11f1-bc5c-2dbaa642ebb3
+# ╠═87909280-7c65-11f1-ab5d-abcb439a5798
+# ╠═8790a496-7c65-11f1-b5ef-152829f72351
+# ╠═8790b224-7c65-11f1-b8c1-b18b22751bc6
+# ╠═8790be1a-7c65-11f1-939b-d3366e48ada0

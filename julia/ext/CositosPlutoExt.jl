@@ -53,7 +53,13 @@ function Cositos.local_front_runtime_url()
 end
 
 function Base.show(io::IO, ::MIME"text/html", w::PlutoWidget)
-    url = JSON.json(w.runtime_url)
+    # runtime_url left at its DEFAULT_RUNTIME_URL sentinel auto-resolves to the local,
+    # offline bundle -- the common case needs no separate call to
+    # Cositos.local_front_runtime_url() (cositos-z76.7 UX follow-up). An explicit,
+    # different runtime_url (e.g. a real published CDN URL, or a self-hosted copy) is
+    # respected verbatim.
+    effective_url = w.runtime_url == Cositos.DEFAULT_RUNTIME_URL ? Cositos.local_front_runtime_url() : w.runtime_url
+    url = JSON.json(effective_url)
     state = JSON.json(w.state)
     esm = JSON.json(w.esm)
     css = JSON.json(w.css)
