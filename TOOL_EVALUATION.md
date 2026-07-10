@@ -310,7 +310,7 @@ prose; or allow `< > / -` in statements and escape only at genuine sinks.
 
 ---
 
-**F27 · `wai way` reports "Specs in deployed docs: openspec not included in deployed
+**F28 · `wai way` reports "Specs in deployed docs: openspec not included in deployed
 docs" even when the specs already ARE in the deployed docs, just not via a file-copy
 step.** Working `cositos-483.5` (wire the docs site into README/llm.txt + fix `wai way`
 docs findings), `wai way` flagged: *"Your docs workflow doesn't include openspec/ in the
