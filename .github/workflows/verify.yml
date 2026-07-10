@@ -89,8 +89,16 @@ jobs:
 
       - uses: quarto-dev/quarto-actions/setup@v2
 
+      # Docs build includes a Julia parity check (examples/parity/dump.jl)
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.11"
+
       - name: Install project dependencies (Python + JS)
         run: mise run setup
+
+      - name: Precompile Julia parity project deps
+        run: julia --project=examples/parity -e 'using Pkg; Pkg.instantiate()'
 
       - name: Build Quarto documentation site
         run: mise run docs

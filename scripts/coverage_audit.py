@@ -65,12 +65,17 @@ def discover_backend_dirs() -> set[str]:
     return found
 
 
-def pretender_parses_files(rel: str) -> bool:
-    """True iff `pretender check <rel>` parses at least one file."""
-    proc = subprocess.run(
-        ["pretender", "check", rel, "--format", "json"],
-        cwd=ROOT, capture_output=True, text=True,
-    )
+def pretender_parses_files(rel: str) -> bool | None:
+    """True iff `pretender check <rel>` parses at least one file.
+    Returns None if `pretender` binary is not installed (e.g. in CI).
+    """
+    try:
+        proc = subprocess.run(
+            ["pretender", "check", rel, "--format", "json"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+    except FileNotFoundError:
+        return None
     try:
         payload = json.loads(proc.stdout or "{}")
     except json.JSONDecodeError:
@@ -106,11 +111,15 @@ def main() -> int:
         has_binding = cfg.get("pretender") or cfg.get("espectacular")
         if not has_binding and "exempt" not in cfg:
             errors.append(f"'{name}/' has no tool binding and no exempt reason.")
-        if cfg.get("pretender") and not pretender_parses_files(name):
-            errors.append(
-                f"'{name}/' claims pretender=true but `pretender check {name}` parses 0 "
-                f"files — coverage is a silent no-op (F19)."
-            )
+        if cfg.get("pretender"):
+            result = pretender_parses_files(name)
+            if result is None:
+                print(f"  ⚠ '{name}/' claims pretender=true but `pretender` binary not found (CI gap, see cositos-dad.19)")
+            elif not result:
+                errors.append(
+                    f"'{name}/' claims pretender=true but `pretender check {name}` parses 0 "
+                    f"files — coverage is a silent no-op (F19)."
+                )
 
     if errors:
         print("coverage-audit FAILED:", file=sys.stderr)
