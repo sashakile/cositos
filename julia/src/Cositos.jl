@@ -25,7 +25,8 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     Widget, open!, close!, send_state!, send_custom!,
     supports_receive, comm_id, transport_send, transport_on_message, ijulia_transport,
     PlutoWidget, local_front_runtime_url,
-    int_slider, dropdown, vbox, hbox
+    int_slider, dropdown, vbox, hbox,
+    pluto_int_slider, pluto_checkbox, pluto_text, pluto_button, pluto_dropdown, pluto_html
 
 const PROTOCOL_VERSION_MAJOR = 2
 const PROTOCOL_VERSION_MINOR = 1
@@ -575,6 +576,81 @@ function local_front_runtime_url(args...; kwargs...)
         "loaded; run `using JSON, AbstractPlutoDingetjes` first (the CositosPlutoExt " *
         "package extension provides the implementation).",
     )
+end
+
+# ---- Pluto batteries-included widget gallery (see ext/CositosPlutoExt.jl) ----
+#
+# End users shouldn't have to hand-write ESM + a state Dict + PlutoWidget for the six
+# ipywidgets categories `docs/widgets.md` already certifies (`front/test/
+# gallery.test.js`). Each `pluto_*` wraps the SAME `examples/widgets/*.js` this repo
+# already ships and certifies into a ready-to-`@bind` PlutoWidget — no new or
+# reimplemented widget code, only the construction boilerplate is hidden. Named
+# `pluto_*` (not `int_slider`/`dropdown`, already taken by the real-controls catalog,
+# cositos-70b.7) since these build a raw-ESM PlutoWidget, a different thing entirely.
+
+const _PLUTO_GALLERY_ERROR = " requires JSON and AbstractPlutoDingetjes to be loaded; " *
+    "run `using JSON, AbstractPlutoDingetjes` first (the CositosPlutoExt package " *
+    "extension provides the implementation)."
+
+"""
+    pluto_int_slider(; value=0, min=0, max=100, kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/int_slider.js` (the
+numeric category). Extra `kwargs` (e.g. `css`, `runtime_url`) pass through to
+[`PlutoWidget`](@ref).
+"""
+function pluto_int_slider(args...; kwargs...)
+    return error("pluto_int_slider()" * _PLUTO_GALLERY_ERROR)
+end
+
+"""
+    pluto_checkbox(; value=false, kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/checkbox.js` (the
+boolean category).
+"""
+function pluto_checkbox(args...; kwargs...)
+    return error("pluto_checkbox()" * _PLUTO_GALLERY_ERROR)
+end
+
+"""
+    pluto_text(; value="", kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/text.js` (the string
+category).
+"""
+function pluto_text(args...; kwargs...)
+    return error("pluto_text()" * _PLUTO_GALLERY_ERROR)
+end
+
+"""
+    pluto_button(; description="Click", clicks=0, kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/button.js` (the
+button/event category). The bound value's `"clicks"` key increments on every click.
+"""
+function pluto_button(args...; kwargs...)
+    return error("pluto_button()" * _PLUTO_GALLERY_ERROR)
+end
+
+"""
+    pluto_dropdown(options; value=nothing, kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/dropdown.js` (the
+selection category). `value` defaults to the first option (stringified) when omitted.
+"""
+function pluto_dropdown(args...; kwargs...)
+    return error("pluto_dropdown()" * _PLUTO_GALLERY_ERROR)
+end
+
+"""
+    pluto_html(; value="", kwargs...) -> PlutoWidget
+
+A ready-to-`@bind` [`PlutoWidget`](@ref) wrapping `examples/widgets/html.js` (the
+output/display category). `value` is raw HTML, pushed kernel(Julia) -> view.
+"""
+function pluto_html(args...; kwargs...)
+    return error("pluto_html()" * _PLUTO_GALLERY_ERROR)
 end
 
 # ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----

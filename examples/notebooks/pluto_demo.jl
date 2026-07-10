@@ -16,7 +16,7 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ 87907f98-7c65-11f1-bc5c-2dbaa642ebb3
+# ╔═╡ 23079bf6-7c6a-11f1-90df-b744befe28dd
 begin
 	import Pkg
 	Pkg.activate(mktempdir())
@@ -25,35 +25,41 @@ begin
 	using Cositos, AbstractPlutoDingetjes, JSON
 end
 
-# ╔═╡ 87909280-7c65-11f1-ab5d-abcb439a5798
+# ╔═╡ 2307b0f2-7c6a-11f1-9306-a5f97ebd9615
 md"""
-# cositos widget in Pluto — no npm publish required
+# cositos widgets in Pluto — batteries included
 
-Pluto is **not** Jupyter — see `docs/pluto.md` for how `PlutoWidget` maps anywidget's
-`AnyModel`/`@bind` reactivity onto Pluto's model. This notebook reuses the exact same
-anywidget ESM the Python/Julia/Clojure Jupyter counters use for the slider category
-(`examples/widgets/int_slider.js`). `PlutoWidget`'s `runtime_url` defaults to a
-self-contained, offline `data:` URI bundling `@cositos/front` (`front/src/*.js`) — no
-npm publish, CDN, or local server required (cositos-z76.7); nothing to configure below.
+No hand-written ESM, no state `Dict`, no `PlutoWidget` construction: `pluto_int_slider`,
+`pluto_checkbox`, `pluto_dropdown` (and `pluto_text`/`pluto_button`/`pluto_html`) each
+wrap the SAME `examples/widgets/*.js` this repo already ships and certifies
+(`docs/widgets.md`'s six ipywidgets categories) into a ready-to-`@bind` `PlutoWidget`.
+Nothing to configure — `runtime_url` defaults to a self-contained, offline `data:` URI
+(cositos-z76.7): no npm publish, CDN, or local server.
 """
 
-# ╔═╡ 8790a496-7c65-11f1-b5ef-152829f72351
-const SLIDER_ESM = read(joinpath(@__DIR__, "..", "widgets", "int_slider.js"), String)
+# ╔═╡ 2307c27a-7c6a-11f1-8c4b-71a9861e47d8
+@bind slider_state pluto_int_slider(value=20, min=0, max=100)
 
-# ╔═╡ 8790b224-7c65-11f1-b8c1-b18b22751bc6
-@bind widget_state PlutoWidget(esm=SLIDER_ESM, state=Dict("value" => 20, "min" => 0, "max" => 100))
+# ╔═╡ 2307d5da-7c6a-11f1-9c93-b530a8e865cf
+@bind checkbox_state pluto_checkbox(value=false)
 
-# ╔═╡ 8790be1a-7c65-11f1-939b-d3366e48ada0
+# ╔═╡ 2307e78c-7c6a-11f1-a940-4981ce21c881
+@bind dropdown_state pluto_dropdown(["small", "medium", "large"])
+
+# ╔═╡ 2307f876-7c6a-11f1-93d3-3b7a884be735
 md"""
-Dragging the slider above re-runs this cell reactively — `widget_state` is the widget's
-full state `Dict`, exactly as `@bind` promises:
+Each widget above re-runs this cell reactively on interaction — every `*_state` is the
+widget's full state `Dict`, exactly as `@bind` promises:
 
-**Current value:** $(widget_state["value"])
+- **Slider:** $(slider_state["value"])
+- **Checkbox:** $(checkbox_state["value"])
+- **Dropdown:** $(dropdown_state["value"])
 """
 
 # ╔═╡ Cell order:
-# ╠═87907f98-7c65-11f1-bc5c-2dbaa642ebb3
-# ╠═87909280-7c65-11f1-ab5d-abcb439a5798
-# ╠═8790a496-7c65-11f1-b5ef-152829f72351
-# ╠═8790b224-7c65-11f1-b8c1-b18b22751bc6
-# ╠═8790be1a-7c65-11f1-939b-d3366e48ada0
+# ╠═23079bf6-7c6a-11f1-90df-b744befe28dd
+# ╠═2307b0f2-7c6a-11f1-9306-a5f97ebd9615
+# ╠═2307c27a-7c6a-11f1-8c4b-71a9861e47d8
+# ╠═2307d5da-7c6a-11f1-9c93-b530a8e865cf
+# ╠═2307e78c-7c6a-11f1-a940-4981ce21c881
+# ╠═2307f876-7c6a-11f1-93d3-3b7a884be735

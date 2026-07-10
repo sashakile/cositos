@@ -23,6 +23,33 @@ than Jupyter: the frontend gets state once (at render), and every interaction pu
 the full state back to Julia via the bond (triggering reactive re-execution). Custom
 messages (`model.send(...)`) have no kernel to reach and are routed to an optional sink.
 
+## Batteries included: a ready-made widget gallery
+
+Most of the time you don't need to write ESM or construct a `PlutoWidget` yourself.
+`Cositos.pluto_int_slider`, `pluto_checkbox`, `pluto_text`, `pluto_button`,
+`pluto_dropdown`, and `pluto_html` each wrap the SAME `examples/widgets/*.js` this repo
+already ships and certifies (`docs/widgets.md`'s six ipywidgets categories,
+`front/test/gallery.test.js`) into a ready-to-`@bind` `PlutoWidget` — no hand-written
+ESM, no state `Dict`, no `PlutoWidget` construction:
+
+```julia
+using Cositos, AbstractPlutoDingetjes, JSON   # extension activates
+
+@bind slider_state pluto_int_slider(value=20, min=0, max=100)
+@bind checkbox_state pluto_checkbox(value=false)
+@bind dropdown_state pluto_dropdown(["small", "medium", "large"])
+# slider_state["value"], checkbox_state["value"], dropdown_state["value"] update reactively
+```
+
+This is `examples/notebooks/pluto_demo.jl`, verified live end-to-end (a real Pluto server
++ browser: dragging the slider, ticking the checkbox, and changing the dropdown each
+reactively updated their bound Julia value). Every `pluto_*` accepts extra keyword
+arguments (e.g. `css`, `runtime_url`) that pass straight through to `PlutoWidget`.
+
+Only reach for `PlutoWidget` directly — covered next — when you need a *bespoke* widget
+(a d3 chart, a custom form) outside these six categories; that's the same
+"build-your-own" path `docs/widgets.md` describes for Jupyter, unchanged for Pluto.
+
 ## Julia side
 
 `PlutoWidget` (core) + the `CositosPlutoExt` package extension (auto-loads with
@@ -89,6 +116,8 @@ bundle order in `CositosPlutoExt._bundle_front_source`.
 
 - Verified by contract on both sides (JS: `front/test/pluto.test.js`; Julia:
   the Pluto testset in `julia/test/runtests.jl`), **and** live end-to-end against a real
-  Pluto server + browser interaction (`examples/notebooks/pluto_demo.jl`, cositos-z76.7).
+  Pluto server + browser interaction (`examples/notebooks/pluto_demo.jl`, cositos-z76.7):
+  the slider, checkbox, and dropdown from the batteries-included gallery all reactively
+  updated their bound Julia value from real DOM interaction.
 - Coarse reactive sync only; no `echo_update`, no binary buffers over the bond in v0
   (buffers work in the ESM locally but aren't round-tripped through `@bind`).

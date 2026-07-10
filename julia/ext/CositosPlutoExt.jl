@@ -9,6 +9,11 @@ Loads automatically when `AbstractPlutoDingetjes` and `JSON` are available. Prov
   widget's full state `Dict`.
 - `Cositos.local_front_runtime_url()` — a `data:` URI bundling `@cositos/front` with no
   npm publish, CDN, or local server required (cositos-z76.7).
+- `Cositos.pluto_int_slider`/`pluto_checkbox`/`pluto_text`/`pluto_button`/
+  `pluto_dropdown`/`pluto_html` — batteries-included, ready-to-`@bind` PlutoWidgets
+  wrapping `examples/widgets/*.js` (the six ipywidgets categories `docs/widgets.md`
+  certifies), so end users don't hand-write ESM + a state `Dict` + `PlutoWidget`
+  themselves for the common case.
 
 Pluto is reactive-cell-based, not a live comm: state flows Julia→JS once at render time
 (embedded in the HTML) and JS→Julia via the bond on each interaction. There is no
@@ -50,6 +55,54 @@ end
 function Cositos.local_front_runtime_url()
     bundle = _bundle_front_source()
     return "data:text/javascript;base64,$(base64encode(bundle))"
+end
+
+# ---- Pluto batteries-included widget gallery (cositos-z76.7 UX follow-up) ----
+#
+# Each wraps the SAME examples/widgets/*.js this repo already ships and certifies
+# (front/test/gallery.test.js, docs/widgets.md's category table) into a ready-to-@bind
+# PlutoWidget — no new or reimplemented widget code, only the ESM-file-read + state
+# Dict + PlutoWidget construction boilerplate is hidden.
+const _EXAMPLE_WIDGETS_DIR = joinpath(@__DIR__, "..", "..", "examples", "widgets")
+
+_widget_esm(name::AbstractString) = read(joinpath(_EXAMPLE_WIDGETS_DIR, "$(name).js"), String)
+
+function Cositos.pluto_int_slider(; value::Integer=0, min::Integer=0, max::Integer=100, kwargs...)
+    return PlutoWidget(;
+        esm=_widget_esm("int_slider"),
+        state=Dict{String,Any}("value" => value, "min" => min, "max" => max),
+        kwargs...,
+    )
+end
+
+function Cositos.pluto_checkbox(; value::Bool=false, kwargs...)
+    return PlutoWidget(; esm=_widget_esm("checkbox"), state=Dict{String,Any}("value" => value), kwargs...)
+end
+
+function Cositos.pluto_text(; value::AbstractString="", kwargs...)
+    return PlutoWidget(; esm=_widget_esm("text"), state=Dict{String,Any}("value" => String(value)), kwargs...)
+end
+
+function Cositos.pluto_button(; description::AbstractString="Click", clicks::Integer=0, kwargs...)
+    return PlutoWidget(;
+        esm=_widget_esm("button"),
+        state=Dict{String,Any}("description" => String(description), "clicks" => clicks),
+        kwargs...,
+    )
+end
+
+function Cositos.pluto_dropdown(options; value=nothing, kwargs...)
+    labels = [string(option) for option in options]
+    resolved_value = value === nothing ? (isempty(labels) ? "" : first(labels)) : string(value)
+    return PlutoWidget(;
+        esm=_widget_esm("dropdown"),
+        state=Dict{String,Any}("options" => labels, "value" => resolved_value),
+        kwargs...,
+    )
+end
+
+function Cositos.pluto_html(; value::AbstractString="", kwargs...)
+    return PlutoWidget(; esm=_widget_esm("html"), state=Dict{String,Any}("value" => String(value)), kwargs...)
 end
 
 function Base.show(io::IO, ::MIME"text/html", w::PlutoWidget)

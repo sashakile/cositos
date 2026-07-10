@@ -279,6 +279,71 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test occursin(url, html)
     end
 
+    @testset "Pluto batteries-included widget gallery (cositos-z76.7 follow-up)" begin
+        # End users shouldn't have to hand-write ESM + a state Dict + PlutoWidget for the
+        # six ipywidgets categories docs/widgets.md already certifies (front/test/
+        # gallery.test.js). Each pluto_* wraps the SAME examples/widgets/*.js this repo
+        # already ships and certifies -- no new/reimplemented widget code, only the
+        # PlutoWidget construction boilerplate is hidden.
+
+        @testset "pluto_int_slider" begin
+            w = pluto_int_slider(; value=7, min=1, max=10)
+            @test w isa PlutoWidget
+            @test w.state == Dict{String,Any}("value" => 7, "min" => 1, "max" => 10)
+            @test occursin("input.type = \"range\"", w.esm)
+        end
+
+        @testset "pluto_checkbox" begin
+            w = pluto_checkbox(; value=true)
+            @test w.state == Dict{String,Any}("value" => true)
+            @test occursin("checkbox", w.esm)
+        end
+
+        @testset "pluto_text" begin
+            w = pluto_text(; value="hi")
+            @test w.state == Dict{String,Any}("value" => "hi")
+            @test occursin("input.type = \"text\"", w.esm)
+        end
+
+        @testset "pluto_button" begin
+            w = pluto_button(; description="Go")
+            @test w.state == Dict{String,Any}("description" => "Go", "clicks" => 0)
+            @test occursin("on_click", w.esm)
+        end
+
+        @testset "pluto_dropdown" begin
+            w = pluto_dropdown(["a", "b", "c"]; value="b")
+            @test w.state == Dict{String,Any}("options" => ["a", "b", "c"], "value" => "b")
+            @test occursin("select", w.esm)
+        end
+
+        @testset "pluto_dropdown defaults value to the first option" begin
+            w = pluto_dropdown([1, 2, 3])
+            @test w.state["value"] == "1"
+        end
+
+        @testset "pluto_html" begin
+            w = pluto_html(; value="<b>hi</b>")
+            @test w.state == Dict{String,Any}("value" => "<b>hi</b>")
+            @test occursin("innerHTML", w.esm)
+        end
+
+        @testset "every pluto_* builder renders via the @bind contract" begin
+            for w in [pluto_int_slider(), pluto_checkbox(), pluto_text(), pluto_button(),
+                pluto_dropdown(["x", "y"]), pluto_html()]
+                html = sprint(show, MIME("text/html"), w)
+                @test occursin("PlutoChannel", html)
+                @test occursin("data:text/javascript;base64,", html)  # local bundle default
+            end
+        end
+
+        @testset "kwargs pass through to PlutoWidget (e.g. an explicit runtime_url)" begin
+            w = pluto_checkbox(; value=false, runtime_url="https://example.test/front.js")
+            html = sprint(show, MIME("text/html"), w)
+            @test occursin("https://example.test/front.js", html)
+        end
+    end
+
     include("host_tests.jl")
     include("controls_tests.jl")
 end
