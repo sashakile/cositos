@@ -3,6 +3,8 @@ using Base64
 using JSON
 using AbstractPlutoDingetjes
 using Cositos
+using Cositos.Pluto
+using Cositos.Pluto: int_slider as _pluto_int_slider_selective  # proves the selective-using call style
 
 const FIXTURES = joinpath(@__DIR__, "..", "..", "fixtures")
 
@@ -282,55 +284,58 @@ b64(buffers) = [base64encode(b) for b in buffers]
     @testset "Pluto batteries-included widget gallery (cositos-z76.7 follow-up)" begin
         # End users shouldn't have to hand-write ESM + a state Dict + PlutoWidget for the
         # six ipywidgets categories docs/widgets.md already certifies (front/test/
-        # gallery.test.js). Each pluto_* wraps the SAME examples/widgets/*.js this repo
-        # already ships and certifies -- no new/reimplemented widget code, only the
-        # PlutoWidget construction boilerplate is hidden.
+        # gallery.test.js). Each Cositos.Pluto function wraps the SAME
+        # examples/widgets/*.js this repo already ships and certifies -- no
+        # new/reimplemented widget code, only the PlutoWidget construction boilerplate
+        # is hidden. Lives in the Cositos.Pluto submodule (not exported from Cositos
+        # itself) to avoid clashing with the unrelated top-level int_slider/dropdown
+        # real-controls catalog (cositos-70b.7) and with the Pluto.jl tool's own name.
 
-        @testset "pluto_int_slider" begin
-            w = pluto_int_slider(; value=7, min=1, max=10)
+        @testset "Pluto.int_slider" begin
+            w = Pluto.int_slider(; value=7, min=1, max=10)
             @test w isa PlutoWidget
             @test w.state == Dict{String,Any}("value" => 7, "min" => 1, "max" => 10)
             @test occursin("input.type = \"range\"", w.esm)
         end
 
-        @testset "pluto_checkbox" begin
-            w = pluto_checkbox(; value=true)
+        @testset "Pluto.checkbox" begin
+            w = Pluto.checkbox(; value=true)
             @test w.state == Dict{String,Any}("value" => true)
             @test occursin("checkbox", w.esm)
         end
 
-        @testset "pluto_text" begin
-            w = pluto_text(; value="hi")
+        @testset "Pluto.text" begin
+            w = Pluto.text(; value="hi")
             @test w.state == Dict{String,Any}("value" => "hi")
             @test occursin("input.type = \"text\"", w.esm)
         end
 
-        @testset "pluto_button" begin
-            w = pluto_button(; description="Go")
+        @testset "Pluto.button" begin
+            w = Pluto.button(; description="Go")
             @test w.state == Dict{String,Any}("description" => "Go", "clicks" => 0)
             @test occursin("on_click", w.esm)
         end
 
-        @testset "pluto_dropdown" begin
-            w = pluto_dropdown(["a", "b", "c"]; value="b")
+        @testset "Pluto.dropdown" begin
+            w = Pluto.dropdown(["a", "b", "c"]; value="b")
             @test w.state == Dict{String,Any}("options" => ["a", "b", "c"], "value" => "b")
             @test occursin("select", w.esm)
         end
 
-        @testset "pluto_dropdown defaults value to the first option" begin
-            w = pluto_dropdown([1, 2, 3])
+        @testset "Pluto.dropdown defaults value to the first option" begin
+            w = Pluto.dropdown([1, 2, 3])
             @test w.state["value"] == "1"
         end
 
-        @testset "pluto_html" begin
-            w = pluto_html(; value="<b>hi</b>")
+        @testset "Pluto.html" begin
+            w = Pluto.html(; value="<b>hi</b>")
             @test w.state == Dict{String,Any}("value" => "<b>hi</b>")
             @test occursin("innerHTML", w.esm)
         end
 
-        @testset "every pluto_* builder renders via the @bind contract" begin
-            for w in [pluto_int_slider(), pluto_checkbox(), pluto_text(), pluto_button(),
-                pluto_dropdown(["x", "y"]), pluto_html()]
+        @testset "every Cositos.Pluto builder renders via the @bind contract" begin
+            for w in [Pluto.int_slider(), Pluto.checkbox(), Pluto.text(), Pluto.button(),
+                Pluto.dropdown(["x", "y"]), Pluto.html()]
                 html = sprint(show, MIME("text/html"), w)
                 @test occursin("PlutoChannel", html)
                 @test occursin("data:text/javascript;base64,", html)  # local bundle default
@@ -338,9 +343,17 @@ b64(buffers) = [base64encode(b) for b in buffers]
         end
 
         @testset "kwargs pass through to PlutoWidget (e.g. an explicit runtime_url)" begin
-            w = pluto_checkbox(; value=false, runtime_url="https://example.test/front.js")
+            w = Pluto.checkbox(; value=false, runtime_url="https://example.test/front.js")
             html = sprint(show, MIME("text/html"), w)
             @test occursin("https://example.test/front.js", html)
+        end
+
+        @testset "Cositos.Pluto functions are also reachable via selective using" begin
+            # `using Cositos.Pluto: int_slider` should work without any Cositos.-level
+            # qualification (the alternative call style docs/pluto.md documents).
+            w = _pluto_int_slider_selective(; value=3)
+            @test w isa PlutoWidget
+            @test w.state["value"] == 3
         end
     end
 

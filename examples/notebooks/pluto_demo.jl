@@ -16,37 +16,40 @@ macro bind(def, element)
     #! format: on
 end
 
-# ╔═╡ 23079bf6-7c6a-11f1-90df-b744befe28dd
+# ╔═╡ 8a947e54-7c80-11f1-8cf2-05535da4ec14
 begin
 	import Pkg
 	Pkg.activate(mktempdir())
 	Pkg.develop(path=joinpath(@__DIR__, "..", "..", "julia"))
 	Pkg.add(["AbstractPlutoDingetjes", "JSON"])
 	using Cositos, AbstractPlutoDingetjes, JSON
+	using Cositos.Pluto: int_slider, checkbox, dropdown
 end
 
-# ╔═╡ 2307b0f2-7c6a-11f1-9306-a5f97ebd9615
+# ╔═╡ 8a948ff0-7c80-11f1-baf9-bdd06355d9b2
 md"""
 # cositos widgets in Pluto — batteries included
 
-No hand-written ESM, no state `Dict`, no `PlutoWidget` construction: `pluto_int_slider`,
-`pluto_checkbox`, `pluto_dropdown` (and `pluto_text`/`pluto_button`/`pluto_html`) each
+No hand-written ESM, no state `Dict`, no `PlutoWidget` construction:
+`Cositos.Pluto.int_slider`, `checkbox`, `dropdown` (and `text`/`button`/`html`) each
 wrap the SAME `examples/widgets/*.js` this repo already ships and certifies
 (`docs/widgets.md`'s six ipywidgets categories) into a ready-to-`@bind` `PlutoWidget`.
-Nothing to configure — `runtime_url` defaults to a self-contained, offline `data:` URI
-(cositos-z76.7): no npm publish, CDN, or local server.
+`using Cositos.Pluto: int_slider, checkbox, dropdown` brings them in unqualified — no
+`pluto_` prefix needed. Nothing to configure — `runtime_url` defaults to a
+self-contained, offline `data:` URI (cositos-z76.7): no npm publish, CDN, or local
+server.
 """
 
-# ╔═╡ 2307c27a-7c6a-11f1-8c4b-71a9861e47d8
-@bind slider_state pluto_int_slider(value=20, min=0, max=100)
+# ╔═╡ 8a94990c-7c80-11f1-b0cf-b70d3f2b6508
+@bind slider_state int_slider(value=20, min=0, max=100)
 
-# ╔═╡ 2307d5da-7c6a-11f1-9c93-b530a8e865cf
-@bind checkbox_state pluto_checkbox(value=false)
+# ╔═╡ 8a94a2bc-7c80-11f1-aa98-b11391b0e4a4
+@bind checkbox_state checkbox(value=false)
 
-# ╔═╡ 2307e78c-7c6a-11f1-a940-4981ce21c881
-@bind dropdown_state pluto_dropdown(["small", "medium", "large"])
+# ╔═╡ 8a94ae88-7c80-11f1-9f3b-01bb02ba752b
+@bind dropdown_state dropdown(["small", "medium", "large"])
 
-# ╔═╡ 2307f876-7c6a-11f1-93d3-3b7a884be735
+# ╔═╡ 8a94c256-7c80-11f1-9e9a-bf4e08617f21
 md"""
 Each widget above re-runs this cell reactively on interaction — every `*_state` is the
 widget's full state `Dict`, exactly as `@bind` promises:
@@ -57,9 +60,9 @@ widget's full state `Dict`, exactly as `@bind` promises:
 """
 
 # ╔═╡ Cell order:
-# ╠═23079bf6-7c6a-11f1-90df-b744befe28dd
-# ╠═2307b0f2-7c6a-11f1-9306-a5f97ebd9615
-# ╠═2307c27a-7c6a-11f1-8c4b-71a9861e47d8
-# ╠═2307d5da-7c6a-11f1-9c93-b530a8e865cf
-# ╠═2307e78c-7c6a-11f1-a940-4981ce21c881
-# ╠═2307f876-7c6a-11f1-93d3-3b7a884be735
+# ╠═8a947e54-7c80-11f1-8cf2-05535da4ec14
+# ╠═8a948ff0-7c80-11f1-baf9-bdd06355d9b2
+# ╠═8a94990c-7c80-11f1-b0cf-b70d3f2b6508
+# ╠═8a94a2bc-7c80-11f1-aa98-b11391b0e4a4
+# ╠═8a94ae88-7c80-11f1-9f3b-01bb02ba752b
+# ╠═8a94c256-7c80-11f1-9e9a-bf4e08617f21

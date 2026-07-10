@@ -26,25 +26,36 @@ messages (`model.send(...)`) have no kernel to reach and are routed to an option
 ## Batteries included: a ready-made widget gallery
 
 Most of the time you don't need to write ESM or construct a `PlutoWidget` yourself.
-`Cositos.pluto_int_slider`, `pluto_checkbox`, `pluto_text`, `pluto_button`,
-`pluto_dropdown`, and `pluto_html` each wrap the SAME `examples/widgets/*.js` this repo
-already ships and certifies (`docs/widgets.md`'s six ipywidgets categories,
-`front/test/gallery.test.js`) into a ready-to-`@bind` `PlutoWidget` — no hand-written
-ESM, no state `Dict`, no `PlutoWidget` construction:
+`Cositos.Pluto.int_slider`, `checkbox`, `text`, `button`, `dropdown`, and `html` each
+wrap the SAME `examples/widgets/*.js` this repo already ships and certifies
+(`docs/widgets.md`'s six ipywidgets categories, `front/test/gallery.test.js`) into a
+ready-to-`@bind` `PlutoWidget` — no hand-written ESM, no state `Dict`, no `PlutoWidget`
+construction. They live in the `Cositos.Pluto` submodule (**not** exported from
+`Cositos` itself — avoids clashing with the unrelated top-level `int_slider`/`dropdown`
+real-controls catalog, cositos-70b.7, and with the `Pluto.jl` tool's own package name),
+so reach them via `Cositos.Pluto....` or an explicit `using Cositos.Pluto: ...`:
 
 ```julia
 using Cositos, AbstractPlutoDingetjes, JSON   # extension activates
+using Cositos.Pluto: int_slider, checkbox, dropdown   # bring them in unqualified
 
-@bind slider_state pluto_int_slider(value=20, min=0, max=100)
-@bind checkbox_state pluto_checkbox(value=false)
-@bind dropdown_state pluto_dropdown(["small", "medium", "large"])
+@bind slider_state int_slider(value=20, min=0, max=100)
+@bind checkbox_state checkbox(value=false)
+@bind dropdown_state dropdown(["small", "medium", "large"])
 # slider_state["value"], checkbox_state["value"], dropdown_state["value"] update reactively
+```
+
+Or fully qualified, with no `using Cositos.Pluto` at all:
+
+```julia
+@bind slider_state Cositos.Pluto.int_slider(value=20, min=0, max=100)
 ```
 
 This is `examples/notebooks/pluto_demo.jl`, verified live end-to-end (a real Pluto server
 + browser: dragging the slider, ticking the checkbox, and changing the dropdown each
-reactively updated their bound Julia value). Every `pluto_*` accepts extra keyword
-arguments (e.g. `css`, `runtime_url`) that pass straight through to `PlutoWidget`.
+reactively updated their bound Julia value). Every `Cositos.Pluto` function accepts
+extra keyword arguments (e.g. `css`, `runtime_url`) that pass straight through to
+`PlutoWidget`.
 
 Only reach for `PlutoWidget` directly — covered next — when you need a *bespoke* widget
 (a d3 chart, a custom form) outside these six categories; that's the same
