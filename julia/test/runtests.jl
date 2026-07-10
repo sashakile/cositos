@@ -235,6 +235,39 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test occursin("render({model, el})", html)                # esm embedded
     end
 
+    @testset "Pluto extension: local_front_runtime_url bundles @cositos/front with no npm/CDN (cositos-z76.7)" begin
+        # Unblocks Pluto without publishing @cositos/front: bundles front/src/*.js (the
+        # SAME source the JS test suite certifies, front/test/*.test.js) into one
+        # self-contained ESM with no relative imports, as a data: URI — works fully
+        # offline, no server, no npm/CDN.
+        url = local_front_runtime_url()
+        @test startswith(url, "data:text/javascript;base64,")
+
+        encoded = split(url, ","; limit=2)[2]
+        bundle = String(base64decode(encoded))
+
+        # Self-contained: no leftover relative import (the one internal edge,
+        # model.js -> buffers.js, must be inlined, not referenced). Checks the static
+        # `import { ... } from` syntax specifically -- runtime.js's dynamic import(...)
+        # calls (loading widget ESM at runtime) and JSDoc prose mentioning "import" are
+        # legitimate and must survive untouched.
+        @test !occursin("from \"./buffers.js\"", bundle)
+        @test !occursin("import {", bundle)
+
+        # Carries every symbol index.js re-exports (the public @cositos/front surface).
+        for needle in ["class Model", "class PlutoChannel", "class LocalChannel",
+            "class MemoryChannel", "class ClayChannel", "function loadWidget",
+            "function renderWidget", "function remove_buffers", "function put_buffers"]
+            @test occursin(needle, bundle)
+        end
+
+        # A PlutoWidget built with this url embeds it verbatim in the render (same
+        # contract as the CDN default, proven above).
+        w = PlutoWidget(; esm="export default { render() {} }", state=Dict{String,Any}("value" => 0), runtime_url=url)
+        html = sprint(show, MIME("text/html"), w)
+        @test occursin(url, html)
+    end
+
     include("host_tests.jl")
     include("controls_tests.jl")
 end

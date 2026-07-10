@@ -24,7 +24,7 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     view_identity, with_view_identity,
     Widget, open!, close!, send_state!, send_custom!,
     supports_receive, comm_id, transport_send, transport_on_message, ijulia_transport,
-    PlutoWidget,
+    PlutoWidget, local_front_runtime_url,
     int_slider, dropdown, vbox, hbox
 
 const PROTOCOL_VERSION_MAJOR = 2
@@ -555,6 +555,25 @@ function hbox(args...; kwargs...)
     return error(
         "hbox() requires JSON to be loaded; run `using JSON` first " *
         "(the CositosControlsExt package extension provides the implementation).",
+    )
+end
+
+"""
+    local_front_runtime_url() -> String
+
+A `data:` URI embedding a self-contained bundle of `@cositos/front` (`front/src/*.js`)
+with no relative imports — usable as [`PlutoWidget`](@ref)'s `runtime_url` with **no
+npm publish, no CDN, and no local server**: it works fully offline. Unblocks Pluto usage
+before `@cositos/front` is published (cositos-z76.7); the default `runtime_url` in
+[`PlutoWidget`](@ref) stays the (currently unpublished) CDN URL for when it is. Requires
+`JSON` and `AbstractPlutoDingetjes` to be loaded (the `CositosPlutoExt` package
+extension provides the implementation).
+"""
+function local_front_runtime_url(args...; kwargs...)
+    return error(
+        "local_front_runtime_url() requires JSON and AbstractPlutoDingetjes to be " *
+        "loaded; run `using JSON, AbstractPlutoDingetjes` first (the CositosPlutoExt " *
+        "package extension provides the implementation).",
     )
 end
 
