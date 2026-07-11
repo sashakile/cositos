@@ -45,7 +45,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Publish cositos-front to npm
-        run: npm publish --provenance
+        run: npm publish
         working-directory: front
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
