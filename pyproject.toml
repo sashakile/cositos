@@ -1,6 +1,6 @@
 [project]
 name = "cositos"
-version = "0.0.1"
+version = "0.1.0"
 description = "Binding-free anywidget-style backend core for any Jupyter kernel language."
 readme = "README.md"
 requires-python = ">=3.9"
