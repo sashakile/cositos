@@ -1,0 +1,100 @@
+# cositos Binder base image — language runtimes + Jupyter kernels (heavy layer).
+#
+# This image contains everything needed to run cositos widgets in any supported
+# Jupyter kernel. It is published to GHCR and rarely rebuilt (only when runtime
+# versions change).
+#
+# Usage:
+#   docker build -f Dockerfile.binder-base -t ghcr.io/sashakile/cositos-binder-base:latest .
+#   docker push ghcr.io/sashakile/cositos-binder-base:latest
+#
+# The project-specific code is layered on top by Dockerfile.binder or .binder/Dockerfile.
+
+FROM quay.io/jupyter/base-notebook:python-3.12
+
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ---- System dependencies ----
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        default-jre-headless \
+        git \
+        rlwrap \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---- Python packages ----
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir \
+        anywidget>=0.9.21 \
+        comm>=0.2.3 \
+        ipykernel>=6 \
+        ipywidgets>=8.1.8 \
+        jupyter-server-proxy \
+        jupyterlab>=4 \
+        nbconvert>=7 \
+        nbformat>=5 \
+        voila>=0.5
+
+# ---- Clojure CLI + deps-based clojupyter kernel ----
+ENV CLOJURE_TOOLS_VERSION=1.12.4.1618
+RUN curl -fsSL -o /tmp/linux-install.sh \
+      https://download.clojure.org/install/linux-install-${CLOJURE_TOOLS_VERSION}.sh \
+    && chmod +x /tmp/linux-install.sh \
+    && /tmp/linux-install.sh \
+    && rm -f /tmp/linux-install.sh
+
+# Prefetch clojupyter deps (resolved from Clojars at runtime).
+# No standalone jar needed — avoids downloading proxy-blocked GHCR release assets.
+RUN clojure -Sdeps '{:deps {clojupyter/clojupyter {:mvn/version "0.4.332"}} :mvn/repos {"clojars" {:url "https://repo.clojars.org/"}}}' \
+      -M -e '(println "clojupyter deps prefetched")'
+
+# Install Clojure kernelspec from checked-in kernel.json
+RUN mkdir -p /opt/conda/share/jupyter/kernels/cositos-clj
+COPY kernels/cositos-clj/kernel.json /opt/conda/share/jupyter/kernels/cositos-clj/kernel.json
+
+# ---- Julia + IJulia ----
+ENV JULIA_VERSION=1.11.4 \
+    JULIA_DEPOT_PATH=/opt/julia \
+    JULIA_PROJECT=/opt/julia/environments/cositos
+
+RUN curl -fsSL -o /tmp/julia.tar.gz \
+      "https://julialang-s3.julialang.org/bin/linux/x64/1.11/julia-${JULIA_VERSION}-linux-x86_64.tar.gz" \
+    && mkdir -p /opt/julia \
+    && tar -xzf /tmp/julia.tar.gz -C /opt/julia --strip-components=1 \
+    && rm -f /tmp/julia.tar.gz \
+    && ln -s /opt/julia/bin/julia /usr/local/bin/julia
+
+# Pre-create the cositos Julia environment, install deps, and register IJulia
+RUN mkdir -p /opt/julia/environments/cositos
+RUN julia -e 'import Pkg; Pkg.activate("/opt/julia/environments/cositos"); Pkg.add(["IJulia", "JSON", "Base64", "UUIDs"]); Pkg.precompile(); using IJulia; IJulia.installkernel("Julia", "--project=/opt/julia/environments/cositos")'
+
+# Make the Julia depot writable by non-root users (the binder image runs as uid 1000)
+RUN chmod -R a+rwX /opt/julia
+
+# ---- R + IRkernel ----
+# Install r-base with build dependencies so IRkernel and its deps compile from CRAN source
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        r-base \
+        r-base-dev \
+        r-cran-jsonlite \
+        libzmq3-dev \
+        libssl-dev \
+        libxml2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install IRkernel from CRAN (builds from source; pre-installs deps for stability)
+RUN Rscript -e 'install.packages(c("repr", "IRdisplay", "pbdZMQ", "uuid", "digest", "IRkernel"), repos="https://cloud.r-project.org")' \
+    && Rscript -e 'IRkernel::installspec(name="ir", displayname="R (cositos)")'
+
+# ---- Cleanup ----
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+USER ${NB_UID}
+WORKDIR /home/jovyan
+ENV PATH="${HOME}/.local/bin:${PATH}" \
+    JULIA_DEPOT_PATH=/opt/julia

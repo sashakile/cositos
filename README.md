@@ -1,7 +1,12 @@
 # cositos
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sashakile/cositos/main?urlpath=lab/tree/examples/notebooks/python_counter.ipynb)
+
 > A portable [anywidget](https://anywidget.dev)-inspired backend core: define a widget
 > front end once, drive it from **any** Jupyter kernel language.
+
+Try it live on myBinder — opens JupyterLab with a runnable Python widget counter
+([other kernels also available](examples/binder/README.md)).
 
 `cositos` is the small pile of protocol glue ("cositos" = little things) that sits
 between a host language's state object and the Jupyter **comm** channel. It speaks the

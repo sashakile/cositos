@@ -237,3 +237,52 @@ run = """
   echo ""
   echo "Dry-run complete. Run 'git tag v...' to publish."
 """
+
+# --- Binder container build ---
+[tasks.binder-base]
+description = "Build the Binder base image (all language runtimes + kernels)"
+run = "docker build -f Dockerfile.binder-base -t cositos-binder-base ."
+
+[tasks.binder-local]
+description = "Build the Binder image from local source (no published GHCR image needed)"
+run = "docker build -f Dockerfile.binder -t cositos-binder ."
+
+[tasks.binder-serve]
+description = "Serve the locally-built Binder image"
+depends = ["binder-local"]
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    cositos-binder \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/python_counter.ipynb
+"""
+
+[tasks.binder-serve-clojure]
+description = "Serve the Binder image with the Clojure counter notebook"
+depends = ["binder-local"]
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    cositos-binder \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/clojure_counter.ipynb
+"""
+
+[tasks.binder-serve-julia]
+description = "Serve the Binder image with the Julia counter notebook"
+depends = ["binder-local"]
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    cositos-binder \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/julia_counter.ipynb
+"""
+
+[tasks.binder-url]
+description = "Print the local Binder URL"
+run = "echo http://localhost:8888"

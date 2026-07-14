@@ -1,0 +1,103 @@
+name: Publish Binder container images
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-base-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for base image
+        id: meta_base
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/cositos-binder-base
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=tag
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.binder-base
+          push: true
+          tags: ${{ steps.meta_base.outputs.tags }}
+          labels: ${{ steps.meta_base.outputs.labels }}
+
+  publish-binder-image:
+    needs: publish-base-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Binder image
+        id: meta_binder
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/cositos-binder
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=tag
+
+      - name: Resolve deterministic base image tag
+        id: base_ref
+        env:
+          GHCR_OWNER: ${{ github.repository_owner }}
+        run: |
+          owner="${GHCR_OWNER,,}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="sha-${GITHUB_SHA::7}"
+          fi
+          echo "image=ghcr.io/${owner}/cositos-binder-base:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Binder image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.binder
+          push: true
+          build-args: |
+            BINDER_BASE_IMAGE=${{ steps.base_ref.outputs.image }}
+          tags: ${{ steps.meta_binder.outputs.tags }}
+          labels: ${{ steps.meta_binder.outputs.labels }}
+
+      - name: Print digest for .binder/Dockerfile pin
+        run: |
+          echo "=== Update .binder/Dockerfile with this digest ==="
+          echo "ghcr.io/${{ github.repository_owner }}/cositos-binder@${{ steps.meta_binder.outputs.digest }}"

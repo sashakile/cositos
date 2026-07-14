@@ -1,0 +1,82 @@
+# Git metadata
+.git/
+.github/
+.beads/
+
+# Python caches and build artifacts
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+.venv/
+venv/
+
+# Julia
+julia/Manifest.toml
+julia/docs/
+
+# Clojure
+clojure/.cpcache/
+clojure/.clj-kondo/
+clojure/target/
+
+# .NET
+csharp/bin/
+csharp/obj/
+
+# Node / frontend build artifacts
+front/node_modules/
+front/coverage/
+front/package-lock.json
+
+# Tooling / agent artifacts
+.wai/
+.claude/
+.dont/
+.dolt/
+.handoffs/
+handoffs/
+
+# Docs (static Quarto build — not needed at runtime)
+docs/_site/
+docs/_freeze/
+
+# Dev-only dockerfiles
+Dockerfile.local
+Dockerfile.binder-base
+
+# Dev config files (keep pyproject.toml — needed for pip install)
+justfile
+AGENTS.md
+CLAUDE.md
+chat.md
+mise.toml
+mise.local.toml
+coverage-manifest.toml
+pretender.toml
+uv.lock
+lefthook.yml
+llm.txt
+TOOL_EVALUATION.md
+openspec/
+
+# Tests (not needed at runtime)
+tests/
+probe/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Misc
+.npm/
+.yarn/
+*.local.toml
+*.backup
+*.swp
+*.swo
+*~
+.DS_Store

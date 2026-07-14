@@ -1,0 +1,53 @@
+# cositos Binder image — project-code layer on top of published base image.
+#
+# Builds on Dockerfile.binder-base, adding the cositos Python package, Julia
+# Cositos.jl development install, Clojure dependency prefetch, and all example
+# notebooks and fixtures.
+#
+# This is what BinderHub actually builds (via .binder/Dockerfile which pins a
+# specific GHCR digest). It can also be built locally for testing:
+#
+#   mise run binder-local
+#   mise run binder-local-serve
+#
+# To test the full BinderHub path (using the published base image):
+#
+#   mise run binder
+#   mise run binder-serve
+
+ARG BINDER_BASE_IMAGE=cositos-binder-base:latest
+FROM ${BINDER_BASE_IMAGE}
+
+USER ${NB_UID}
+WORKDIR /home/jovyan
+
+# ---- Layer 1: Install cositos Python package from repo source ----
+# Copy build metadata and source first so Docker layer caching works across
+# non-package edits.
+COPY --chown=${NB_UID}:${NB_GID} pyproject.toml README.md LICENSE ${HOME}/
+COPY --chown=${NB_UID}:${NB_GID} src/ ${HOME}/src/
+RUN python -m pip install --no-cache-dir -e .
+
+# ---- Layer 2: Develop-install Cositos.jl (Julia) ----
+COPY --chown=${NB_UID}:${NB_GID} julia/ ${HOME}/julia/
+RUN julia -e 'using Pkg; Pkg.develop(path="/home/jovyan/julia")' && echo "Cositos.jl developed (precompile deferred to first use)"
+
+# ---- Layer 3: Prefetch Clojure deps (cached until deps.edn changes) ----
+COPY --chown=${NB_UID}:${NB_GID} clojure/deps.edn ${HOME}/clojure/deps.edn
+RUN mkdir -p ${HOME}/clojure && cd ${HOME}/clojure \
+    && for i in 1 2 3 4 5; do \
+         clojure -P -M:test && exit 0; \
+         echo "Clojure prefetch failed, retrying ($i/5)..." >&2; \
+         sleep 5; \
+       done; \
+       echo "Clojure prefetch failed after retries" >&2; \
+       exit 1
+
+# ---- Layer 4: Copy remaining project files ----
+# .dockerignore ensures we skip build artifacts, cache dirs, etc.
+COPY --chown=${NB_UID}:${NB_GID} . ${HOME}/
+
+# Ensure binder scripts are executable
+RUN chmod +x .binder/start.sh 2>/dev/null || true
+
+ENV PATH="${HOME}/.local/bin:${PATH}"
