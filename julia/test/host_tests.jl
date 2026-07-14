@@ -116,6 +116,19 @@ end
         @test content["state"] == Dict{String,Any}("a" => 1)
     end
 
+    @testset "send_state! without include re-merges anywidget identity (parity with cositos-k43)" begin
+        w, t, _ = make_widget(Dict("_esm" => "x", "value" => 0))
+        open!(w)
+        send_state!(w)  # full send, mirrors an inbound request_state
+        _mt, content, _b, _m = t.sent[end]
+        @test content["state"]["_model_name"] == "AnyModel"
+        @test content["state"]["_model_module"] == "anywidget"
+        @test content["state"]["_model_module_version"] == "~0.11.*"
+        @test content["state"]["_view_name"] == "AnyView"
+        @test content["state"]["_view_module"] == "anywidget"
+        @test content["state"]["_view_module_version"] == "~0.11.*"
+    end
+
     @testset "mimebundle includes repr text" begin
         w, _t, _ = make_widget(Dict("value" => 0))
         bundle = mimebundle(w, "Counter(value=0)")

@@ -27,6 +27,34 @@ metadata in every `comm_open` payload.
 - **THEN** the state includes `_model_module="anywidget"`, `_model_name="AnyModel"`, and `_view_name="AnyView"`
 - **AND** the metadata declares protocol version `2.1.0`
 
+### Requirement: Full State Send Includes Immutable Identity Fields
+When `send_state` performs a full state send (no `include` filter, equivalent to processing an inbound `request_state`), the resulting `update` message SHALL include the seven immutable anywidget identity fields in its state payload: `_model_module`, `_model_name`, `_model_module_version`, `_view_module`, `_view_name`, `_view_module_version`, and `_view_count`.
+
+#### Scenario: Full send_state includes model identity
+- **GIVEN** an open widget
+- **WHEN** `send_state(w)` is called with no `include` argument
+- **THEN** the resulting `update` message's `state` SHALL contain `_model_module` set to `"anywidget"`
+- **AND** `_model_name` SHALL be set to `"AnyModel"`
+- **AND** `_model_module_version` SHALL be set to the configured anywidget module version
+
+#### Scenario: Full send_state includes view identity
+- **GIVEN** an open widget
+- **WHEN** `send_state(w)` is called with no `include` argument
+- **THEN** the resulting `update` message's `state` SHALL contain `_view_module` set to `"anywidget"`
+- **AND** `_view_name` SHALL be set to `"AnyView"`
+- **AND** `_view_module_version` SHALL be set to the configured anywidget module version
+
+#### Scenario: Explicit include skips identity merge
+- **GIVEN** an open widget
+- **WHEN** `send_state(w; include=["value"])` is called
+- **THEN** the resulting `update` message's `state` SHALL contain only the `"value"` key
+- **AND** SHALL NOT contain any of the immutable identity fields
+
+#### Scenario: RequestState handler produces identity-bearing reply
+- **GIVEN** an open widget with a listener for incoming messages
+- **WHEN** the widget receives a `request_state` message
+- **THEN** the handler SHALL send an `update` reply whose `state` includes all seven immutable identity fields
+
 ### Requirement: Inbound Message Parsing
 The system SHALL parse inbound comm messages into typed events and ignore unknown methods (matching ipywidgets' forward-compatible dispatch).
 

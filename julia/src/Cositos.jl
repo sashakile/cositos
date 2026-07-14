@@ -431,7 +431,14 @@ Send an `update` with the full state, or only the keys in `include`. Requires an
 function send_state!(w::Widget; include=nothing)
     _require_open(w, "send_state!")
     state = w.get_state()
-    if include !== nothing
+    if include === nothing
+        # On a full send (triggered by request_state after JupyterLab reload without
+        # kernel restart), re-merge identity fields so the frontend can reconstruct
+        # its view class. Python reference does the same (cositos-k43).
+        state = merge(model_identity(ANYWIDGET_MODULE_VERSION),
+                       view_identity(ANYWIDGET_MODULE_VERSION),
+                       state)
+    else
         state = Dict{String,Any}(k => v for (k, v) in state if k in include)
     end
     data, buffers = build_update(state)
