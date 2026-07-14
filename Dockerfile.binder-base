@@ -94,6 +94,10 @@ RUN Rscript -e 'install.packages(c("repr", "IRdisplay", "pbdZMQ", "uuid", "diges
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/*
 
+# Fix up home directory ownership -- root-level setup steps (pip, Clojure, Julia, R)
+# may have created root-owned files in /home/jovyan/ that block the non-root user.
+RUN chown -R ${NB_UID}:${NB_GID} /home/jovyan
+
 USER ${NB_UID}
 WORKDIR /home/jovyan
 ENV PATH="${HOME}/.local/bin:${PATH}" \
