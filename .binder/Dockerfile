@@ -8,7 +8,7 @@
 #   2. Find the new digest: docker pull ghcr.io/sashakile/cositos-binder:sha-<commit>
 #   3. Replace the digest below.
 
-ARG BINDER_IMAGE=ghcr.io/sashakile/cositos-binder@sha256:c14aaa09a984e915ffa8270d156ac7c684602c8ea5cc0cdde880e435bf12276a
+ARG BINDER_IMAGE=ghcr.io/sashakile/cositos-binder@sha256:e423e75bc56669fa812d3799f19d3de63a27aa3fa5d147141902d4792003ac1c
 FROM ${BINDER_IMAGE}
 
 USER root
