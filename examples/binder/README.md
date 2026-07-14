@@ -66,10 +66,33 @@ deterministic build.
 
 ## Local testing
 
-Build and run the Binder image from local source (no published GHCR image needed):
+Two paths:
+
+### Fast: use the published image (seconds, no build)
 
 ```bash
-# Build the binder image (Dockerfile.binder layers over base)
+# Pull and run the Python counter notebook
+mise run binder-pull-serve
+# Open http://localhost:8888
+
+# Same with a different notebook
+mise run binder-pull-serve-julia     # Julia counter
+mise run binder-pull-serve-clojure   # Clojure counter
+
+# Quick smoke test (no browser needed)
+mise run binder-check
+```
+
+This runs `ghcr.io/sashakile/cositos-binder:latest` directly -- no local Docker build
+needed. The image is pulled from GHCR (cached after the first pull).
+
+### Slow: build from local source (30+ min, useful for testing changes)
+
+```bash
+# Build the base image (heavy -- all runtimes)
+mise run binder-base
+
+# Build the project layer on top
 mise run binder-local
 
 # Serve with the Python counter notebook

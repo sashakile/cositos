@@ -286,3 +286,43 @@ run = """
 [tasks.binder-url]
 description = "Print the local Binder URL"
 run = "echo http://localhost:8888"
+
+[tasks.binder-pull-serve]
+description = "Run the published Binder image from GHCR directly (no local build, fastest path)"
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    ghcr.io/sashakile/cositos-binder:latest \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/python_counter.ipynb
+"""
+
+[tasks.binder-pull-serve-julia]
+description = "Same, but opens the Julia counter notebook"
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    ghcr.io/sashakile/cositos-binder:latest \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/julia_counter.ipynb
+"""
+
+[tasks.binder-pull-serve-clojure]
+description = "Same, but opens the Clojure counter notebook"
+run = """
+  docker run --rm -p 8888:8888 \
+    -e JULIA_DEPOT_PATH=/opt/julia \
+    ghcr.io/sashakile/cositos-binder:latest \
+    start-notebook.py \
+      --IdentityProvider.token='' \
+      --ServerApp.default_url=/lab/tree/examples/notebooks/clojure_counter.ipynb
+"""
+
+[tasks.binder-check]
+description = "Quick smoke test: verify cositos and Cositos.jl import cleanly in the published image"
+run = """
+  docker run --rm --entrypoint python ghcr.io/sashakile/cositos-binder:latest -c 'import cositos; from cositos.protocol import build_comm_open; d,b,m = build_comm_open({"_esm":"//test","value":0}); print("cositos OK, protocol v" + m["version"])'
+  docker run --rm --entrypoint julia ghcr.io/sashakile/cositos-binder:latest -e 'using Cositos; println("Cositos.jl OK")'
+"""
