@@ -5,16 +5,13 @@ title: "Quickstart: your first live cositos widget"
 This page answers one question per language: **what is the shortest path to a live
 cositos widget in my kernel, today?** For the full backend-maturity picture (why only
 some languages are listed as "live" below) see the "Backend maturity" table in the root
-`README.md` and the tier classification in `probe/README.md`.
+[`README.md`](https://github.com/sashakile/cositos/blob/main/README.md) and the tier
+classification in [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md).
 
 Every snippet below renders the *same* counter widget — one anywidget-style ESM file,
 reused verbatim, with **no new JavaScript** regardless of host language. The full
-runnable notebooks these snippets are extracted from live in `examples/notebooks/`.
-
-<!-- Repo-relative paths to files outside docs/ (README.md, probe/README.md,
-     examples/notebooks/) are plain text here, not markdown links: docs/tutorials/*.qmd
-     renders one directory level deeper than its source (docs/_site/tutorials/), so a
-     relative link to a file outside docs/ 404s in the built site. See cositos-7co. -->
+runnable notebooks these snippets are extracted from live in
+[`examples/notebooks/`](https://github.com/sashakile/cositos/blob/main/examples/notebooks/).
 
 ## Python
 
@@ -137,7 +134,7 @@ Click **increment**, then read the count back: `(get @state "count")`.
 These two backends are **protocol-core only**: the message-building and
 buffer-split/merge logic is ported and fixture-certified, but there is no live-widget
 path yet because the *kernel's* comm support is blocked upstream -- not a gap in
-cositos itself. See `probe/README.md` for how each was classified.
+cositos itself. See [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md) for how each was classified.
 
 | Language | Blocked on | Tracking |
 |---|---|---|

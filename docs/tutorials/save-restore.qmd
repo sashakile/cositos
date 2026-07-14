@@ -61,7 +61,7 @@ That's the whole persistence model: `dump_document` / `load_document` (and the
 single-widget `dump_model` / `load_model`). See also [static export](static-export.qmd)
 to turn a saved document into a viewable HTML page.
 
-## Download & restore a dashboard's state
+## Download & restore a dashboard's state {#download-restore-a-dashboards-state}
 
 The pattern above generalizes directly to a **real, running dashboard**:
 [`examples/dashboard/build.py`](../../examples/dashboard/build.py)'s `Dashboard`

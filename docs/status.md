@@ -6,10 +6,12 @@ A one-page snapshot of what's built vs. planned, so a reader doesn't have to rec
 it from beads issues or git history. Two independent axes decide what "works" means for a
 given language: the **protocol core** (pure, fixture-certified) and **live comm** (needs a
 kernel that implements Jupyter's `comm_open`/`comm_msg`, a per-kernel property, not a
-per-language one—see [`probe/README.md`](../probe/README.md)).
+per-language one—see [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md)).
 
-This repo isn't yet published (no hosting decision made), so links below are
-repo-relative paths, not GitHub URLs—open them from a checkout, not the deployed site.
+> **Note on links:** Links to per-language backends in the table below point to
+> GitHub (they work on the deployed site *and* in a checkout). The `docs/` pages
+> linked throughout this page are rendered as part of this Quarto site.
+> See [`docs/porting.md`](porting.md) for the porting guide.
 
 ## Per-language maturity (protocol core + live comm)
 
@@ -20,15 +22,15 @@ support:
 
 | Language | Protocol core | Live widgets | Detail |
 |---|---|---|---|
-| Python | ✅ certified | ✅ yes (Tier 1, ipykernel) | [`src/cositos/`](../src/cositos/) |
-| Julia | ✅ certified | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](../julia/README.md) |
-| Clojure | ✅ certified | ✅ yes (Tier 1, via Clay) | [`clojure/`](../clojure/) |
-| R | ✅ certified | 🚧 blocked upstream—IRkernel's `comm$open()` throws an internal `send_response` arity error | [`r/README.md`](../r/README.md) |
-| C# | ✅ certified | 🚧 blocked upstream—.NET Interactive uses its own kernel protocol, doesn't answer `comm_info_request` | [`csharp/README.md`](../csharp/README.md) |
+| Python | ✅ certified | ✅ yes (Tier 1, ipykernel) | [`src/cositos/`](https://github.com/sashakile/cositos/blob/main/src/cositos/) |
+| Julia | ✅ certified | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](https://github.com/sashakile/cositos/blob/main/julia/README.md) |
+| Clojure | ✅ certified | ✅ yes (Tier 1, via Clay) | [`clojure/`](https://github.com/sashakile/cositos/blob/main/clojure/) |
+| R | ✅ certified | 🚧 blocked upstream—IRkernel's `comm$open()` throws an internal `send_response` arity error | [`r/README.md`](https://github.com/sashakile/cositos/blob/main/r/README.md) |
+| C# | ✅ certified | 🚧 blocked upstream—.NET Interactive uses its own kernel protocol, doesn't answer `comm_info_request` | [`csharp/README.md`](https://github.com/sashakile/cositos/blob/main/csharp/README.md) |
 
 "Blocked upstream" means the gap is in the kernel, not in cositos—there's no
 workaround short of a protocol shim or an upstream fix. Full tier classification and how
-each kernel was probed: [`probe/README.md`](../probe/README.md).
+each kernel was probed: [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md).
 
 ## Display & hosting (static export, no kernel)
 
