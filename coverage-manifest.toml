@@ -34,3 +34,6 @@ exempt = "pretender/espectacular unsupported for Clojure; certified via clojure-
 
 [cores.probe]
 exempt = "capability probe (Python script + per-kernel programs); covered by tests/test_kernel_probe.py"
+
+[cores.kernels]
+exempt = "pre-installed Jupyter kernelspec for Clojure (static kernel.json, no source to cover)"
