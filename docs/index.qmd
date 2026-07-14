@@ -36,3 +36,19 @@ HTML(embed_snippet(doc))
 
 The button is a real cositos widget: its frontend ESM ran in your browser against state
 that was serialized in Python and embedded here. Interaction is client-side (no kernel).
+
+## Documentation structure
+
+This site is organized into four content types so you can find what you need quickly:
+
+- **Tutorials** — step-by-step walkthroughs for specific tasks (start here)
+- **How-to Guides** — solutions to specific problems (use when you know what you need)
+- **Reference** — API details, specifications, cheat sheets (use when you need precise information)
+- **Explanation** — conceptual background and design reasoning (read to understand *why*)
+
+## Next steps
+
+- [Quickstart: run your first widget](tutorials/quickstart.qmd) — Python, Julia, or Clojure
+- [Architecture: how cositos works](explanation/architecture.qmd) — the design behind it
+- [Widget gallery](widgets-gallery.qmd) — see more widget examples and live demos
+- [Implementation status](status.md) — what languages and hosts are supported today

@@ -65,3 +65,9 @@ See [`docs/hosts.md`](hosts.md) for the channel abstraction behind this table an
 The living specifications (protocol, serialization, embed) are woven verbatim into the
 [reference → Specifications](reference/specs.qmd) page from `openspec/specs/`—that page
 *is* the spec, not a paraphrase of it.
+
+## Getting started
+
+- [Quickstart: run your first widget](tutorials/quickstart.qmd) — pick your language
+- [Architecture overview](explanation/architecture.qmd) — how cositos works
+- [Author your own widget](tutorials/authoring-widgets.qmd) — write custom ESM

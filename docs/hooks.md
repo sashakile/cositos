@@ -52,3 +52,7 @@ bd init                                # re-establishes .beads/hooks + hooksPath
 
 If you don't use beads, run `lefthook install --force` instead to let lefthook own the
 hooks directly.
+
+> **Internal reference:** See [`docs/_internal/bd-sync.md`](_internal/bd-sync.md) for
+> details on how beads syncs issue data across machines using Dolt remotes, including
+> setup commands, anti-patterns, and merge conflict resolution.

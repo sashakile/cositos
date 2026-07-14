@@ -31,6 +31,8 @@ project:
     - porting.md
     - hooks.md
     - hosts.md
+    - _internal/bd-sync.md
+    - _internal/publish-readiness-review-2026-07-07.md
 
 website:
   title: "cositos"
@@ -53,6 +55,7 @@ website:
           - tutorials/polyglot-parity.qmd
           - tutorials/plot-integration.qmd
           - tutorials/web-ojs.qmd
+          - widgets-gallery.qmd
       - text: Reference
         menu:
           - reference/index.qmd
@@ -62,14 +65,13 @@ website:
         menu:
           - explanation/architecture.qmd
           - explanation/state-discipline.qmd
-      - text: Guides
-        menu:
           - widgets.md
-          - widgets-gallery.qmd
+          - hosts.md
+      - text: How-to Guides
+        menu:
           - pluto.md
           - porting.md
           - hooks.md
-          - hosts.md
 
 format:
   html:
