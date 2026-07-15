@@ -2,6 +2,10 @@
 title: "Hosts & channels: running cositos widgets anywhere"
 ---
 
+> **What this page is:** The frontend-side `Channel` contract and all built-in channels
+> (Jupyter, Pluto, Clay, LocalChannel, MemoryChannel). The backend-side analog is the
+> `Transport` seam documented in the [architecture](explanation/architecture.qmd).
+
 cositos runs the **same anywidget ESM** in many environments by isolating everything
 environment-specific behind one small seam: the **`Channel`**. The frontend `Model`
 (from `@cositos/front`) holds widget state and syncs it over a `Channel`; a *host* (a

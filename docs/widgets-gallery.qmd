@@ -6,6 +6,15 @@ title: "Widget gallery: live demos + how to launch each one per language"
 widgets cover. This page makes that list concrete: **a live, in-browser demo of each
 widget**, plus **the exact snippet that launches it from a real backend language**.
 
+**Jump to a widget category:**
+- [IntSlider — numeric](#intslider--numeric-ipywidgets-intslider-floatslider)
+- [Checkbox — boolean](#checkbox--boolean-ipywidgets-checkbox-togglebutton)
+- [Text — string](#text--string-ipywidgets-text-textarea)
+- [Button — button/event](#button--buttonevent-ipywidgets-button)
+- [Dropdown — selection](#dropdown--selection-ipywidgets-dropdown-select-radiobuttons)
+- [HTML — output/display](#html--outputdisplay-ipywidgets-html-label-output)
+- [Real ipywidgets controls](#real-ipywidgets-controls-no-reimplementation-required)
+
 Every demo below runs the *unmodified* ESM from `examples/widgets/*.js` — the same file
 Jupyter (via the anywidget frontend) and `@cositos/front` (web/WASM/Pluto) both load. The
 demos on this page render with zero kernel, using `LocalChannel` — a loopback channel with
@@ -49,7 +58,7 @@ whichever snippet matches your kernel.
 
 ::: {.panel-tabset}
 
-## Python
+## Python (gallery)
 
 ```{python}
 # | eval: false
@@ -67,7 +76,7 @@ widget = Widget(
 widget  # last line of a cell: renders live
 ```
 
-## Julia
+## Julia (gallery)
 
 ```julia
 using Cositos, IJulia

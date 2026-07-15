@@ -55,18 +55,18 @@ website:
           - tutorials/polyglot-parity.qmd
           - tutorials/plot-integration.qmd
           - tutorials/web-ojs.qmd
-          - widgets-gallery.qmd
       - text: Reference
         menu:
           - reference/index.qmd
           - reference/specs.qmd
           - reference/api-cheatsheet.qmd
+          - widgets-gallery.qmd
+          - widgets.md
+          - hosts.md
       - text: Explanation
         menu:
           - explanation/architecture.qmd
           - explanation/state-discipline.qmd
-          - widgets.md
-          - hosts.md
       - text: How-to Guides
         menu:
           - pluto.md

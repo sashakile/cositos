@@ -3,17 +3,30 @@ title: "Porting a cositos backend to a new Jupyter kernel language"
 ---
 
 
+> **What this page is:** How to implement a cositos backend in a new language — Transport
+> adapter, pure core, lifecycle shell, and certification against fixtures.
+
 This guide is for someone who knows a language ecosystem (Julia, C#, R, …) and wants a
 `cositos`/anywidget-style backend there. You do **not** write any JavaScript — you reuse
 anywidget's published `AnyModel`/`AnyView` frontend.
 
+Before you start, read the [architecture](explanation/architecture.qmd) page to
+understand the **lifecycle reducer** — the pure state machine that every backend
+implements. The [lifecycle spec](reference/specs.qmd#lifecycle) and
+[lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) are the full normative
+contracts.
+
 ## What you implement
 
-Exactly two things:
+Three things, covered across five steps below (Steps 1–2 and 5 are implementation;
+Steps 3–4 verify what you built):
 
 1. **A `Transport` adapter** over your kernel's comm API.
 2. **The pure core** — message builders + buffer split/merge — in your language. This is
    ~150 lines and is fully specified by the golden fixtures.
+3. **The lifecycle shell** — the thin imperative bridge that calls the lifecycle reducer
+   and executes the returned effects. This is ~50 lines and is specified by the
+   [lifecycle-shell spec](reference/specs.qmd#lifecycle-shell).
 
 Everything else (observer autodetection, ESM hot-reload, host-idiomatic state objects)
 is optional ergonomics you can add later.
@@ -92,10 +105,46 @@ Certify against `fixtures/widget-state.json`:
 The round-trip `load_document(dump_document(x)) == x` is the law to test (the Python
 reference also property-tests it).
 
+## Step 5 — Implement the lifecycle shell
+
+The pure message builders from Step 2 cover message *shaping*, but a live widget also
+needs a **lifecycle** — opening the comm, sending state, receiving updates, closing.
+cositos encodes this as a pure reducer:
+
+```
+reduce(phase, event, current_state, capabilities)
+    → (new_phase, effects[])
+```
+
+Every backend implements the same reducer. The **imperative shell** (`WidgetShell` in
+Python; see `src/cositos/lifecycle.py`) is the thin per-language bridge that:
+
+1. Calls `reduce` with the current phase, the user's event, the widget state, and the
+   transport's capability flags.
+2. Walks the returned effect list and executes each one:
+   - `Send(msg_type, data, buffers, metadata)` → `transport.send(...)`
+   - `Listen()` → `transport.on_message(callback)`
+   - `ApplyState(state)` → host's `set_state`
+   - `InvokeCustom(content, buffers)` → host's custom handler
+   - `Error(message)` → raise an error
+3. After a `comm_open` send, reads the transport's assigned comm id and feeds it back
+   as a `CommIdAssigned` event. This is needed because the transport may assign a
+   different comm id than the one the shell passed — the feedback loop ensures the shell
+   uses the real id for subsequent mimebundle calls.
+
+See the [lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) for the full
+contract and the [API reference](reference/index.qmd#lifecycle) for the event and
+effect type signatures.
+
 ## Reference
 
 - Wire protocol: <https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md>
 - Python reference: `src/cositos/` in this repo.
-- Design rationale: `.wai/projects/cositos-core/designs/`.
-- Cross-language symbol lookup (exact name + return shape per language for every
-  operation above): `docs/reference/api-cheatsheet.qmd`.
+- [Architecture & reducer design](explanation/architecture.qmd) — how the lifecycle
+  reducer, Transport seam, and Document model fit together.
+- [Lifecycle spec](reference/specs.qmd#lifecycle) — the normative reducer contract.
+- [Lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) — the imperative shell
+  contract.
+- [API reference](reference/index.qmd) — full API including lifecycle events, effects,
+  and capabilities.
+- Cross-language symbol lookup: `docs/reference/api-cheatsheet.qmd`.

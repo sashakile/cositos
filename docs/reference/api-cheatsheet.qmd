@@ -3,12 +3,17 @@ title: "API cheat sheet: the same operation, five languages"
 ---
 
 Every backend implements the same six operations, verified byte-for-byte against the
-shared golden fixtures (see `porting.md`). Each is deliberately idiomatic to its
-language — different casing, different mutation convention, different return shape —
-so there is no muscle-memory transfer between backends, only conceptual transfer. This
-page is the lookup table for jumping between them.
+shared golden fixtures (see the [porting guide](../porting.md)). Each is deliberately
+idiomatic to its language — different casing, different mutation convention, different
+return shape — so there is no muscle-memory transfer between backends, only conceptual
+transfer. This page is the lookup table for jumping between them.
 
-## Message builders
+For the full API with signatures, defaults, and behaviour, see the
+[API reference](index.qmd). The normative contracts live in the
+[specifications](specs.qmd) (protocol, serialization, embed, lifecycle,
+lifecycle-shell).
+
+## Message builders {#message-builders}
 
 | Operation | Python | Julia | Clojure | C# | R |
 |---|---|---|---|---|---|
@@ -16,7 +21,7 @@ page is the lookup table for jumping between them.
 | Push a state update | `build_update(state)` → `(data, buffers)` | `build_update(state)` → `(data, buffers)` | `(build-update state)` → `[data buffers]` | `Core.BuildUpdate(state)` → `(Data, Buffers)` named tuple | `build_update(state)` → `list(data=, buffers=)` |
 | Send a custom message | `build_custom(content)` → `dict` | `build_custom(content)` → `Dict` | `(build-custom content)` → `map` | `Core.BuildCustom(content)` → `Dictionary<string, object?>` | `build_custom(content)` → `list(method=, content=)` |
 
-## Inbound parsing
+## Inbound parsing {#inbound-parsing}
 
 | Operation | Python | Julia | Clojure | C# | R |
 |---|---|---|---|---|---|
@@ -26,7 +31,7 @@ Python, Julia, and C# give you a real tagged type to pattern-match/switch on; Cl
 R use a plain map/list with a `type`/`:type` string key instead — check that key, not a
 class, in those two.
 
-## Binary buffers
+## Binary buffers {#binary-buffers}
 
 | Operation | Python | Julia | Clojure | C# | R |
 |---|---|---|---|---|---|

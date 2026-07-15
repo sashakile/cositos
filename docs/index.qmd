@@ -50,5 +50,7 @@ This site is organized into four content types so you can find what you need qui
 
 - [Quickstart: run your first widget](tutorials/quickstart.qmd) — Python, Julia, or Clojure
 - [Architecture: how cositos works](explanation/architecture.qmd) — the design behind it
+- [State discipline for cositos apps](explanation/state-discipline.qmd) — keep your
+  widgets consistent as the app grows
 - [Widget gallery](widgets-gallery.qmd) — see more widget examples and live demos
 - [Implementation status](status.md) — what languages and hosts are supported today

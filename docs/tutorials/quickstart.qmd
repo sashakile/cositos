@@ -2,18 +2,21 @@
 title: "Quickstart: your first live cositos widget"
 ---
 
+> **What this page is:** The shortest path to a live cositos widget in Python, Julia,
+> or Clojure — one code snippet per language, ready to run in your notebook.
+
 This page answers one question per language: **what is the shortest path to a live
 cositos widget in my kernel, today?** For the full backend-maturity picture (why only
-some languages are listed as "live" below) see the "Backend maturity" table in the root
-[`README.md`](https://github.com/sashakile/cositos/blob/main/README.md) and the tier
-classification in [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md).
+some languages are listed as "live" below) see the [Implementation status](../status.md)
+page and the tier classification in
+[`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md).
 
 Every snippet below renders the *same* counter widget — one anywidget-style ESM file,
 reused verbatim, with **no new JavaScript** regardless of host language. The full
 runnable notebooks these snippets are extracted from live in
 [`examples/notebooks/`](https://github.com/sashakile/cositos/blob/main/examples/notebooks/).
 
-## Python
+## Python (quickstart)
 
 Live today (Tier 1, ipykernel). Full notebook: `examples/notebooks/python_counter.ipynb`.
 
@@ -54,10 +57,15 @@ widget = Widget(
 widget  # last line of a cell: renders live, opens the comm on first display
 ```
 
+> **How it works:** `Widget` implements `_repr_mimebundle_` — the Jupyter display hook
+> that notebooks call automatically when an object is the last expression in a cell.
+> This triggers `open()`, which sends `comm_open` and registers the inbound listener.
+> The widget then renders in the browser and stays connected to the kernel.
+
 Click **increment** in the rendered widget, then read the count back from the kernel:
 `state['count']`.
 
-## Julia
+## Julia (quickstart)
 
 Live today (Tier 1, IJulia). Full notebook: `examples/notebooks/julia_counter.ipynb`.
 
@@ -147,6 +155,8 @@ not on cositos work.
 
 ## Next steps
 
+- Understand how it works: [architecture](../explanation/architecture.qmd) — the lifecycle
+  reducer, Transport seam, and Document model.
 - Author a new widget's ESM: `tutorials/authoring-widgets.qmd`.
 - Embed a widget into an existing tool (Quarto, JupyterBook, Voila, Clay, …):
   `tutorials/integrating.qmd`.

@@ -2,6 +2,8 @@
 title: "Using cositos widgets in Pluto.jl"
 ---
 
+> **What this page is:** How to use cositos widgets in Pluto.jl — PlutoChannel, @bind
+> integration, and the PlutoWidget wrapper.
 
 Pluto is **not** Jupyter — there is no comm protocol. Pluto is reactive-cell-based:
 widgets render via `Base.show(::MIME"text/html")`, two-way binding happens through
@@ -99,7 +101,7 @@ export default { render({ model, el }) {
 
 The generated HTML `import`s `@cositos/front` from `runtime_url`. **You don't need to set
 it.** `PlutoWidget`'s default (cositos-z76.7) resolves automatically to
-[`Cositos.local_front_runtime_url()`](@ref) — a self-contained `data:` URI bundling
+[`Cositos.local_front_runtime_url()`](#runtime-hosting) — a self-contained `data:` URI bundling
 `front/src/*.js`, with **no npm publish, CDN, or local server required**, fully offline:
 
 ```julia
@@ -132,3 +134,12 @@ bundle order in `CositosPlutoExt._bundle_front_source`.
   updated their bound Julia value from real DOM interaction.
 - Coarse reactive sync only; no `echo_update`, no binary buffers over the bond in v0
   (buffers work in the ESM locally but aren't round-tripped through `@bind`).
+
+## See also
+
+- [Hosts & channels](hosts.md) — the full `Channel` contract and all built-in channels
+  (Jupyter, Clay, LocalChannel, MemoryChannel).
+- [Architecture](../explanation/architecture.qmd) — how the lifecycle reducer, Transport
+  seam, and Document model make cositos portable across languages and environments.
+- [API reference](../reference/index.qmd#lifecycle) — the lifecycle reducer's event and
+  effect types.

@@ -53,18 +53,24 @@ mise run docs-preview   # live-reload preview while editing
 
 Start at [`docs/index.qmd`](docs/index.qmd) (a live-rendered widget) or
 [`docs/status.md`](docs/status.md) for the implementation-status overview (per-language
-and per-host maturity). The site is not published yet (no hosting decision made) — build
-it locally.
+and per-host maturity). Read the
+[architecture](docs/explanation/architecture.qmd) page to understand the
+**lifecycle reducer** — the pure state machine behind every widget backend. The
+[porting guide](docs/porting.md) is the starting point for adding a new language.
+The site is not published yet (no hosting decision made) — build it locally.
 
 ## Architecture
 
 ```
-host state ──▶ cositos-core (pure protocol, no I/O) ──▶ Transport seam ──▶ kernel comm
-                • message builders   • buffer split/merge   • mimebundle
+host state ──▶ WidgetShell ──▶ reduce() ──▶ effects[] ──▶ Transport seam ──▶ kernel comm
+                 │              │             │
+                 │  pure core:  │  message    │  Send / Listen
+                 │  buffers     │  builders   │  ApplyState / InvokeCustom
+                 │  parse       │  + parser   │
 ```
 
-- **Core is pure**: message shaping, binary-buffer split/merge, inbound parsing. No
-  kernel code.
+- **Core is pure**: the lifecycle reducer, message shaping, binary-buffer split/merge,
+  inbound parsing. No kernel code.
 - **Transport is a seam**: each kernel supplies a thin adapter (Python `comm`,
   `Deno.jupyter.broadcast`, IJulia, dotnet-interactive). See
   `docs/tutorials/integrating.qmd` for which one to use and how to embed a widget into

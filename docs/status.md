@@ -22,9 +22,9 @@ support:
 
 | Language | Protocol core | Live widgets | Detail |
 |---|---|---|---|
-| Python | ✅ certified | ✅ yes (Tier 1, ipykernel) | [`src/cositos/`](https://github.com/sashakile/cositos/blob/main/src/cositos/) |
+| Python | ✅ certified | ✅ yes (Tier 1, ipykernel) | [`src/cositos/`](https://github.com/sashakile/cositos/tree/main/src/cositos/) |
 | Julia | ✅ certified | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](https://github.com/sashakile/cositos/blob/main/julia/README.md) |
-| Clojure | ✅ certified | ✅ yes (Tier 1, via Clay) | [`clojure/`](https://github.com/sashakile/cositos/blob/main/clojure/) |
+| Clojure | ✅ certified | ✅ yes (Tier 1, via Clay) | [`clojure/`](https://github.com/sashakile/cositos/tree/main/clojure/) |
 | R | ✅ certified | 🚧 blocked upstream—IRkernel's `comm$open()` throws an internal `send_response` arity error | [`r/README.md`](https://github.com/sashakile/cositos/blob/main/r/README.md) |
 | C# | ✅ certified | 🚧 blocked upstream—.NET Interactive uses its own kernel protocol, doesn't answer `comm_info_request` | [`csharp/README.md`](https://github.com/sashakile/cositos/blob/main/csharp/README.md) |
 

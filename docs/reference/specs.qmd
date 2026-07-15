@@ -2,6 +2,13 @@
 title: "Specifications"
 ---
 
+> **What this page is:** The normative contracts for cositos — protocol, serialization,
+> embed, lifecycle, and lifecycle-shell — woven from `openspec/specs/`.
+
+> **Reading on GitHub?** This page is woven from spec files in `openspec/specs/` via
+> Quarto's `{{< include >}}`. The raw spec files render directly on GitHub:
+> `openspec/specs/{protocol,serialization,embed,lifecycle,lifecycle-shell}/spec.md`.
+
 These are the **living specifications** for cositos — the source-of-truth contracts that
 the test suite and any cross-language port certify against. They are maintained under
 `openspec/specs/` and woven into this page verbatim, so the docs can never drift from the
@@ -32,3 +39,21 @@ How a serialized document renders to self-contained HTML via the CDN html-manage
 how embedded JSON is script-escaped so widget state can't break out of the page.
 
 {{< include ../../openspec/specs/embed/spec.md >}}
+
+## lifecycle {#lifecycle}
+
+The pure widget lifecycle reducer: a deterministic state machine that encodes the
+open → send → close lifecycle as a pure function. Every cositos backend feeds events
+(Open, SendState, SendCustom, Inbound, Close, CommIdAssigned) through `reduce()` and
+executes the returned effects. See the [API reference](index.qmd#lifecycle) for the
+event and effect types.
+
+{{< include ../../openspec/specs/lifecycle/spec.md >}}
+
+## lifecycle-shell {#lifecycle-shell}
+
+The thin imperative shell that calls the lifecycle reducer and executes the returned
+effects — bridging between the pure reducer and the real transport/kernel APIs. See the
+[API reference](index.qmd#lifecycle) for the shell API and capability types.
+
+{{< include ../../openspec/specs/lifecycle-shell/spec.md >}}

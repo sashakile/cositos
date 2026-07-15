@@ -1,8 +1,8 @@
 # How bd/Dolt remote sync works
 
 Research for `cositos-dad.9`, gathered 2026-07-07 against `bd version 1.1.0
-(Homebrew)`. Evidence: `docs/SYNC_CONCEPTS.md` from
-[gastownhall/beads](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
+(Homebrew)`. Evidence: `docs/core-concepts/sync-concepts.md` from
+[gastownhall/beads](https://github.com/gastownhall/beads/blob/main/docs/core-concepts/sync-concepts.md)
 plus local `bd dolt --help`, `bd bootstrap --help`, `bd merge-slot --help`,
 `bd gc --help`, and `bd dolt show` run against this repo.
 

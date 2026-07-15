@@ -2,6 +2,16 @@
 title: "Widgets: covering the ipywidgets surface without cloning the zoo"
 ---
 
+> **What this page is:** The six ipywidgets categories cositos can express — value
+> types, ESM patterns, and per-language code snippets.
+
+A cositos widget is an anywidget-compatible ES module — a small JavaScript file that
+renders a UI element and syncs state over a Jupyter comm channel. This page catalogs the
+ipywidgets categories cositos can express. See [Authoring a widget](tutorials/authoring-widgets.qmd)
+for how to write one from scratch, or the [Widget gallery](widgets-gallery.qmd) for live demos.
+
+> **What this page is:** The six ipywidgets categories cositos can express — value
+> types, ESM patterns, and per-language code snippets.
 
 **cositos does not reimplement `@jupyter-widgets/controls`.** ipywidgets ships ~30
 frontend widget classes (`IntSlider`, `Button`, `Dropdown`, …); cloning them verbatim
@@ -55,7 +65,7 @@ ipywidgets one.
 
 See [`docs/widgets-gallery.qmd`](widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required)
 for a runnable example (`int_slider()`, `dropdown()`, `vbox()`) built from
-`cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](tutorials/plot-integration.qmd#about-cositos-contrib),
+`cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](tutorials/plot-integration.qmd#about-cositos.contrib),
 this one needs neither `ipywidgets` nor `anywidget` installed.
 
 For the full scenario—building a small dashboard from these real controls, downloading its state, and restoring it in a fresh session—see [`tutorials/dashboard.qmd`](tutorials/dashboard.qmd).

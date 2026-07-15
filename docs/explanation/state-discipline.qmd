@@ -2,6 +2,9 @@
 title: "State discipline for cositos apps"
 ---
 
+> **What this page is:** Rules for keeping many cositos widgets consistent as the app
+> grows — MVU, reactive graphs, and benchmarked wiring styles.
+
 Once a cositos app grows past a handful of widgets, the hard question is no longer *how do
 I display a widget?* but *how do I keep many widgets consistent as the user interacts?*
 This page answers that with a small set of **rules**, and — because rules without evidence

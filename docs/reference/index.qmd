@@ -2,14 +2,24 @@
 title: "API reference"
 ---
 
+> **What this page is:** Every public symbol in the cositos Python package — functions,
+> classes, and their signatures — organized by concern.
+
 The public API is everything exported from the top-level `cositos` package. It splits
-into six concerns: **serialization**, **embedding**, the **`Widget` façade**, the
-**`Transport` seam**, the **protocol core**, and **buffers**. Every symbol below is
+into nine concerns: **serialization**, **embedding**, the **`Widget` façade**, the
+**lifecycle reducer**, the **`Transport` seam**, the **protocol core**, **buffers**,
+**reference checking**, and **capabilities**. Every symbol below is
 importable directly, e.g. `from cositos import dump_document`.
 
+**Jump to:**
+[Serialization](#serialization) · [Embedding](#embedding) · [Widget](#the-widget-façade) ·
+[Lifecycle reducer](#lifecycle) · [Transport](#the-transport-seam) ·
+[Protocol core](#protocol-core) · [Buffers](#buffers)
+
 The behaviour behind these functions is pinned by the living
-[specifications](specs.qmd) (protocol, serialization, embed) — the same contracts the
-test suite and any cross-language port certify against.
+[specifications](specs.qmd) (protocol, serialization, embed, lifecycle,
+lifecycle-shell) — the same contracts the test suite and any cross-language port
+certify against.
 
 ## Serialization
 
@@ -23,6 +33,7 @@ state-format v2 schema). See the [serialization spec](specs.qmd#serialization).
 | `load_model` | `load_model(item) -> tuple[str, dict]` | Inverse of `dump_model`. |
 | `dump_document` | `dump_document(entries) -> Document` | Serialize many entries into a v2 Widget-State document envelope. |
 | `load_document` | `load_document(doc) -> list[tuple[str, dict]]` | Inverse of `dump_document`. |
+| `check_references` | `check_references(doc) -> None` | Validate that every `"IPY_MODEL_<id>"` reference points at a model in `doc`; raises `ValueError` on dangling references. |
 
 ```python
 from cositos import dump_document, load_document
@@ -76,12 +87,88 @@ Widget(
 
 | Method | Purpose |
 |---|---|
-| `open()` | Send `comm_open`, adopt the transport's real comm id, start listening (if the transport `supports_receive`). |
+| `open()` | Send `comm_open`, adopt the transport's real comm id, start listening (if the transport `supports_receive`). Idempotent. |
 | `send_state(include=None)` | Send an `update` with the full state, or only the `include` keys. |
 | `send_custom(content, buffers=None)` | Send a `custom` message (`model.on("msg:custom")` on the frontend). |
-| `close()` | Send `comm_close`. |
+| `close()` | Send `comm_close`. Idempotent. |
 | `mimebundle(repr_text="")` | The widget-view mimebundle for display. |
 | `_repr_mimebundle_(...)` | Jupyter display hook — rendering the widget opens its comm, then returns the view bundle. |
+
+## Lifecycle reducer {#lifecycle}
+
+`Widget` delegates to a pure **lifecycle reducer** that encodes the widget's open → send
+→ close lifecycle as a deterministic state machine. The reducer is a pure function — no
+I/O, no side effects, no mutable state.
+
+```python
+from cositos.lifecycle import reduce, Phase, TransportCapabilities
+
+state = {"_esm": "export default function render({model, el}) {...}", "value": 0}
+phase, effects = reduce(Phase.UNOPENED, Open(), state, TransportCapabilities())
+```
+
+### Phases
+
+A widget is always in one of three phases:
+
+| Phase | Meaning |
+|---|---|
+| `Phase.UNOPENED` | The comm has not been opened yet. |
+| `Phase.OPEN` | The comm is open — messages can be sent and received. |
+| `Phase.CLOSED` | The comm has been closed. |
+
+### Events
+
+Events are passed to `reduce()` to trigger state transitions. The reducer pattern means
+every possible transition is enumerated and fixture-testable.
+
+| Event | Purpose |
+|---|---|
+| `Open()` | User/host wants to open the comm. |
+| `SendState(include=None)` | Send an `update` with the full state, or only `include` keys. |
+| `SendCustom(content, buffers=[])` | Send a custom message to the frontend. |
+| `Inbound(message, buffers=[])` | An inbound message arrived from the transport (buffers already merged). |
+| `Close()` | User/host wants to close the comm. |
+| `CommIdAssigned(id)` | The transport assigned a comm id after a `comm_open` send. |
+
+### Effects
+
+`reduce()` returns a list of **effects** — commands for the imperative shell to execute.
+
+| Effect | Purpose |
+|---|---|
+| `Send(msg_type, data, buffers, metadata)` | Send a Jupyter comm message to the frontend. |
+| `Listen()` | Register an inbound message callback on the transport. |
+| `ApplyState(state)` | Apply an inbound state dict to the host object. |
+| `InvokeCustom(content, buffers)` | Invoke the host's custom message handler. |
+| `Error(message)` | An error — the shell shall raise `RuntimeError`. |
+
+### TransportCapabilities
+
+Capability flags declare which event kinds the transport can carry. The reducer uses
+these flags to decide which effects to produce — the shell never blocks or rewrites
+events based on capabilities.
+
+```python
+@dataclass(frozen=True)
+class TransportCapabilities:
+    supports_receive: bool = True
+    supports_request_state: bool = True
+    supports_custom: bool = True
+    supports_buffers: bool = True
+```
+
+- `supports_receive=False` — broadcast-only kernels (early Deno); the reducer suppresses
+  the `Listen` effect.
+- `supports_buffers=False` — transports that cannot carry binary buffers; `send_custom`
+  with buffers produces an `Error` effect.
+- `supports_request_state=False` — transports that don't support `request_state`;
+  inbound `request_state` messages are silently ignored.
+- `supports_custom=False` — transports that don't support custom messages; `send_custom`
+  produces an `Error` effect.
+
+See the [lifecycle spec](specs.qmd#lifecycle) and the
+[lifecycle-shell spec](specs.qmd#lifecycle-shell) for the full contract.
 
 ## The `Transport` seam
 

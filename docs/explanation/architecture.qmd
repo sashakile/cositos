@@ -2,6 +2,9 @@
 title: "Architecture"
 ---
 
+> **What this page is:** The design of cositos — how the lifecycle reducer, Transport
+> seam, and Document model enable cross-language widget backends.
+
 cositos exists to answer one question from its founding conversation: *how much work is it
 to reuse an [anywidget](https://anywidget.dev) frontend from a kernel that isn't Python?*
 The answer the design commits to: **the frontend and the protocol are shared; only a thin,
@@ -16,29 +19,81 @@ logic** with no kernel or transport code:
 - **`protocol`** — constants, message builders (`build_comm_open`, `build_update`,
   `build_custom`), and the inbound parser (`parse_message`).
 - **`buffers`** — the v2 nested binary-buffer split/merge rules.
-- **`model`** — the `Widget` façade tying a state getter/setter to a transport.
+- **`lifecycle`** — the pure widget lifecycle reducer: a deterministic state machine
+  that encodes open → send → close as a pure function (see below).
+- **`model`** — the `Widget` façade, which delegates to the lifecycle reducer via the
+  imperative `WidgetShell` (internal; `cositos.lifecycle.WidgetShell`).
 - **`transport`** — the interface only. **No implementations live in the core.**
 
 Because none of this touches I/O, the entire core is testable without a running kernel —
 and portable to any language that can shape the same JSON.
 
+## The lifecycle reducer
+
+The widget lifecycle — opening a comm, sending state, receiving updates, closing — is
+encoded as a **pure reducer**, the same pattern found in Redux and Elm. The reducer is a
+single function:
+
+```
+reduce(phase, event, current_state, capabilities)
+    → (new_phase, effects[])
+```
+
+- **`phase`** is one of `Unopened`, `Open`, or `Closed`.
+- **`event`** describes what happened: the user wants to open, the frontend sent an
+  update, the host should send state, etc.
+- **`current_state`** is the widget's state dict.
+- **`capabilities`** declares what the transport supports (receive, buffers, custom
+  messages).
+
+The reducer returns a **new phase** and a list of **effects** — commands that tell the
+imperative shell what to do: send a message to the frontend, register a listener, apply
+an inbound update, raise an error.
+
+This design gives cositos three guarantees:
+
+1. **Determinism.** The same inputs always produce the same outputs. Every transition is
+   fixture-testable against `fixtures/lifecycle/*.json` (open, close, full-send,
+   filtered-send, one-way-open, inbound-update, etc.).
+2. **Cross-language.** Any language port implements the same reducer — there is no shared
+   runtime, only a shared contract. See the [lifecycle spec](../reference/specs.qmd#lifecycle).
+3. **Capability-aware.** A broadcast-only kernel (no `supports_receive`) automatically
+   suppresses the listener effect; no shell code needs to branch on capabilities.
+
+The imperative shell (`WidgetShell`) that calls `reduce` and walks the effect list is the
+only per-language code in the lifecycle path. It is thin enough that the [porting
+guide](../porting.md) covers it in a few paragraphs. See the [lifecycle-shell
+spec](../reference/specs.qmd#lifecycle-shell) and the [API reference](../reference/index.qmd#lifecycle)
+for the full event and effect types. Inbound messages arriving before the comm is opened
+(`unopened` phase) are silently dropped — wire `on_message` only after `open()`
+completes.
+
 ## The Transport seam
 
 Every kernel exposes comms differently: Python's `comm` library, Deno's
 `Deno.jupyter.broadcast`, IJulia's comm API, dotnet-interactive. cositos absorbs that
-variation behind a single narrow interface:
+variation behind a single narrow interface. The `Widget` façade feeds user actions
+through the lifecycle reducer, which returns effects executed by the shell on the
+transport:
 
 ```
-   host state object  ──▶  cositos core (pure, no I/O)
-   (traits / struct)         open() -> comm_open payload
-                             send_state() -> comm_msg payload
-                             parse_message() -> typed inbound event
-                             remove_buffers() / put_buffers()
-                                     │
-                                     │  Transport interface
-                                     │    send(msg_type, content, buffers, metadata)
-                                     │    on_message(callback)
-                                     ▼
+   host state object  ──▶  WidgetShell (imperative shell)
+   (traits / struct)         │
+                              │  reduce(phase, event, state, caps)
+                              │  ──────▶  (new_phase, effects[])
+                              │           │
+                              │       effects loop:
+                              │         Send(msg_type, data, buffers, meta)
+                              │         Listen() → on_message callback
+                              │         ApplyState(state)  → host set_state
+                              │         InvokeCustom(…)   → host on_custom
+                              │         Error(msg)        → raise RuntimeError
+                              ▼
+                          Transport interface
+                            send(msg_type, content, buffers, metadata)
+                            on_message(callback)
+                              │
+                              ▼
                           host adapter (per kernel, thin)
                             Python: comm.create_comm / on_msg
                             Deno:   Deno.jupyter.broadcast
@@ -77,6 +132,16 @@ core knowing anything about their language.
 The [specifications](../reference/specs.qmd) formalize this: each requirement's scenarios
 are the behaviour a fixture captures, and the [Julia port](../porting.md) certifies against
 the very same `fixtures/widget-state.json` the Python reference does.
+
+## See also
+
+- [State discipline for cositos apps](state-discipline.qmd) — once you have widgets
+  working, keep them consistent as the app grows (MVU, reactive graphs, benchmarked
+  wiring styles).
+- [Hosts & channels](../hosts.md) — the frontend-side `Channel` seam (the browser-side
+  analog of the `Transport` seam). How cositos runs the same widget in Jupyter, Pluto,
+  Clay, or a plain browser tab.
+- [Porting guide](../porting.md) — adding a new kernel language.
 
 ## Why reuse the anywidget frontend verbatim
 
