@@ -28,8 +28,8 @@
 
 ## 4. Replace Existing Widget — Python
 
-- [ ] 4.1 Replace `Widget` class internals in `src/cositos/model.py` to delegate to `WidgetShell` (public API unchanged)
-- [ ] 4.2 Run full test suite: `python -m pytest tests/test_model.py tests/test_lifecycle.py tests/test_shell.py` — all pass
+- [x] 4.1 Replace `Widget` class internals in `src/cositos/model.py` to delegate to `WidgetShell` (public API unchanged)
+- [x] 4.2 Run full test suite: `python -m pytest tests/test_model.py tests/test_lifecycle.py tests/test_shell.py` — all pass
 - [ ] 4.3 Run e2e tests: `python -m pytest tests/test_e2e_jupyter.py` — widget still renders and interacts live
 
 ## 5. Lifecycle Reducer — Julia

@@ -3,19 +3,23 @@
 Deliberately minimal — no observer autodetection. The host decides when state changed
 and calls :meth:`send_state`. Mirrors the Deno ``Comm`` and Python ``ReprMimeBundle``
 responsibilities, minus per-language ergonomics.
+
+Internally delegates to :class:`~cositos.lifecycle.WidgetShell`, which uses the pure
+``reduce`` function. The public API is unchanged.
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable
 
-from cositos import protocol
-from cositos.buffers import put_buffers
+from cositos.lifecycle import WidgetShell
 from cositos.transport import Transport
 
 
 class Widget:
     """Drive one anywidget-compatible widget over a Transport.
+
+    Internally delegates to :class:`~cositos.lifecycle.WidgetShell`.
 
     Parameters
     ----------
@@ -38,12 +42,29 @@ class Widget:
         model_id: str = "",
         on_custom: Callable[[Any, list[Any]], None] | None = None,
     ) -> None:
-        self._transport = transport
-        self._get_state = get_state
-        self._set_state = set_state
-        self.model_id = model_id
-        self._on_custom = on_custom
-        self._opened = False
+        self._shell = WidgetShell(
+            transport=transport,
+            get_state=get_state,
+            set_state=set_state,
+            model_id=model_id,
+            on_custom=on_custom,
+        )
+        self.model_id = model_id  # kept for backward compat; _shell.model_id is the source
+
+    @property
+    def _opened(self) -> bool:
+        from cositos.lifecycle import Phase
+
+        return self._shell._phase == Phase.OPEN
+
+    @_opened.setter
+    def _opened(self, value: bool) -> None:
+        # Compatibility shim for tests that set _opened directly.
+        # Only used for resetting state; the shell is the source of truth.
+        from cositos.lifecycle import Phase
+
+        if not value:
+            self._shell._phase = Phase.UNOPENED
 
     def open(self) -> None:
         """Send the ``comm_open`` and start listening for inbound messages.
@@ -51,90 +72,31 @@ class Widget:
         Idempotent: a second call while already open is a no-op (no duplicate
         ``comm_open``), matching :meth:`close`.
         """
-        if self._opened:
-            return
-        data, buffers, metadata = protocol.build_comm_open(self._get_state())
-        self._transport.send("comm_open", data, buffers=buffers, metadata=metadata)
-        self._opened = True
-        # Adopt the transport's real comm id so the display bundle references the model
-        # the kernel actually opened (a comm generates its own id).
-        comm_id = getattr(self._transport, "comm_id", "")
-        if comm_id:
-            self.model_id = comm_id
-        if getattr(self._transport, "supports_receive", False):
-            self._transport.on_message(self._handle)
+        self._shell.open()
+        self.model_id = self._shell.model_id
 
     def send_state(self, include: set[str] | None = None) -> None:
         """Send an ``update`` with the full state, or only ``include`` keys.
 
-        A full send (``include=None``) also carries anywidget's immutable
-        ``_model_name``/``_model_module``/``_view_name`` identity fields, matching
-        real ipywidgets' always-synced traits. Without them, JupyterLab's
-        reload-without-kernel-restart restore path (``WidgetManager.
-        _loadFromKernelModels``) sends ``request_state`` and reads ``model_name``/
-        ``model_module`` straight off the resulting ``update`` state; if absent, it
-        instantiates the model with both undefined and the widget never re-renders
-        (cositos-k43).
-
         Requires an open comm; call :meth:`open` (or display the widget) first.
         """
-        self._require_open("send_state")
-        state = self._get_state()
-        if include is None:
-            state = {
-                **protocol.model_identity(protocol.ANYWIDGET_MODULE_VERSION),
-                **protocol.view_identity(protocol.ANYWIDGET_MODULE_VERSION),
-                **state,
-            }
-        else:
-            state = {k: v for k, v in state.items() if k in include}
-        data, buffers = protocol.build_update(state)
-        self._transport.send("comm_msg", data, buffers=buffers)
+        self._shell.send_state(include=include)
 
     def send_custom(self, content: Any, buffers: list[Any] | None = None) -> None:
         """Send a ``custom`` message to the frontend (``model.on('msg:custom')``).
 
         Requires an open comm; call :meth:`open` (or display the widget) first.
         """
-        self._require_open("send_custom")
-        self._transport.send("comm_msg", protocol.build_custom(content), buffers=buffers or [])
-
-    def _require_open(self, action: str) -> None:
-        """Raise a clear error if ``action`` is attempted before the comm is opened."""
-        if not self._opened:
-            raise RuntimeError(
-                f"{action}() requires an open comm; call open() (or display the widget) first"
-            )
-
-    def _handle(self, data: dict[str, Any], buffers: list[Any]) -> None:
-        """Dispatch an inbound message from the frontend."""
-        message = protocol.parse_message(data)
-        if isinstance(message, protocol.Update):
-            if self._set_state is not None:
-                state = dict(message.state)
-                put_buffers(state, message.buffer_paths, buffers)
-                self._set_state(state)
-        elif isinstance(message, protocol.RequestState):
-            self.send_state()
-        elif isinstance(message, protocol.Custom) and self._on_custom is not None:
-            self._on_custom(message.content, buffers)
+        self._shell.send_custom(content, buffers=buffers)
 
     def mimebundle(self, repr_text: str = "") -> dict[str, Any]:
         """Return the widget-view mimebundle for display."""
-        return protocol.mimebundle(self.model_id, repr_text)
+        return self._shell.mimebundle(repr_text)
 
     def _repr_mimebundle_(self, include: Any = None, exclude: Any = None) -> dict[str, Any]:
-        """Display hook: rendering the widget opens its comm, then returns the view bundle.
-
-        Lets a bare ``widget`` (or ``display(widget)``) render in Jupyter/Voila without a
-        manual ``display(widget.mimebundle(), raw=True)``.
-        """
-        if not self._opened:
-            self.open()
-        return self.mimebundle()
+        """Display hook: rendering the widget opens its comm, then returns the view bundle."""
+        return self._shell._repr_mimebundle_(include, exclude)
 
     def close(self) -> None:
         """Close the comm channel."""
-        if self._opened:
-            self._transport.send("comm_close", {})
-            self._opened = False
+        self._shell.close()
