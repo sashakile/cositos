@@ -1,6 +1,6 @@
 {
   "name": "@cositos/front",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Standalone anywidget-compatible AnyModel runtime with a pluggable transport Channel. Runs anywidget ESM widgets in Jupyter, pure web, WASM, or Pluto.",
   "type": "module",
   "exports": {

@@ -1,6 +1,6 @@
 name = "Cositos"
 uuid = "01e4b146-d225-4b8c-b033-d37308b9b41a"
-version = "0.0.1"
+version = "0.2.0"
 authors = ["cositos contributors"]
 
 [deps]
