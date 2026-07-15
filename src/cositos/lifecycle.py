@@ -286,3 +286,177 @@ def _reduce_close(phase: Phase) -> tuple[Phase, list[Any]]:
     if phase == Phase.OPEN:
         return Phase.CLOSED, [Send(msg_type="comm_close", data={})]
     return phase, []
+
+
+# ---------------------------------------------------------------------------
+# Imperative Shell
+# ---------------------------------------------------------------------------
+
+
+class WidgetShell:
+    """Thin imperative shell that calls ``reduce`` and executes effects.
+
+    Mirrors the existing ``Widget`` class API so existing end-user code continues
+    to work without changes. The shell owns the event loop: it holds the current
+    phase, the host state (fetched via ``get_state``), and the capability flags,
+    feeds them into ``reduce``, and walks the returned effects.
+
+    Parameters
+    ----------
+    transport:
+        The kernel comm adapter.
+    get_state:
+        Returns the current full state dict (including ``_esm``).
+    set_state:
+        Applies an inbound state dict to the host object. Optional; if omitted,
+        inbound ``update`` messages are ignored.
+    model_id:
+        The comm id, for the display mimebundle.
+    on_custom:
+        Callback invoked with ``(content, buffers)`` for inbound custom messages.
+        Optional; if omitted, inbound custom messages are ignored.
+    capabilities:
+        Transport capability flags. Defaults to full capability.
+    """
+
+    def __init__(
+        self,
+        transport: Any,
+        get_state: Callable[[], dict[str, Any]],
+        set_state: Callable[[dict[str, Any]], None] | None = None,
+        model_id: str = "",
+        on_custom: Callable[[Any, list[Any]], None] | None = None,
+        capabilities: TransportCapabilities | None = None,
+    ):
+        self._transport = transport
+        self._get_state = get_state
+        self._set_state = set_state
+        self._on_custom = on_custom
+        self._capabilities = capabilities
+        if self._capabilities is None:
+            # Infer from transport attributes (matching Widget behavior)
+            self._capabilities = TransportCapabilities(
+                supports_receive=getattr(transport, "supports_receive", False),
+            )
+        self._phase: Phase = Phase.UNOPENED
+        self.model_id = model_id
+        self._listening = False
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def open(self) -> None:
+        """Send the ``comm_open`` and start listening for inbound messages.
+
+        Idempotent: a second call while already open is a no-op (no duplicate
+        ``comm_open``), matching :meth:`close`.
+        """
+        if self._phase == Phase.OPEN:
+            return
+        self._execute(reduce(self._phase, Open(), self._get_state(), self._capabilities))
+
+    def send_state(self, include: set[str] | None = None) -> None:
+        """Send an ``update`` with the full state, or only ``include`` keys.
+
+        Requires an open comm; call :meth:`open` (or display the widget) first.
+        """
+        self._execute(
+            reduce(self._phase, SendState(include=include), self._get_state(), self._capabilities)
+        )
+
+    def send_custom(self, content: Any, buffers: list[Any] | None = None) -> None:
+        """Send a ``custom`` message to the frontend (``model.on('msg:custom')``).
+
+        Requires an open comm; call :meth:`open` (or display the widget) first.
+        """
+        self._execute(
+            reduce(
+                self._phase,
+                SendCustom(content=content, buffers=buffers or []),
+                self._get_state(),
+                self._capabilities,
+            )
+        )
+
+    def close(self) -> None:
+        """Close the comm channel. Idempotent."""
+        self._execute(reduce(self._phase, Close(), {}, self._capabilities))
+
+    def mimebundle(self, repr_text: str = "") -> dict[str, Any]:
+        """Return the widget-view mimebundle for display."""
+        from cositos import protocol
+        return protocol.mimebundle(self.model_id, repr_text)
+
+    def _repr_mimebundle_(self, include: Any = None, exclude: Any = None) -> dict[str, Any]:
+        """Display hook: rendering the widget opens its comm, then returns the view bundle."""
+        if self._phase == Phase.UNOPENED or self._phase == Phase.CLOSED:
+            self.open()
+        return self.mimebundle()
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _execute(self, result: tuple[Phase, list[Any]]) -> None:
+        """Walk the effect list from a ``reduce`` call and execute each effect."""
+        new_phase, effects = result
+        self._phase = new_phase
+        for effect in effects:
+            self._exec_one(effect)
+
+    def _exec_one(self, effect: Any) -> None:
+        """Execute a single effect."""
+        if isinstance(effect, Send):
+            self._transport.send(
+                effect.msg_type,
+                effect.data,
+                buffers=effect.buffers,
+                metadata=effect.metadata,
+            )
+            # Comm-id feedback loop: after a comm_open, adopt the transport's id
+            if effect.msg_type == "comm_open":
+                cid = getattr(self._transport, "comm_id", "")
+                if cid:
+                    self.model_id = cid
+                    self._execute(
+                        reduce(self._phase, CommIdAssigned(id=cid), {}, self._capabilities)
+                    )
+        elif isinstance(effect, Listen):
+            if not self._listening:
+                self._transport.on_message(self._handle_inbound)
+                self._listening = True
+        elif isinstance(effect, ApplyState):
+            if self._set_state is not None:
+                self._set_state(effect.state)
+        elif isinstance(effect, InvokeCustom):
+            if self._on_custom is not None:
+                self._on_custom(effect.content, effect.buffers)
+        elif isinstance(effect, Error):
+            raise RuntimeError(effect.message)
+
+    def _handle_inbound(self, data: dict[str, Any], buffers: list[Any]) -> None:
+        """Dispatch an inbound message from the transport back into ``reduce``."""
+        from cositos import protocol
+        message = protocol.parse_message(data)
+        if isinstance(message, (protocol.Update, protocol.Custom)):
+            self._execute(
+                reduce(
+                    self._phase,
+                    Inbound(message=data, buffers=buffers),
+                    self._get_state(),
+                    self._capabilities,
+                )
+            )
+        elif isinstance(message, protocol.RequestState):
+            self._execute(
+                reduce(
+                    self._phase,
+                    Inbound(message=data, buffers=buffers),
+                    self._get_state(),
+                    self._capabilities,
+                )
+            )
+        else:
+            # Ignored: forward-compat, no-op
+            pass

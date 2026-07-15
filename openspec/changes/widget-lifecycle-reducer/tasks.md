@@ -20,11 +20,11 @@
 
 ## 3. Imperative Shell — Python (lifecycle-shell spec, design D7)
 
-- [ ] 3.1 Implement `WidgetShell` in `src/cositos/lifecycle.py` (or a new `shell.py`): stores `(phase, capabilities)`, calls `reduce`, walks effects, delegates to transport/host callbacks
-- [ ] 3.2 Implement public API methods: `open()`, `send_state(include)`, `send_custom(content, buffers)`, `close()`, `mimebundle()`, `_repr_mimebundle_()` — same signatures as current `Widget`
-- [ ] 3.3 Wire the inbound callback loop: `on_message` feeds inbound data through `parse_message` and `put_buffers`, then back into `reduce` as `Inbound` events
-- [ ] 3.4 Implement the comm-id feedback loop: after executing a `send("comm_open")` effect, read `transport.comm_id()` and feed `CommIdAssigned` back into `reduce`
-- [ ] 3.5 Write `tests/test_shell.py` — parity tests against the existing `test_model.py` using the same `FakeTransport`, verifying identical behavior
+- [x] 3.1 Implement `WidgetShell` in `src/cositos/lifecycle.py` (or a new `shell.py`): stores `(phase, capabilities)`, calls `reduce`, walks effects, delegates to transport/host callbacks
+- [x] 3.2 Implement public API methods: `open()`, `send_state(include)`, `send_custom(content, buffers)`, `close()`, `mimebundle()`, `_repr_mimebundle_()` — same signatures as current `Widget`
+- [x] 3.3 Wire the inbound callback loop: `on_message` feeds inbound data through `parse_message` and `put_buffers`, then back into `reduce` as `Inbound` events
+- [x] 3.4 Implement the comm-id feedback loop: after executing a `send("comm_open")` effect, read `transport.comm_id()` and feed `CommIdAssigned` back into `reduce`
+- [x] 3.5 Write `tests/test_shell.py` — parity tests against the existing `test_model.py` using the same `FakeTransport`, verifying identical behavior
 
 ## 4. Replace Existing Widget — Python
 
