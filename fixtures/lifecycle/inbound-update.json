@@ -1,0 +1,5 @@
+[
+  ["open", {"kind": "inbound", "message": {"method": "update", "state": {"value": 42}, "buffer_paths": []}}, {}, "open", [
+    {"kind": "apply_state"}
+  ]]
+]

@@ -1,0 +1,5 @@
+[
+  ["open", {"kind": "close"}, {}, "closed", [
+    {"kind": "send", "msg_type": "comm_close"}
+  ]]
+]

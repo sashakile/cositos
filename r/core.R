@@ -35,15 +35,40 @@ immutable_fields <- function(version) {
 
 # ---- buffer split / merge (protocol v2 nested rules) ----
 
+MAX_DEPTH <- 500L
+
 is_binary <- function(x) is.raw(x)
 is_object <- function(x) is.list(x) && !is.null(names(x))
 is_array <- function(x) is.list(x) && is.null(names(x))
 is_container <- function(x) is.list(x) && !is.raw(x)
 
+# Get a unique identifier for an R object's reference (memory address-like).
+# Uses tracemem's return value (a hex address string) which is unique per reference.
+# suppressWarnings handles the case where the object is already traced.
+.obj_id <- function(x) suppressWarnings(tracemem(x))
+
 # Recurse into objects/arrays, extracting binary values. Returns a list(stripped, paths,
 # buffers), threading paths/buffers through. Binary at an object key removes the key; at an
 # array index it becomes null.
-.separate <- function(sub, path, paths, buffers) {
+# Detects cyclic references (via object identity) and caps nesting at MAX_DEPTH, both
+# raising a clear error rather than stack-overflowing.
+.separate <- function(sub, path, paths, buffers, ancestors = list(), depth = 0L) {
+  if (!is_container(sub)) {
+    return(list(stripped = sub, paths = paths, buffers = buffers))
+  }
+  if (depth > MAX_DEPTH) {
+    stop(sprintf("state nesting exceeds %d levels at path %s", MAX_DEPTH,
+      paste(sapply(path, deparse), collapse = ", ")))
+  }
+  addr <- .obj_id(sub)
+  for (a in ancestors) {
+    if (identical(a, addr)) {
+      stop(sprintf("cyclic reference detected in state at path %s",
+        paste(sapply(path, deparse), collapse = ", ")))
+    }
+  }
+  ancestors <- c(ancestors, list(addr))
+
   if (is_object(sub)) {
     out <- list()
     for (k in names(sub)) {
@@ -53,7 +78,7 @@ is_container <- function(x) is.list(x) && !is.raw(x)
         paths[[length(paths) + 1L]] <- seg
         buffers[[length(buffers) + 1L]] <- v
       } else if (is_container(v)) {
-        r <- .separate(v, seg, paths, buffers)
+        r <- .separate(v, seg, paths, buffers, ancestors, depth + 1L)
         out[[k]] <- r$stripped
         paths <- r$paths
         buffers <- r$buffers
@@ -72,7 +97,7 @@ is_container <- function(x) is.list(x) && !is.raw(x)
         paths[[length(paths) + 1L]] <- seg
         buffers[[length(buffers) + 1L]] <- v
       } else if (is_container(v)) {
-        r <- .separate(v, seg, paths, buffers)
+        r <- .separate(v, seg, paths, buffers, ancestors, depth + 1L)
         out[[i]] <- r$stripped
         paths <- r$paths
         buffers <- r$buffers

@@ -38,36 +38,55 @@ public static class Core
     private static bool IsContainer(object? x) =>
         x is Dictionary<string, object?> || x is List<object?>;
 
+    private const int MaxDepth = 500;
+
     private static object? Separate(
-        object? sub, List<object?> path, List<List<object?>> paths, List<byte[]> buffers)
+        object? sub, List<object?> path, List<List<object?>> paths, List<byte[]> buffers,
+        HashSet<object>? ancestors = null, int depth = 0)
     {
-        switch (sub)
+        if (!IsContainer(sub))
+            return sub;
+        if (depth > MaxDepth)
+            throw new InvalidOperationException(
+                $"state nesting exceeds {MaxDepth} levels at path [{string.Join(", ", path)}]");
+        ancestors ??= new HashSet<object>(ReferenceEqualityComparer.Instance);
+        if (!ancestors.Add(sub!))
+            throw new InvalidOperationException(
+                $"cyclic reference detected in state at path [{string.Join(", ", path)}]");
+        try
         {
-            case Dictionary<string, object?> obj:
-                var outObj = new Dictionary<string, object?>();
-                foreach (var (k, v) in obj)
-                {
-                    var seg = new List<object?>(path) { k };
-                    if (IsBinary(v)) { paths.Add(seg); buffers.Add((byte[])v!); }
-                    else if (IsContainer(v)) outObj[k] = Separate(v, seg, paths, buffers);
-                    else outObj[k] = v;
-                }
-                return outObj;
+            switch (sub)
+            {
+                case Dictionary<string, object?> obj:
+                    var outObj = new Dictionary<string, object?>();
+                    foreach (var (k, v) in obj)
+                    {
+                        var seg = new List<object?>(path) { k };
+                        if (IsBinary(v)) { paths.Add(seg); buffers.Add((byte[])v!); }
+                        else if (IsContainer(v)) outObj[k] = Separate(v, seg, paths, buffers, ancestors, depth + 1);
+                        else outObj[k] = v;
+                    }
+                    return outObj;
 
-            case List<object?> arr:
-                var outArr = new List<object?>();
-                for (var i = 0; i < arr.Count; i++)
-                {
-                    var v = arr[i];
-                    var seg = new List<object?>(path) { (long)i }; // 0-based wire index
-                    if (IsBinary(v)) { outArr.Add(null); paths.Add(seg); buffers.Add((byte[])v!); }
-                    else if (IsContainer(v)) outArr.Add(Separate(v, seg, paths, buffers));
-                    else outArr.Add(v);
-                }
-                return outArr;
+                case List<object?> arr:
+                    var outArr = new List<object?>();
+                    for (var i = 0; i < arr.Count; i++)
+                    {
+                        var v = arr[i];
+                        var seg = new List<object?>(path) { (long)i }; // 0-based wire index
+                        if (IsBinary(v)) { outArr.Add(null); paths.Add(seg); buffers.Add((byte[])v!); }
+                        else if (IsContainer(v)) outArr.Add(Separate(v, seg, paths, buffers, ancestors, depth + 1));
+                        else outArr.Add(v);
+                    }
+                    return outArr;
 
-            default:
-                return sub;
+                default:
+                    return sub;
+            }
+        }
+        finally
+        {
+            ancestors.Remove(sub!);
         }
     }
 

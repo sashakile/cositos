@@ -72,37 +72,52 @@ _immutable_fields(version::AbstractString) =
 
 # ---- buffer split / merge (protocol v2 nested rules) ----
 
-function _separate(sub, path, buffer_paths, buffers)
-    if sub isa AbstractDict
-        out = Dict{String,Any}()
-        for (k, v) in sub
-            if isbinary(v)
-                push!(buffers, v)
-                push!(buffer_paths, Any[path..., k])
-            elseif iscontainer(v)
-                out[k] = _separate(v, Any[path..., k], buffer_paths, buffers)
-            else
-                out[k] = v
-            end
-        end
-        return out
-    elseif sub isa AbstractVector
-        out = Vector{Any}(undef, length(sub))
-        for (i, v) in enumerate(sub)
-            idx0 = i - 1  # wire protocol is 0-based
-            if isbinary(v)
-                out[i] = nothing
-                push!(buffers, v)
-                push!(buffer_paths, Any[path..., idx0])
-            elseif iscontainer(v)
-                out[i] = _separate(v, Any[path..., idx0], buffer_paths, buffers)
-            else
-                out[i] = v
-            end
-        end
-        return out
-    else
+const _MAX_DEPTH = 500
+
+function _separate(sub, path, buffer_paths, buffers, ancestors=Set{UInt64}(), depth=0)
+    if !iscontainer(sub)
         return sub
+    end
+    if depth > _MAX_DEPTH
+        error("state nesting exceeds $_MAX_DEPTH levels at path $path")
+    end
+    oid = objectid(sub)
+    if oid in ancestors
+        error("cyclic reference detected in state at path $path")
+    end
+    push!(ancestors, oid)
+    try
+        if sub isa AbstractDict
+            out = Dict{String,Any}()
+            for (k, v) in sub
+                if isbinary(v)
+                    push!(buffers, v)
+                    push!(buffer_paths, Any[path..., k])
+                elseif iscontainer(v)
+                    out[k] = _separate(v, Any[path..., k], buffer_paths, buffers, ancestors, depth + 1)
+                else
+                    out[k] = v
+                end
+            end
+            return out
+        else  # AbstractVector
+            out = Vector{Any}(undef, length(sub))
+            for (i, v) in enumerate(sub)
+                idx0 = i - 1  # wire protocol is 0-based
+                if isbinary(v)
+                    out[i] = nothing
+                    push!(buffers, v)
+                    push!(buffer_paths, Any[path..., idx0])
+                elseif iscontainer(v)
+                    out[i] = _separate(v, Any[path..., idx0], buffer_paths, buffers, ancestors, depth + 1)
+                else
+                    out[i] = v
+                end
+            end
+            return out
+        end
+    finally
+        delete!(ancestors, oid)
     end
 end
 

@@ -1,0 +1,5 @@
+[
+  ["unopened", {"kind": "open"}, {"_esm": "e", "value": 0}, "open", [
+    {"kind": "send", "msg_type": "comm_open"}
+  ], {"supports_receive": false}]
+]

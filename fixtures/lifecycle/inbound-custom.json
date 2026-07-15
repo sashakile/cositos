@@ -1,0 +1,5 @@
+[
+  ["open", {"kind": "inbound", "message": {"method": "custom", "content": {"event": "click"}}}, {}, "open", [
+    {"kind": "invoke_custom"}
+  ]]
+]

@@ -35,33 +35,50 @@
 (defn- binary? [x] (bytes? x))
 (defn- container? [x] (and (or (map? x) (vector? x)) (not (binary? x))))
 
+(def max-depth 500)
+
 (defn- separate
   "Recurse into maps/vectors extracting binary values. Returns [stripped paths buffers],
   threading the accumulated `paths` and `buffers` through. A binary at a map key removes
-  the key; at a list index it becomes nil."
-  [sub path paths buffers]
-  (cond
-    (map? sub)
-    (reduce (fn [[out ps bs] [k v]]
-              (let [p (conj path k)]
-                (cond
-                  (binary? v) [out (conj ps p) (conj bs v)]
-                  (container? v) (let [[cv ps2 bs2] (separate v p ps bs)]
-                                   [(assoc out k cv) ps2 bs2])
-                  :else [(assoc out k v) ps bs])))
-            [{} paths buffers] sub)
+  the key; at a list index it becomes nil.
 
-    (vector? sub)
-    (reduce (fn [[out ps bs] [i v]]
-              (let [p (conj path i)]              ; 0-based wire index
-                (cond
-                  (binary? v) [(conj out nil) (conj ps p) (conj bs v)]
-                  (container? v) (let [[cv ps2 bs2] (separate v p ps bs)]
-                                   [(conj out cv) ps2 bs2])
-                  :else [(conj out v) ps bs])))
-            [[] paths buffers] (map-indexed vector sub))
+  Detects cyclic references (object identity) and caps nesting at max-depth, both
+  raising a clear error rather than stack-overflowing."
+  [sub path paths buffers & [ancestors depth]]
+  (let [ancestors (or ancestors #{})
+        depth (or depth 0)]
+    (if (not (container? sub))
+      [sub paths buffers]
+      (do
+        (when (> depth max-depth)
+          (throw (ex-info (str "state nesting exceeds " max-depth " levels at path " path)
+                          {:path path :max-depth max-depth})))
+        (when (contains? ancestors (identity sub))
+          (throw (ex-info (str "cyclic reference detected in state at path " path)
+                          {:path path :cyclic true})))
+        (let [ancestors' (conj ancestors (identity sub))
+              depth' (inc depth)]
+          (cond
+            (map? sub)
+            (reduce (fn [[out ps bs] [k v]]
+                      (let [p (conj path k)]
+                        (cond
+                          (binary? v) [out (conj ps p) (conj bs v)]
+                          (container? v) (let [[cv ps2 bs2] (separate v p ps bs ancestors' depth')]
+                                           [(assoc out k cv) ps2 bs2])
+                          :else [(assoc out k v) ps bs])))
+                    [{} paths buffers] sub)
 
-    :else [sub paths buffers]))
+            (vector? sub)
+            (reduce (fn [[out ps bs] [i v]]
+                      (let [p (conj path i)]              ; 0-based wire index
+                        (cond
+                          (binary? v) [(conj out nil) (conj ps p) (conj bs v)]
+                          (container? v) (let [[cv ps2 bs2] (separate v p ps bs ancestors' depth')]
+                                           [(conj out cv) ps2 bs2])
+                          :else [(conj out v) ps bs])))
+                    [[] paths buffers] (map-indexed vector sub))
+            :else [sub paths buffers]))))))
 
 (defn remove-buffers
   "Strip binary values out of `state`. Returns [stripped buffer-paths buffers] where

@@ -1,0 +1,6 @@
+[
+  ["unopened", {"kind": "open"}, {"_esm": "export default { render() {} }", "value": 0}, "open", [
+    {"kind": "send", "msg_type": "comm_open"},
+    {"kind": "listen"}
+  ]]
+]

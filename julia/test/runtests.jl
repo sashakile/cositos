@@ -42,6 +42,32 @@ b64(buffers) = [base64encode(b) for b in buffers]
         @test length(buffers) == 2
     end
 
+    @testset "buffers: cycle detection raises clear error" begin
+        state = Dict{String,Any}("a" => 1)
+        state["self"] = state
+        @test_throws ErrorException remove_buffers(state)
+    end
+
+    @testset "buffers: depth capping raises clear error" begin
+        state = Dict{String,Any}()
+        node = state
+        for _ in 1:2000
+            child = Dict{String,Any}()
+            node["n"] = child
+            node = child
+        end
+        @test_throws ErrorException remove_buffers(state)
+    end
+
+    @testset "buffers: shared acyclic subtrees (DAG) are fine" begin
+        shared = Dict{String,Any}("v" => 1)
+        state = Dict{String,Any}("a" => shared, "b" => shared)
+        stripped, paths, buffers = remove_buffers(state)
+        @test stripped == Dict{String,Any}("a" => Dict{String,Any}("v" => 1), "b" => Dict{String,Any}("v" => 1))
+        @test paths == []
+        @test buffers == []
+    end
+
     @testset "buffers: nested round-trip is lossless" begin
         original = Dict{String,Any}(
             "x" => Dict{String,Any}("ar" => UInt8[1]),

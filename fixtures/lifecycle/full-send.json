@@ -1,0 +1,5 @@
+[
+  ["open", {"kind": "send_state"}, {"_esm": "e", "value": 5}, "open", [
+    {"kind": "send", "msg_type": "comm_msg"}
+  ]]
+]

@@ -74,6 +74,18 @@
       (is (= (seq blob) (seq (get-in restored ["x" "ar"]))))
       (is (= (seq blob) (seq (get-in restored ["xs" 0])))))))
 
+;; ---- buffer-split edge cases: cycle detection and depth capping ----
+
+(deftest remove-buffers-caps-deep-nesting
+  (let [nested (reduce (fn [acc _] {"n" acc}) {} (range 2001))]
+    (is (thrown? clojure.lang.ExceptionInfo (c/remove-buffers nested)))))
+
+(deftest remove-buffers-allows-dag
+  (let [shared {"v" 1}
+        state {"a" shared "b" shared}
+        [stripped _ _] (c/remove-buffers state)]
+    (is (= {"a" {"v" 1} "b" {"v" 1}} stripped))))
+
 ;; ---- serialization: dump/load_document certified vs widget-state.json ----
 
 (defn widget-state-entries []

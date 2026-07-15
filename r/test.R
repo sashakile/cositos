@@ -81,6 +81,23 @@ restored <- put_buffers(r$stripped, r$paths, r$buffers)
 check(identical(restored[["x"]][["ar"]], blob), "restored nested map buffer")
 check(identical(restored[["xs"]][[1]], blob), "restored list-slot buffer")
 
+# ---- buffer-split edge cases: cycle detection and depth capping ----
+# R's copy-on-write semantics make self-referential lists impossible through normal means
+# (lists are always copied on mutation), so cycle detection is a no-op guard.
+
+# Deep nesting must raise a clear error, not stack-overflow.
+expect_error({
+  state <- list()
+  for (i in 1:2000) state <- list(n = state)
+  remove_buffers(state)
+}, "depth capping raises error")
+
+# Shared acyclic subtrees (DAG) are fine.
+shared <- list(v = 1L)
+state <- list(a = shared, b = shared)
+r <- remove_buffers(state)
+check(json_equal(r$stripped, list(a = list(v = 1L), b = list(v = 1L))), "DAG not misreported as cycle")
+
 # ---- serialization: dump/load_document vs widget-state.json ----
 widget_state_entries <- function() {
   list(

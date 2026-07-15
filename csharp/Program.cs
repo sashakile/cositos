@@ -159,5 +159,33 @@ ExpectThrows(() => Core.LoadModel(("m", Obj(
     ("buffers", Arr(Obj(("path", Arr("data")), ("encoding", "hex"), ("data", "00"))))))),
     "reject non-base64 encoding");
 
+// ---- buffer-split edge cases: cycle detection and depth capping ----
+{
+    // Self-referential container must raise a clear error, not stack-overflow.
+    var state = new Dictionary<string, object?>();
+    state["a"] = 1L;
+    state["self"] = state;
+    ExpectThrows(() => Core.RemoveBuffers(state), "cycle detection raises InvalidOperationException");
+}
+{
+    // Deep nesting must raise a clear error naming the depth.
+    Dictionary<string, object?> state = new();
+    var node = state;
+    for (var i = 0; i < 2000; i++)
+    {
+        var child = new Dictionary<string, object?>();
+        node["n"] = child;
+        node = child;
+    }
+    ExpectThrows(() => Core.RemoveBuffers(state), "depth capping raises InvalidOperationException");
+}
+{
+    // Shared acyclic subtrees (DAG) is fine — not a cycle.
+    var shared = new Dictionary<string, object?> { ["v"] = 1L };
+    var state = new Dictionary<string, object?> { ["a"] = shared, ["b"] = shared };
+    var (stripped, _, _) = Core.RemoveBuffers(state);
+    Check(JsonEqual(stripped, Obj(("a", Obj(("v", 1L))), ("b", Obj(("v", 1L))))), "DAG is not misreported as cycle");
+}
+
 Console.WriteLine($"\nRan {count} checks, {failures} failures.");
 return failures > 0 ? 1 : 0;

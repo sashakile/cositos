@@ -1,0 +1,4 @@
+[
+  ["open", {"kind": "inbound", "message": {"method": "bogus"}}, {}, "open", []
+  ]
+]
