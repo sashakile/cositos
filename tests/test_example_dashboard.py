@@ -311,7 +311,8 @@ def test_download_button_never_receives_inbound_state_from_slider_or_dropdown():
     dashboard.wire(slider_t, dropdown_t, summary_t, download_transport=download_t)
 
     assert dashboard.download_widget is not None
-    assert dashboard.download_widget._set_state is None
+    # Download widget is a pure projection — never receives inbound state.
+    assert dashboard.download_widget._shell._set_state is None
 
 
 def test_restore_document_recovers_the_downloaded_state_in_a_fresh_session(tmp_path):
