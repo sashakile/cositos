@@ -383,6 +383,90 @@ b64(buffers) = [base64encode(b) for b in buffers]
         end
     end
 
+    # ---- lifecycle reducer certification against shared fixtures ----
+    @testset "lifecycle reducer" begin
+        LIFECYCLE = joinpath(FIXTURES, "lifecycle")
+
+        function _to_phase(s::AbstractString)
+            s == "unopened" && return Cositos.UNOPENED
+            s == "open" && return Cositos.OPEN
+            s == "closed" && return Cositos.CLOSED
+            error("unknown phase: $s")
+        end
+
+        function _to_event(ev::Dict)
+            kind = ev["kind"]
+            if kind == "open"
+                return Cositos.Open()
+            elseif kind == "send_state"
+                include_set = get(ev, "include", nothing)
+                return Cositos.SendState(; include=include_set)
+            elseif kind == "send_custom"
+                return Cositos.SendCustom(get(ev, "content", nothing);
+                                           buffers=get(ev, "buffers", Any[]))
+            elseif kind == "inbound"
+                return Cositos.Inbound(Dict{String,Any}(ev["message"]);
+                                        buffers=get(ev, "buffers", Any[]))
+            elseif kind == "close"
+                return Cositos.Close()
+            elseif kind == "comm_id_assigned"
+                return Cositos.CommIdAssigned(ev["id"])
+            else
+                error("unknown event kind: $kind")
+            end
+        end
+
+        function _effects_match(fx_effects::Vector{<:Any}, got_effects::Vector{<:Any})
+            length(fx_effects) == length(got_effects) || return false
+            for (fe, ge) in zip(fx_effects, got_effects)
+                fe_kind = fe["kind"]
+                if fe_kind == "send"
+                    ge isa Cositos.Send || return false
+                    haskey(fe, "msg_type") && fe["msg_type"] != ge.msg_type && return false
+                elseif fe_kind == "listen"
+                    ge isa Cositos.Listen || return false
+                elseif fe_kind == "apply_state"
+                    ge isa Cositos.ApplyState || return false
+                elseif fe_kind == "invoke_custom"
+                    ge isa Cositos.InvokeCustom || return false
+                elseif fe_kind == "error"
+                    ge isa Cositos.Error || return false
+                else
+                    return false
+                end
+            end
+            return true
+        end
+
+        for fx_file in readdir(LIFECYCLE)
+            startswith(fx_file, ".") && continue
+            fx_path = joinpath(LIFECYCLE, fx_file)
+            entries = JSON.parsefile(fx_path)
+            @testset "$(fx_file)" for entry in entries
+                phase_in_str, ev_dict, state_in = entry[1], entry[2], entry[3]
+                phase_out_str = entry[4]
+                fx_effects = entry[5]
+                caps = length(entry) >= 6 ?
+                    entry[6] : Dict{String,Any}()
+
+                phase_in = _to_phase(phase_in_str)
+                event = _to_event(Dict{String,Any}(ev_dict))
+                state = Dict{String,Any}(state_in)
+                capabilities = Cositos.TransportCapabilities(
+                    supports_receive=get(caps, "supports_receive", true),
+                    supports_request_state=get(caps, "supports_request_state", true),
+                    supports_custom=get(caps, "supports_custom", true),
+                    supports_buffers=get(caps, "supports_buffers", true),
+                )
+
+                phase_out, effects = Cositos.reduce(phase_in, event, state, capabilities)
+
+                @test phase_out == _to_phase(phase_out_str)
+                @test _effects_match(fx_effects, effects)
+            end
+        end
+    end
+
     include("host_tests.jl")
     include("controls_tests.jl")
 end

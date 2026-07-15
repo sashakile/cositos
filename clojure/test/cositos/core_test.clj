@@ -77,7 +77,7 @@
 ;; ---- buffer-split edge cases: cycle detection and depth capping ----
 
 (deftest remove-buffers-caps-deep-nesting
-  (let [nested (reduce (fn [acc _] {"n" acc}) {} (range 2001))]
+  (let [nested (reduce (fn [acc _] {"n" acc}) {} (range 600))]
     (is (thrown? clojure.lang.ExceptionInfo (c/remove-buffers nested)))))
 
 (deftest remove-buffers-allows-dag

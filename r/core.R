@@ -21,7 +21,7 @@ ANYWIDGET_MODULE_VERSION <- "~0.11.*"
 STATE_VERSION_MAJOR <- 2L
 STATE_VERSION_MINOR <- 0L
 
-immutable_fields <- function(version) {
+immutable_fields <- function(version = ANYWIDGET_MODULE_VERSION) {
   list(
     "_model_module" = "anywidget",
     "_model_name" = "AnyModel",
@@ -246,3 +246,133 @@ load_document <- function(doc) {
   st <- doc[["state"]]
   lapply(names(st), function(id) load_model(list(id, st[[id]])))
 }
+
+# ---- lifecycle types ----
+
+.UNOPENED <- "unopened"
+.OPEN <- "open"
+.CLOSED <- "closed"
+
+make_capabilities <- function(supports_receive = TRUE, supports_request_state = TRUE,
+                                supports_custom = TRUE, supports_buffers = TRUE) {
+  list(
+    supports_receive = supports_receive,
+    supports_request_state = supports_request_state,
+    supports_custom = supports_custom,
+    supports_buffers = supports_buffers
+  )
+}
+
+.default_capabilities <- make_capabilities()
+
+# Effect constructors
+make_send <- function(msg_type, data, buffers = list(), metadata = NULL) {
+  list(kind = "send", msg_type = msg_type, data = data, buffers = buffers, metadata = metadata)
+}
+make_listen <- function() list(kind = "listen")
+make_apply_state <- function(state) list(kind = "apply_state", state = state)
+make_invoke_custom <- function(content, buffers = list()) list(kind = "invoke_custom", content = content, buffers = buffers)
+make_error <- function(message) list(kind = "error", message = message)
+
+# Event constructors
+make_open <- function() list(kind = "open")
+make_send_state <- function(include = NULL) list(kind = "send_state", include = include)
+make_send_custom <- function(content, buffers = list()) list(kind = "send_custom", content = content, buffers = buffers)
+make_inbound <- function(message, buffers = list()) list(kind = "inbound", message = message, buffers = buffers)
+make_close <- function() list(kind = "close")
+make_comm_id_assigned <- function(id) list(kind = "comm_id_assigned", id = id)
+
+# ---- lifecycle reducer ----
+
+reduce <- function(phase, event, current_state, capabilities = .default_capabilities) {
+  kind <- event$kind
+  if (kind == "open") {
+    .reduce_open(phase, current_state, capabilities)
+  } else if (kind == "send_state") {
+    .reduce_send_state(phase, event, current_state, capabilities)
+  } else if (kind == "send_custom") {
+    .reduce_send_custom(phase, event, capabilities)
+  } else if (kind == "inbound") {
+    .reduce_inbound(phase, event, current_state, capabilities)
+  } else if (kind == "close") {
+    .reduce_close(phase)
+  } else if (kind == "comm_id_assigned") {
+    list(.OPEN, list())
+  } else {
+    list(phase, list(make_error(paste("unknown event kind:", kind))))
+  }
+}
+
+.reduce_open <- function(phase, current_state, capabilities) {
+  if (phase == .UNOPENED || phase == .CLOSED) {
+    full_state <- modifyList(immutable_fields(), current_state)
+    msg <- build_comm_open(full_state)
+    effects <- list(make_send("comm_open", msg$data, msg$buffers, msg$metadata))
+    if (isTRUE(capabilities$supports_receive)) {
+      effects <- c(effects, list(make_listen()))
+    }
+    list(.OPEN, effects)
+  } else {
+    list(.OPEN, list())
+  }
+}
+
+.reduce_send_state <- function(phase, event, current_state, capabilities) {
+  if (phase != .OPEN) {
+    return(list(phase, list(make_error("send_state() requires an open comm; call open() first"))))
+  }
+  if (is.null(event$include)) {
+    state <- modifyList(immutable_fields(), current_state)
+  } else {
+    state <- current_state[names(current_state) %in% event$include]
+  }
+  msg <- build_update(state)
+  list(phase, list(make_send("comm_msg", msg$data, msg$buffers)))
+}
+
+.reduce_send_custom <- function(phase, event, capabilities) {
+  if (phase != .OPEN) {
+    return(list(phase, list(make_error("send_custom() requires an open comm; call open() first"))))
+  }
+  if (!isTRUE(capabilities$supports_custom)) {
+    return(list(phase, list(make_error("custom messages are not supported by this transport"))))
+  }
+  if (!isTRUE(capabilities$supports_buffers) && length(event$buffers) > 0) {
+    return(list(phase, list(make_error("buffers are not supported by this transport"))))
+  }
+  list(phase, list(make_send("comm_msg", build_custom(event$content), event$buffers)))
+}
+
+.reduce_inbound <- function(phase, event, current_state, capabilities) {
+  if (phase != .OPEN) {
+    return(list(phase, list()))
+  }
+  msg <- parse_message(event$message)
+  if (identical(msg$type, "update")) {
+    state <- msg$state
+    if (length(msg$buffer_paths) > 0) {
+      state <- put_buffers(state, msg$buffer_paths, event$buffers)
+    }
+    list(phase, list(make_apply_state(state)))
+  } else if (identical(msg$type, "request_state")) {
+    if (!isTRUE(capabilities$supports_request_state)) {
+      return(list(phase, list()))
+    }
+    .reduce_send_state(phase, make_send_state(), current_state, capabilities)
+  } else if (identical(msg$type, "custom")) {
+    list(phase, list(make_invoke_custom(msg$content, event$buffers)))
+  } else {
+    list(phase, list())
+  }
+}
+
+.reduce_close <- function(phase) {
+  if (phase == .OPEN) {
+    list(.CLOSED, list(make_send("comm_close", list())))
+  } else {
+    list(phase, list())
+  }
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+

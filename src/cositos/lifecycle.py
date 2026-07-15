@@ -1,4 +1,4 @@
-"""Pure widget lifecycle reducer — a `reduce(phase, event, state, capabilities) → (new_phase, effects[])` function.
+"""Pure widget lifecycle reducer: `reduce(phase, event, state, caps) -> (new_phase, effects[])`.
 
 The widget lifecycle is encoded as a deterministic state machine with three phases
 (Unopened, Open, Closed), six event types, and five effect types. The reducer is a
@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import dataclasses
 from enum import Enum
-from typing import Any
-
+from typing import Any, Callable
 
 # ---------------------------------------------------------------------------
 # Phase
@@ -332,12 +331,16 @@ class WidgetShell:
         self._get_state = get_state
         self._set_state = set_state
         self._on_custom = on_custom
-        self._capabilities = capabilities
-        if self._capabilities is None:
-            # Infer from transport attributes (matching Widget behavior)
-            self._capabilities = TransportCapabilities(
+        caps = capabilities
+        if caps is None:
+            # Infer from transport attributes
+            caps = TransportCapabilities(
                 supports_receive=getattr(transport, "supports_receive", False),
+                supports_request_state=getattr(transport, "supports_request_state", True),
+                supports_custom=getattr(transport, "supports_custom", True),
+                supports_buffers=getattr(transport, "supports_buffers", True),
             )
+        self._capabilities = caps
         self._phase: Phase = Phase.UNOPENED
         self.model_id = model_id
         self._listening = False
@@ -439,16 +442,7 @@ class WidgetShell:
         """Dispatch an inbound message from the transport back into ``reduce``."""
         from cositos import protocol
         message = protocol.parse_message(data)
-        if isinstance(message, (protocol.Update, protocol.Custom)):
-            self._execute(
-                reduce(
-                    self._phase,
-                    Inbound(message=data, buffers=buffers),
-                    self._get_state(),
-                    self._capabilities,
-                )
-            )
-        elif isinstance(message, protocol.RequestState):
+        if isinstance(message, (protocol.Update, protocol.Custom, protocol.RequestState)):
             self._execute(
                 reduce(
                     self._phase,

@@ -187,5 +187,77 @@ ExpectThrows(() => Core.LoadModel(("m", Obj(
     Check(JsonEqual(stripped, Obj(("a", Obj(("v", 1L))), ("b", Obj(("v", 1L))))), "DAG is not misreported as cycle");
 }
 
+// ---- lifecycle reducer fixture certification ----
+Phase PhaseFromStr(string s) => s switch
+{
+    "unopened" => Phase.Unopened,
+    "open" => Phase.Open,
+    "closed" => Phase.Closed,
+    _ => throw new ArgumentException($"unknown phase: {s}"),
+};
+
+object? EventFromDict(Dictionary<string, object?> d) => ((string)d["kind"]) switch
+{
+    "open" => new Open(),
+    "send_state" => new SendState(
+        d.TryGetValue("include", out var incl) ? new HashSet<string>(((List<object?>)incl!).Cast<string>()) : null),
+    "send_custom" => new SendCustom(d.GetValueOrDefault("content"),
+        d.TryGetValue("buffers", out var bufs) ? (List<object?>?)bufs : null),
+    "inbound" => new Inbound((Dictionary<string, object?>)d["message"]!,
+        d.TryGetValue("buffers", out var bufs2) ? (List<object?>?)bufs2 : null),
+    "close" => new Close(),
+    "comm_id_assigned" => new CommIdAssigned((string)d["id"]!),
+    _ => throw new ArgumentException($"unknown event kind: {d["kind"]}"),
+};
+
+{
+    var lifecycleDir = $"{FixturesDir}/lifecycle";
+    foreach (var fxFile in Directory.GetFiles(lifecycleDir, "*.json"))
+    {
+        var fxName = Path.GetFileName(fxFile);
+        var entries = (List<object?>)Core.FromJson(File.ReadAllText(fxFile))!;
+        foreach (var rawEntry in entries)
+        {
+            var entry = (List<object?>)rawEntry!;
+            var phaseInStr = (string)entry[0]!;
+            var evDict = (Dictionary<string, object?>)entry[1]!;
+            var stateIn = (Dictionary<string, object?>)entry[2]!;
+            var phaseOutStr = (string)entry[3]!;
+            var fxEffects = (List<object?>)entry[4]!;
+            var caps = entry.Count >= 6 ? (Dictionary<string, object?>)entry[5]! : new Dictionary<string, object?>();
+
+            var phaseIn = PhaseFromStr(phaseInStr);
+            var ev = EventFromDict(evDict);
+            var capabilities = new TransportCapabilities(
+                SupportsReceive: caps.TryGetValue("supports_receive", out var sr) ? (bool)sr : true,
+                SupportsRequestState: caps.TryGetValue("supports_request_state", out var rs) ? (bool)rs : true,
+                SupportsCustom: caps.TryGetValue("supports_custom", out var sc) ? (bool)sc : true,
+                SupportsBuffers: caps.TryGetValue("supports_buffers", out var sb) ? (bool)sb : true
+            );
+
+            var (phaseOut, effects) = Lifecycle.Reduce(phaseIn, ev, stateIn, capabilities);
+
+            Check(phaseOut == PhaseFromStr(phaseOutStr), $"{fxName}: phase {phaseInStr} -> {phaseOutStr}");
+            Check(effects.Count == fxEffects.Count, $"{fxName}: effect count {effects.Count} == {fxEffects.Count}");
+
+            for (int i = 0; i < Math.Min(effects.Count, fxEffects.Count); i++)
+            {
+                var fe = (Dictionary<string, object?>)fxEffects[i]!;
+                var kind = (string)fe["kind"]!;
+                bool kindOk = kind switch
+                {
+                    "send" => effects[i] is Send s && (!fe.TryGetValue("msg_type", out var mt) || (string)mt! == s.MsgType),
+                    "listen" => effects[i] is Listen,
+                    "apply_state" => effects[i] is ApplyState,
+                    "invoke_custom" => effects[i] is InvokeCustom,
+                    "error" => effects[i] is Error,
+                    _ => false,
+                };
+                Check(kindOk, $"{fxName}: effect[{i}] kind={kind}");
+            }
+        }
+    }
+}
+
 Console.WriteLine($"\nRan {count} checks, {failures} failures.");
 return failures > 0 ? 1 : 0;

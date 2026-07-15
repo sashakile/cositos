@@ -142,5 +142,62 @@ expect_error(
   "reject non-base64 encoding"
 )
 
+# ---- lifecycle reducer fixture certification ----
+lifecycle_dir <- file.path(FIXTURES_DIR, "lifecycle")
+fx_files <- list.files(lifecycle_dir, pattern = "\\.json$")
+for (fx_file in fx_files) {
+  fx_path <- file.path(lifecycle_dir, fx_file)
+  entries <- fromJSON(paste(readLines(fx_path), collapse = "\n"), simplifyVector = FALSE)
+  for (entry in entries) {
+    phase_in_str <- entry[[1]]
+    ev_dict <- entry[[2]]
+    state_in <- entry[[3]]
+    phase_out_str <- entry[[4]]
+    fx_effects <- entry[[5]]
+    caps <- if (length(entry) >= 6) entry[[6]] else list()
+
+    phase_in <- switch(phase_in_str, "unopened" = .UNOPENED, "open" = .OPEN, "closed" = .CLOSED, stop(paste("unknown phase:", phase_in_str)))
+    phase_out <- switch(phase_out_str, "unopened" = .UNOPENED, "open" = .OPEN, "closed" = .CLOSED, stop(paste("unknown phase:", phase_out_str)))
+
+    event <- switch(ev_dict$kind,
+      "open" = make_open(),
+      "send_state" = make_send_state(include = ev_dict$include),
+      "send_custom" = make_send_custom(ev_dict$content %||% NULL, buffers = ev_dict$buffers %||% list()),
+      "inbound" = make_inbound(ev_dict$message, buffers = ev_dict$buffers %||% list()),
+      "close" = make_close(),
+      "comm_id_assigned" = make_comm_id_assigned(ev_dict$id),
+      stop(paste("unknown event kind:", ev_dict$kind)))
+
+    capabilities <- make_capabilities(
+      supports_receive = caps$supports_receive %||% TRUE,
+      supports_request_state = caps$supports_request_state %||% TRUE,
+      supports_custom = caps$supports_custom %||% TRUE,
+      supports_buffers = caps$supports_buffers %||% TRUE
+    )
+
+    result <- reduce(phase_in, event, state_in, capabilities)
+    result_phase <- result[[1]]
+    result_effects <- result[[2]]
+
+    check(identical(result_phase, phase_out), paste(fx_file, "phase:", phase_in_str, "->", phase_out_str))
+    check(length(result_effects) == length(fx_effects), paste(fx_file, "effect count:", length(result_effects), "==", length(fx_effects)))
+
+    for (i in seq_along(result_effects)) {
+      if (i > length(fx_effects)) break
+      fe <- fx_effects[[i]]
+      kind <- fe$kind
+      ge <- result_effects[[i]]
+      kind_ok <- switch(kind,
+        "send" = identical(ge$kind, "send") && (is.null(fe$msg_type) || identical(fe$msg_type, ge$msg_type)),
+        "listen" = identical(ge$kind, "listen"),
+        "apply_state" = identical(ge$kind, "apply_state"),
+        "invoke_custom" = identical(ge$kind, "invoke_custom"),
+        "error" = identical(ge$kind, "error"),
+        FALSE)
+      check(isTRUE(kind_ok), paste(fx_file, "effect[", i-1, "] kind =", kind))
+    }
+  }
+}
+
 cat(sprintf("\nRan %d checks, %d failures.\n", .count, .failures))
 if (.failures > 0L) quit(status = 1L)

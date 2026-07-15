@@ -22,8 +22,14 @@ export PROTOCOL_VERSION, ANYWIDGET_MODULE_VERSION,
     remove_buffers, put_buffers!,
     dump_model, load_model, dump_document, load_document,
     view_identity, with_view_identity,
-    Widget, open!, close!, send_state!, send_custom!,
-    supports_receive, comm_id, transport_send, transport_on_message, ijulia_transport,
+    WidgetShell, Widget, open!, close!, send_state!, send_custom!,
+    Phase, UNOPENED, OPEN, CLOSED,
+    TransportCapabilities,
+    Send, Listen, ApplyState, InvokeCustom, Error,
+    Open, SendState, SendCustom, Inbound, Close, CommIdAssigned,
+    reduce,
+    supports_receive, supports_request_state, supports_custom, supports_buffers,
+    comm_id, transport_send, transport_on_message, ijulia_transport,
     PlutoWidget, local_front_runtime_url,
     int_slider, dropdown, vbox, hbox
 
@@ -69,6 +75,385 @@ end
 
 _immutable_fields(version::AbstractString) =
     merge(model_identity(version), view_identity(version))
+
+# ---- lifecycle types (effect/event vocabulary, phase, capabilities) ----
+
+"""
+    Phase
+
+The three phases of a widget's lifecycle: `UNOPENED`, `OPEN`, `CLOSED`.
+"""
+@enum Phase begin
+    UNOPENED
+    OPEN
+    CLOSED
+end
+
+"""
+    TransportCapabilities
+
+Declares which event kinds the transport can carry. The reducer uses these flags
+to decide which effects to produce.
+"""
+Base.@kwdef struct TransportCapabilities
+    supports_receive::Bool = true
+    supports_request_state::Bool = true
+    supports_custom::Bool = true
+    supports_buffers::Bool = true
+end
+
+# ---- Effect types ----
+
+"Send a Jupyter comm message to the frontend."
+struct Send
+    msg_type::String
+    data::Dict{String,Any}
+    buffers::Vector{Any}
+    metadata::Union{Dict{String,Any},Nothing}
+end
+Send(msg_type::AbstractString, data; buffers=Any[], metadata=nothing) =
+    Send(String(msg_type), Dict{String,Any}(data), collect(buffers), metadata)
+
+"Register an inbound message callback on the transport."
+struct Listen end
+
+"Apply an inbound state dict to the host object."
+struct ApplyState
+    state::Dict{String,Any}
+end
+
+"Invoke the host's custom message handler. Buffers are raw `Vector{UInt8}`."
+struct InvokeCustom
+    content::Any
+    buffers::Vector{Any}
+end
+InvokeCustom(content; buffers=Any[]) = InvokeCustom(content, collect(Vector{UInt8}, buffers))
+
+"An error effect — the shell shall raise an error in response."
+struct Error
+    message::String
+end
+Error(message::AbstractString) = Error(String(message))
+
+# ---- Event types ----
+
+"User/host wants to open the comm."
+struct Open end
+
+"User/host wants to send an update with optional include filter."
+struct SendState
+    include::Union{Set{String},Nothing}
+end
+SendState(; include=nothing) = SendState(include === nothing ? nothing : Set{String}(include))
+
+"User/host wants to send a custom message."
+struct SendCustom
+    content::Any
+    buffers::Vector{Any}
+end
+SendCustom(content; buffers=Any[]) = SendCustom(content, collect(buffers))
+
+"An inbound message arrived from the transport, with buffers already merged."
+struct Inbound
+    message::Dict{String,Any}
+    buffers::Vector{Any}
+end
+Inbound(message; buffers=Any[]) = Inbound(Dict{String,Any}(message), collect(buffers))
+
+"User/host wants to close the comm."
+struct Close end
+
+"The transport assigned a comm id after a comm_open send."
+struct CommIdAssigned
+    id::String
+end
+CommIdAssigned(id::AbstractString) = CommIdAssigned(String(id))
+
+# ---- lifecycle reducer ----
+
+"""
+    reduce(phase, event, current_state, capabilities) -> (new_phase, effects)
+
+Pure widget lifecycle reducer. Encodes the widget lifecycle as a deterministic
+state machine with three phases, six event types, and five effect types.
+No I/O, no side effects — the shell walks the returned effects.
+"""
+function reduce(
+    phase::Phase,
+    event::Any,
+    current_state::Dict{String,Any},
+    capabilities::TransportCapabilities,
+)
+    if event isa Open
+        return _reduce_open(phase, current_state, capabilities)
+    elseif event isa SendState
+        return _reduce_send_state(phase, event, current_state, capabilities)
+    elseif event isa SendCustom
+        return _reduce_send_custom(phase, event, capabilities)
+    elseif event isa Inbound
+        return _reduce_inbound(phase, event, current_state, capabilities)
+    elseif event isa Close
+        return _reduce_close(phase)
+    elseif event isa CommIdAssigned
+        return OPEN, Any[]
+    else
+        return phase, Any[Error("unknown event type: $(typeof(event))")]
+    end
+end
+
+function _reduce_open(
+    phase::Phase,
+    current_state::Dict{String,Any},
+    capabilities::TransportCapabilities,
+)
+    if phase == UNOPENED || phase == CLOSED
+        data, buffers, metadata = build_comm_open(
+            merge(_immutable_fields(ANYWIDGET_MODULE_VERSION), current_state),
+        )
+        effects = Any[Send("comm_open", data; buffers=buffers, metadata=metadata)]
+        if capabilities.supports_receive
+            push!(effects, Listen())
+        end
+        return OPEN, effects
+    end
+    return OPEN, Any[]
+end
+
+function _reduce_send_state(
+    phase::Phase,
+    event::SendState,
+    current_state::Dict{String,Any},
+    capabilities::TransportCapabilities,
+)
+    if phase != OPEN
+        return phase, Any[Error("send_state() requires an open comm; call open() first")]
+    end
+    if event.include === nothing
+        state = merge(_immutable_fields(ANYWIDGET_MODULE_VERSION), current_state)
+    else
+        state = Dict{String,Any}(k => v for (k, v) in current_state if k in event.include)
+    end
+    data, buffers = build_update(state)
+    return phase, Any[Send("comm_msg", data; buffers=buffers)]
+end
+
+function _reduce_send_custom(
+    phase::Phase,
+    event::SendCustom,
+    capabilities::TransportCapabilities,
+)
+    if phase != OPEN
+        return phase, Any[Error("send_custom() requires an open comm; call open() first")]
+    end
+    if !capabilities.supports_custom
+        return phase, Any[Error("custom messages are not supported by this transport")]
+    end
+    if !capabilities.supports_buffers && !isempty(event.buffers)
+        return phase, Any[Error("buffers are not supported by this transport")]
+    end
+    data = build_custom(event.content)
+    return phase, Any[Send("comm_msg", data; buffers=event.buffers)]
+end
+
+function _reduce_inbound(
+    phase::Phase,
+    event::Inbound,
+    current_state::Dict{String,Any},
+    capabilities::TransportCapabilities,
+)
+    if phase != OPEN
+        return phase, Any[]
+    end
+    message = parse_message(event.message)
+    if message isa Update
+        state = Dict{String,Any}(message.state)
+        bufs = [Vector{UInt8}(b) for b in event.buffers]
+        put_buffers!(state, message.buffer_paths, bufs)
+        return phase, Any[ApplyState(state)]
+    elseif message isa RequestState
+        if !capabilities.supports_request_state
+            return phase, Any[]
+        end
+        return _reduce_send_state(phase, SendState(), current_state, capabilities)
+    elseif message isa Custom
+        return phase, Any[InvokeCustom(message.content; buffers=Any[Vector{UInt8}(b) for b in event.buffers])]
+    else
+        return phase, Any[]
+    end
+end
+
+function _reduce_close(phase::Phase)
+    if phase == OPEN
+        return CLOSED, Any[Send("comm_close", Dict{String,Any}())]
+    end
+    return phase, Any[]
+end
+
+# ---- imperative shell ----
+
+"""
+    WidgetShell(transport; get_state, set_state=nothing, model_id="", on_custom=nothing, capabilities=nothing)
+
+Thin imperative shell that calls [`reduce`](@ref) and executes effects.
+Replaces the old `Widget` mutable struct's lifecycle logic.
+"""
+mutable struct WidgetShell
+    transport::Any
+    get_state::Function
+    set_state::Union{Function,Nothing}
+    on_custom::Union{Function,Nothing}
+    model_id::String
+    phase::Phase
+    capabilities::TransportCapabilities
+    listening::Bool
+end
+
+function WidgetShell(
+    transport;
+    get_state::Function,
+    set_state::Union{Function,Nothing}=nothing,
+    model_id::AbstractString="",
+    on_custom::Union{Function,Nothing}=nothing,
+    capabilities::Union{TransportCapabilities,Nothing}=nothing,
+)
+    caps = if capabilities === nothing
+        TransportCapabilities(
+            supports_receive=supports_receive(transport),
+            supports_request_state=supports_request_state(transport),
+            supports_custom=supports_custom(transport),
+            supports_buffers=supports_buffers(transport),
+        )
+    else
+        capabilities
+    end
+    return WidgetShell(
+        transport, get_state, set_state, on_custom,
+        String(model_id), UNOPENED, caps, false,
+    )
+end
+
+"Send the `comm_open` and start listening for inbound messages. Idempotent."
+function open!(s::WidgetShell)
+    s.phase == OPEN && return s
+    _execute!(s, reduce(s.phase, Open(), s.get_state(), s.capabilities))
+    return s
+end
+
+"Send an `update` with the full state, or only the keys in `include`."
+function send_state!(s::WidgetShell; include=nothing)
+    _execute!(s, reduce(s.phase, SendState(; include=include), s.get_state(), s.capabilities))
+    return nothing
+end
+
+"Send a `custom` message to the frontend."
+function send_custom!(s::WidgetShell, content; buffers=Any[])
+    _execute!(s, reduce(s.phase, SendCustom(content; buffers=buffers), s.get_state(), s.capabilities))
+    return nothing
+end
+
+"Close the comm channel. Idempotent."
+function close!(s::WidgetShell)
+    _execute!(s, reduce(s.phase, Close(), Dict{String,Any}(), s.capabilities))
+    return nothing
+end
+
+"The widget-view mimebundle for display, referencing the shell's `model_id`."
+mimebundle(s::WidgetShell, repr_text::AbstractString="") = mimebundle(s.model_id, repr_text)
+
+# ---- internal: execute effects ----
+
+function _execute!(s::WidgetShell, result::Tuple{Phase,Vector{Any}})
+    new_phase, effects = result
+    s.phase = new_phase
+    for effect in effects
+        _exec_one!(s, effect)
+    end
+    return nothing
+end
+
+function _exec_one!(s::WidgetShell, effect::Any)
+    if effect isa Send
+        transport_send(s.transport, effect.msg_type, effect.data;
+                       buffers=effect.buffers, metadata=effect.metadata)
+        if effect.msg_type == "comm_open"
+            cid = comm_id(s.transport)
+            if !isempty(cid)
+                s.model_id = cid
+                _execute!(s, reduce(s.phase, CommIdAssigned(cid), Dict{String,Any}(), s.capabilities))
+            end
+        end
+    elseif effect isa Listen
+        if !s.listening
+            transport_on_message(s.transport, (d, b) -> _handle_inbound!(s, d, b))
+            s.listening = true
+        end
+    elseif effect isa ApplyState
+        if s.set_state !== nothing
+            s.set_state(effect.state)
+        end
+    elseif effect isa InvokeCustom
+        if s.on_custom !== nothing
+            s.on_custom(effect.content, effect.buffers)
+        end
+    elseif effect isa Error
+        error(effect.message)
+    end
+    return nothing
+end
+
+function _handle_inbound!(s::WidgetShell, data, buffers)
+    message = parse_message(data)
+    if message isa Update || message isa RequestState || message isa Custom
+        _execute!(s, reduce(s.phase, Inbound(data; buffers=buffers), s.get_state(), s.capabilities))
+    end
+    return nothing
+end
+
+# ---- deprecated Widget wrapper (delegates to WidgetShell) ----
+
+"Deprecated wrapper around WidgetShell. Kept for backward compatibility."
+mutable struct Widget
+    shell::WidgetShell
+    model_id::String
+    opened::Bool
+end
+
+function Widget(
+    transport;
+    get_state::Function,
+    set_state::Union{Function,Nothing}=nothing,
+    model_id::AbstractString="",
+    on_custom::Union{Function,Nothing}=nothing,
+)
+    Base.depwarn("Widget is deprecated; use WidgetShell instead", :Widget)
+    shell = WidgetShell(transport; get_state=get_state, set_state=set_state,
+                         model_id=model_id, on_custom=on_custom)
+    return Widget(shell, String(model_id), shell.phase == OPEN)
+end
+
+function open!(w::Widget)
+    open!(w.shell)
+    w.model_id = w.shell.model_id
+    w.opened = true
+    return w
+end
+function send_state!(w::Widget; include=nothing)
+    send_state!(w.shell; include=include)
+    w.model_id = w.shell.model_id
+    return nothing
+end
+function send_custom!(w::Widget, content; buffers=Any[])
+    send_custom!(w.shell, content; buffers=buffers)
+    w.model_id = w.shell.model_id
+    return nothing
+end
+function close!(w::Widget)
+    close!(w.shell)
+    w.model_id = w.shell.model_id
+    w.opened = false
+    return nothing
+end
+mimebundle(w::Widget, repr_text::AbstractString="") = mimebundle(w.shell, repr_text)
 
 # ---- buffer split / merge (protocol v2 nested rules) ----
 
@@ -349,13 +734,20 @@ end
 
 # ---- Widget façade + Transport contract (kernel-agnostic) ----
 
-# The Transport seam: the only kernel-facing interface the core depends on. A host
-# language supplies a concrete transport (e.g. over IJulia's Comm API) by adding methods
-# to these functions. The core never imports kernel code — mirrors `cositos.transport` /
-# `cositos.jupyter.CommTransport` in the Python port.
-
 """Whether the transport can receive frontend→kernel messages (one-way otherwise)."""
 supports_receive(::Any) = false
+
+"Whether the transport supports request_state responses."
+supports_request_state(::Any) = true
+supports_request_state(::Nothing) = false
+
+"Whether the transport supports custom messages."
+supports_custom(::Any) = true
+supports_custom(::Nothing) = false
+
+"Whether the transport supports binary buffers."
+supports_buffers(::Any) = true
+supports_buffers(::Nothing) = false
 
 """The transport's comm id (widget `model_id`); empty until opened."""
 comm_id(::Any) = ""
@@ -389,145 +781,8 @@ function ijulia_transport(args...; kwargs...)
     )
 end
 
-"""
-    Widget(transport; get_state, set_state=nothing, model_id="", on_custom=nothing)
-
-Drive one anywidget-compatible widget over a `transport`. The host owns the state: it
-supplies `get_state` (returns the full state `Dict`, including `_esm`) and, to accept
-inbound updates, `set_state` (applies an inbound state `Dict`). Deliberately minimal — no
-observer autodetection; the host decides when state changed and calls [`send_state!`](@ref).
-Mirrors the Python `cositos.model.Widget`.
-"""
-mutable struct Widget
-    transport::Any
-    get_state::Function
-    set_state::Union{Function,Nothing}
-    on_custom::Union{Function,Nothing}
-    model_id::String
-    opened::Bool
-end
-
-function Widget(
-    transport;
-    get_state::Function,
-    set_state::Union{Function,Nothing}=nothing,
-    model_id::AbstractString="",
-    on_custom::Union{Function,Nothing}=nothing,
-)
-    return Widget(transport, get_state, set_state, on_custom, String(model_id), false)
-end
-
-"""
-    open!(widget) -> widget
-
-Send the `comm_open` and start listening for inbound messages. Idempotent: a second call
-while already open is a no-op (no duplicate `comm_open`), matching [`close!`](@ref).
-"""
-function open!(w::Widget)
-    w.opened && return w
-    data, buffers, metadata = build_comm_open(w.get_state())
-    transport_send(w.transport, "comm_open", data; buffers=buffers, metadata=metadata)
-    w.opened = true
-    # Adopt the transport's real comm id so the display bundle references the model the
-    # kernel actually opened (a comm generates its own id).
-    cid = comm_id(w.transport)
-    isempty(cid) || (w.model_id = cid)
-    if supports_receive(w.transport)
-        transport_on_message(w.transport, (d, b) -> _handle!(w, d, b))
-    end
-    return w
-end
-
-"""
-    send_state!(widget; include=nothing)
-
-Send an `update` with the full state, or only the keys in `include`. Requires an open comm.
-"""
-function send_state!(w::Widget; include=nothing)
-    _require_open(w, "send_state!")
-    state = w.get_state()
-    if include === nothing
-        # On a full send (triggered by request_state after JupyterLab reload without
-        # kernel restart), re-merge identity fields so the frontend can reconstruct
-        # its view class. Python reference does the same (cositos-k43).
-        state = merge(model_identity(ANYWIDGET_MODULE_VERSION),
-                       view_identity(ANYWIDGET_MODULE_VERSION),
-                       state)
-    else
-        state = Dict{String,Any}(k => v for (k, v) in state if k in include)
-    end
-    data, buffers = build_update(state)
-    transport_send(w.transport, "comm_msg", data; buffers=buffers)
-    return nothing
-end
-
-"""
-    send_custom!(widget, content; buffers=Any[])
-
-Send a `custom` message to the frontend (`model.on("msg:custom")`). Requires an open comm.
-"""
-function send_custom!(w::Widget, content; buffers=Any[])
-    _require_open(w, "send_custom!")
-    transport_send(w.transport, "comm_msg", build_custom(content); buffers=buffers)
-    return nothing
-end
-
-function _require_open(w::Widget, action::AbstractString)
-    w.opened || error("$(action) requires an open comm; call open!() first")
-    return nothing
-end
-
-function _handle!(w::Widget, data, buffers)
-    message = parse_message(data)
-    if message isa Update
-        if w.set_state !== nothing
-            state = Dict{String,Any}(message.state)
-            put_buffers!(state, message.buffer_paths, buffers)
-            w.set_state(state)
-        end
-    elseif message isa RequestState
-        send_state!(w)
-    elseif message isa Custom && w.on_custom !== nothing
-        w.on_custom(message.content, buffers)
-    end
-    return nothing
-end
-
-"""
-    close!(widget)
-
-Close the comm channel. Idempotent.
-"""
-function close!(w::Widget)
-    if w.opened
-        transport_send(w.transport, "comm_close", Dict{String,Any}())
-        w.opened = false
-    end
-    return nothing
-end
-
-"""
-    mimebundle(widget, repr_text="") -> Dict
-
-The widget-view mimebundle for display, referencing the widget's `model_id`.
-"""
-mimebundle(w::Widget, repr_text::AbstractString="") = mimebundle(w.model_id, repr_text)
-
 # ---- Real @jupyter-widgets/controls catalog (see ext/CositosControlsExt.jl) ----
 
-# The Julia port of Python's `cositos.contrib.controls` (cositos-70b.7): thin builders
-# over the SAME shared catalog (`../fixtures/controls-catalog.json`), reusing the real
-# ipywidgets frontend zoo's own identity verbatim, with zero core changes — mirrors the
-# `ijulia_transport` stub-in-core/implementation-in-extension pattern above so the JSON
-# dependency stays optional. Loads once `using JSON` activates `CositosControlsExt`.
-
-"""
-    int_slider(; value=0, min=0, max=100, kwargs...) -> Vector{Tuple{String,Dict}}
-
-A real `@jupyter-widgets/controls` `IntSliderModel` + its style/layout companions, built
-from the shared catalog `fixtures/controls-catalog.json`. Requires `JSON` to be loaded
-(the `CositosControlsExt` package extension provides the implementation): `using JSON`.
-"""
 function int_slider(args...; kwargs...)
     return error(
         "int_slider() requires JSON to be loaded; run `using JSON` first " *
@@ -535,15 +790,6 @@ function int_slider(args...; kwargs...)
     )
 end
 
-"""
-    dropdown(options; value=nothing, kwargs...) -> Vector{Tuple{String,Dict}}
-
-A real `@jupyter-widgets/controls` `DropdownModel` + its style/layout companions.
-`options`/`value` are the ergonomic constructor-shaped inputs; on the wire only
-`_options_labels` (label strings) and a 0-based `index` are synced traits — pass
-`index=` directly to bypass the `value`-to-`index` lookup. Requires `JSON` to be loaded
-(the `CositosControlsExt` package extension provides the implementation): `using JSON`.
-"""
 function dropdown(args...; kwargs...)
     return error(
         "dropdown() requires JSON to be loaded; run `using JSON` first " *
@@ -551,14 +797,6 @@ function dropdown(args...; kwargs...)
     )
 end
 
-"""
-    vbox(children; kwargs...) -> Vector{Tuple{String,Dict}}
-
-A real `@jupyter-widgets/controls` `VBoxModel` laying out `children` (previously built
-entries-lists) vertically; the returned entries flatten every descendant into one list.
-Requires `JSON` to be loaded (the `CositosControlsExt` package extension provides the
-implementation): `using JSON`.
-"""
 function vbox(args...; kwargs...)
     return error(
         "vbox() requires JSON to be loaded; run `using JSON` first " *
@@ -566,13 +804,6 @@ function vbox(args...; kwargs...)
     )
 end
 
-"""
-    hbox(children; kwargs...) -> Vector{Tuple{String,Dict}}
-
-See [`vbox`](@ref) for the `children` composition contract (identical, horizontal layout
-only). Requires `JSON` to be loaded (the `CositosControlsExt` package extension provides
-the implementation): `using JSON`.
-"""
 function hbox(args...; kwargs...)
     return error(
         "hbox() requires JSON to be loaded; run `using JSON` first " *
@@ -584,12 +815,7 @@ end
     local_front_runtime_url() -> String
 
 A `data:` URI embedding a self-contained bundle of `@cositos/front` (`front/src/*.js`)
-with no relative imports — usable as [`PlutoWidget`](@ref)'s `runtime_url` with **no
-npm publish, no CDN, and no local server**: it works fully offline. Unblocks Pluto usage
-before `@cositos/front` is published (cositos-z76.7); the default `runtime_url` in
-[`PlutoWidget`](@ref) stays the (currently unpublished) CDN URL for when it is. Requires
-`JSON` and `AbstractPlutoDingetjes` to be loaded (the `CositosPlutoExt` package
-extension provides the implementation).
+with no relative imports. Requires `JSON` and `AbstractPlutoDingetjes`.
 """
 function local_front_runtime_url(args...; kwargs...)
     return error(
@@ -599,33 +825,8 @@ function local_front_runtime_url(args...; kwargs...)
     )
 end
 
-# ---- Pluto.jl host (see ext/CositosPlutoExt.jl for the render + Bonds glue) ----
-
-"""Default ESM URL for `@cositos/front` used by [`PlutoWidget`](@ref) rendering. Acts
-as a sentinel: leaving `runtime_url` at this default makes `CositosPlutoExt` resolve it
-to [`local_front_runtime_url`](@ref) automatically (no npm publish/CDN/server needed,
-cositos-z76.7) — pass an explicit `runtime_url` to opt out (e.g. once the package is
-published, or to point at a self-hosted copy)."""
 const DEFAULT_RUNTIME_URL = "https://cdn.jsdelivr.net/npm/@cositos/front/src/index.js"
 
-"""
-    PlutoWidget(; esm, state=Dict(), css="", runtime_url=DEFAULT_RUNTIME_URL)
-
-A Pluto.jl-displayable anywidget: renders `esm` via `@cositos/front` and acts as an
-`@bind` target. `Base.show(::MIME"text/html")` and the `AbstractPlutoDingetjes.Bonds`
-methods live in the package extension `CositosPlutoExt`, which loads automatically when
-`AbstractPlutoDingetjes` and `JSON` are available.
-
-```julia
-using Cositos, AbstractPlutoDingetjes, JSON   # extension activates
-@bind s PlutoWidget(esm=SLIDER_ESM, state=Dict("value" => 0, "min" => 0, "max" => 100))
-# `s` becomes the widget's full state Dict, updated reactively on interaction.
-```
-
-That's the whole runtime-hosting story: `runtime_url` defaults to
-[`local_front_runtime_url`](@ref) (a self-contained, offline `data:` URI) unless you
-override it — no separate call needed.
-"""
 struct PlutoWidget
     esm::String
     state::Dict{String,Any}
@@ -642,93 +843,27 @@ function PlutoWidget(;
     return PlutoWidget(String(esm), Dict{String,Any}(state), String(css), String(runtime_url))
 end
 
-"""
-    Cositos.Pluto
-
-Batteries-included, ready-to-`@bind` Pluto widgets (cositos-z76.7 UX follow-up). Each
-function wraps the SAME `examples/widgets/*.js` this repo already ships and certifies
-(`docs/widgets.md`'s six ipywidgets categories, `front/test/gallery.test.js`) into a
-ready [`PlutoWidget`](@ref) — no hand-written ESM, no state `Dict`, no `PlutoWidget`
-construction. Implemented by the `CositosPlutoExt` package extension (loads
-automatically when `AbstractPlutoDingetjes` and `JSON` are available).
-
-```julia
-using Cositos, Cositos.Pluto, AbstractPlutoDingetjes, JSON
-@bind s Cositos.Pluto.int_slider(value=20, min=0, max=100)
-
-# or, selectively:
-using Cositos.Pluto: int_slider
-@bind s int_slider(value=20, min=0, max=100)
-```
-
-**Not** exported from `Cositos` itself: a bare `using Cositos` never brings anything
-from here into unqualified scope. This sidesteps two collisions — the unrelated
-top-level `int_slider`/`dropdown` real-controls catalog (cositos-70b.7, a completely
-different thing: it builds real `@jupyter-widgets/controls` identity for the Jupyter
-comm/embed path, not a `PlutoWidget`), and the `Pluto.jl` notebook tool's own package
-name. Always reach these via `Cositos.Pluto....` or an explicit `using Cositos.Pluto:
-...`.
-"""
 module Pluto
 
 const _ERROR_SUFFIX = " requires JSON and AbstractPlutoDingetjes to be loaded; run " *
     "`using JSON, AbstractPlutoDingetjes` first (the CositosPlutoExt package " *
     "extension provides the implementation)."
 
-"""
-    Cositos.Pluto.int_slider(; value=0, min=0, max=100, kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/int_slider.js` (the numeric category). Extra `kwargs` (e.g.
-`css`, `runtime_url`) pass through to [`Cositos.PlutoWidget`](@ref).
-"""
 function int_slider(args...; kwargs...)
     return error("Cositos.Pluto.int_slider()" * _ERROR_SUFFIX)
 end
-
-"""
-    Cositos.Pluto.checkbox(; value=false, kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/checkbox.js` (the boolean category).
-"""
 function checkbox(args...; kwargs...)
     return error("Cositos.Pluto.checkbox()" * _ERROR_SUFFIX)
 end
-
-"""
-    Cositos.Pluto.text(; value="", kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/text.js` (the string category).
-"""
 function text(args...; kwargs...)
     return error("Cositos.Pluto.text()" * _ERROR_SUFFIX)
 end
-
-"""
-    Cositos.Pluto.button(; description="Click", clicks=0, kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/button.js` (the button/event category). The bound value's
-`"clicks"` key increments on every click.
-"""
 function button(args...; kwargs...)
     return error("Cositos.Pluto.button()" * _ERROR_SUFFIX)
 end
-
-"""
-    Cositos.Pluto.dropdown(options; value=nothing, kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/dropdown.js` (the selection category). `value` defaults to the
-first option (stringified) when omitted.
-"""
 function dropdown(args...; kwargs...)
     return error("Cositos.Pluto.dropdown()" * _ERROR_SUFFIX)
 end
-
-"""
-    Cositos.Pluto.html(; value="", kwargs...) -> PlutoWidget
-
-Wraps `examples/widgets/html.js` (the output/display category). `value` is raw HTML,
-pushed kernel(Julia) -> view.
-"""
 function html(args...; kwargs...)
     return error("Cositos.Pluto.html()" * _ERROR_SUFFIX)
 end

@@ -160,7 +160,9 @@ def test_full_send_state_includes_identity():
 
 def test_filtered_send_state_omits_identity():
     state = {"_esm": "e", "value": 5, "other": 1}
-    phase, effects = reduce(Phase.OPEN, SendState(include={"value"}), state, TransportCapabilities())
+    phase, effects = reduce(
+        Phase.OPEN, SendState(include={"value"}), state, TransportCapabilities()
+    )
     assert phase == Phase.OPEN
     assert len(effects) == 1
     send = effects[0]

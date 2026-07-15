@@ -2,7 +2,272 @@ using System.Text.Json;
 
 namespace Cositos;
 
-// Binding-free anywidget-style backend protocol core (C# port) --- pure logic, no
+// ---- lifecycle types ----
+
+/// <summary>The three phases of a widget's lifecycle.</summary>
+public enum Phase { Unopened, Open, Closed }
+
+/// <summary>Declares which event kinds the transport can carry.</summary>
+public record TransportCapabilities(
+    bool SupportsReceive = true,
+    bool SupportsRequestState = true,
+    bool SupportsCustom = true,
+    bool SupportsBuffers = true
+);
+
+// Effect types
+public record Send(string MsgType, Dictionary<string, object?> Data,
+    List<object?>? Buffers = null, Dictionary<string, object?>? Metadata = null);
+public record Listen();
+public record ApplyState(Dictionary<string, object?> State);
+public record InvokeCustom(object? Content, List<object?>? Buffers = null);
+public record Error(string Message);
+
+// Event types
+public record Open();
+public record SendState(HashSet<string>? Include = null);
+public record SendCustom(object? Content, List<object?>? Buffers = null);
+public record Inbound(Dictionary<string, object?> Message, List<object?>? Buffers = null);
+public record Close();
+public record CommIdAssigned(string Id);
+
+// ---- lifecycle reducer ----
+public static class Lifecycle
+{
+    /// <summary>
+    /// Pure widget lifecycle reducer. Encodes the widget lifecycle as a deterministic
+    /// state machine with three phases, six event types, and five effect types.
+    /// No I/O, no side effects — the shell walks the returned effects.
+    /// </summary>
+    /// <param name="phase">Current widget phase.</param>
+    /// <param name="ev">The event to process (Open, SendState, SendCustom, Inbound, Close, or CommIdAssigned).</param>
+    /// <param name="currentState">Current host widget state dict.</param>
+    /// <param name="capabilities">Transport capability flags.</param>
+    /// <returns>(newPhase, effects) tuple.</returns>
+    public static (Phase NewPhase, List<object?> Effects) Reduce(
+        Phase phase, object? ev, Dictionary<string, object?> currentState,
+        TransportCapabilities capabilities)
+    {
+        if (ev is Open) return ReduceOpen(phase, currentState, capabilities);
+        if (ev is SendState ss) return ReduceSendState(phase, ss, currentState, capabilities);
+        if (ev is SendCustom sc) return ReduceSendCustom(phase, sc, capabilities);
+        if (ev is Inbound ib) return ReduceInbound(phase, ib, currentState, capabilities);
+        if (ev is Close) return ReduceClose(phase);
+        if (ev is CommIdAssigned) return (Phase.Open, new List<object?>());
+        return (phase, new List<object?> { new Error($"unknown event type: {ev?.GetType().Name ?? "null"}") });
+    }
+
+    /// <summary>Handle an Open event — transition to Open phase, send comm_open (+ listen if supported).</summary>
+    private static (Phase, List<object?>) ReduceOpen(
+        Phase phase, Dictionary<string, object?> currentState,
+        TransportCapabilities capabilities)
+    {
+        if (phase == Phase.Unopened || phase == Phase.Closed)
+        {
+            var full = Core.ImmutableFields();
+            foreach (var (k, v) in currentState) full[k] = v;
+            var (data, buffers, metadata) = Core.BuildCommOpen(full);
+            var effects = new List<object?> { new Send("comm_open", data, buffers.Cast<object?>().ToList(), metadata) };
+            if (capabilities.SupportsReceive)
+                effects.Add(new Listen());
+            return (Phase.Open, effects);
+        }
+        // Idempotent: already open, no-op
+        return (Phase.Open, new List<object?>());
+    }
+
+    /// <summary>Handle a SendState event — send an update (full with identity re-merge, or filtered).</summary>
+    private static (Phase, List<object?>) ReduceSendState(
+        Phase phase, SendState ev, Dictionary<string, object?> currentState,
+        TransportCapabilities capabilities)
+    {
+        if (phase != Phase.Open)
+            return (phase, new List<object?> { new Error("send_state() requires an open comm; call open() first") });
+        Dictionary<string, object?> state;
+        if (ev.Include == null)
+        {
+            state = Core.ImmutableFields();
+            foreach (var (k, v) in currentState) state[k] = v;
+        }
+        else
+        {
+            state = new Dictionary<string, object?>();
+            foreach (var (k, v) in currentState)
+                if (ev.Include.Contains(k)) state[k] = v;
+        }
+        var (data, buffers) = Core.BuildUpdate(state);
+        return (phase, new List<object?> { new Send("comm_msg", data, buffers.Cast<object?>().ToList()) });
+    }
+
+    /// <summary>Handle a SendCustom event — send a custom message (checks transport capabilities).</summary>
+    private static (Phase, List<object?>) ReduceSendCustom(
+        Phase phase, SendCustom ev, TransportCapabilities capabilities)
+    {
+        if (phase != Phase.Open)
+            return (phase, new List<object?> { new Error("send_custom() requires an open comm; call open() first") });
+        if (!capabilities.SupportsCustom)
+            return (phase, new List<object?> { new Error("custom messages are not supported by this transport") });
+        if (!capabilities.SupportsBuffers && (ev.Buffers?.Count > 0))
+            return (phase, new List<object?> { new Error("buffers are not supported by this transport") });
+        return (phase, new List<object?> { new Send("comm_msg", Core.BuildCustom(ev.Content), ev.Buffers?.Cast<object?>().ToList() ?? new List<object?>()) });
+    }
+
+    /// <summary>Handle an Inbound event — dispatch to update/request_state/custom/ignored based on message type.</summary>
+    private static (Phase, List<object?>) ReduceInbound(
+        Phase phase, Inbound ev, Dictionary<string, object?> currentState,
+        TransportCapabilities capabilities)
+    {
+        if (phase != Phase.Open)
+            return (phase, new List<object?>());
+
+        var message = Core.ParseMessage(ev.Message);
+        switch (message)
+        {
+            case Core.Update upd:
+                var state = new Dictionary<string, object?>((Dictionary<string, object?>)upd.State!);
+                Core.PutBuffers(state, upd.BufferPaths, ev.Buffers?.Cast<byte[]>().ToList()!);
+                return (phase, new List<object?> { new ApplyState(state) });
+
+            case Core.RequestState:
+                if (!capabilities.SupportsRequestState)
+                    return (phase, new List<object?>());
+                return ReduceSendState(phase, new SendState(), currentState, capabilities);
+
+            case Core.Custom cust:
+                return (phase, new List<object?> { new InvokeCustom(cust.Content, ev.Buffers) });
+
+            default:
+                return (phase, new List<object?>());
+        }
+    }
+
+    /// <summary>Handle a Close event — transition to Closed phase, send comm_close.</summary>
+    private static (Phase, List<object?>) ReduceClose(Phase phase)
+    {
+        if (phase == Phase.Open)
+            return (Phase.Closed, new List<object?> { new Send("comm_close", new Dictionary<string, object?>()) });
+        return (phase, new List<object?>());
+    }
+}
+
+// ---- imperative shell ----
+
+/// <summary>
+/// Thin imperative shell that calls Lifecycle.Reduce and executes effects.
+/// Replaces the old Widget lifecycle logic. The shell owns the event loop.
+/// </summary>
+public class WidgetShell
+{
+    public object Transport { get; }
+    public Func<Dictionary<string, object?>> GetState { get; }
+    public Action<Dictionary<string, object?>>? SetState { get; }
+    public Action<object?, List<object?>?>? OnCustom { get; }
+    public string ModelId { get; set; }
+    public Phase Phase { get; private set; }
+    public TransportCapabilities Capabilities { get; }
+    private bool _listening;
+
+    public WidgetShell(
+        object transport,
+        Func<Dictionary<string, object?>> getState,
+        Action<Dictionary<string, object?>>? setState = null,
+        string modelId = "",
+        Action<object?, List<object?>?>? onCustom = null,
+        TransportCapabilities? capabilities = null)
+    {
+        Transport = transport;
+        GetState = getState;
+        SetState = setState;
+        ModelId = modelId;
+        OnCustom = onCustom;
+        Capabilities = capabilities ?? new TransportCapabilities(
+            SupportsReceive: GetSupportsReceive(transport));
+        Phase = Phase.Unopened;
+        _listening = false;
+    }
+
+    private static bool GetSupportsReceive(object transport)
+    {
+        var prop = transport.GetType().GetProperty("SupportsReceive");
+        if (prop != null && prop.CanRead)
+            return (bool)prop.GetValue(transport)!;
+        return false;
+    }
+
+    public void Open()
+    {
+        if (Phase == Phase.Open) return;
+        Execute(Lifecycle.Reduce(Phase, new Open(), GetState(), Capabilities));
+    }
+
+    public void SendState(HashSet<string>? include = null)
+    {
+        Execute(Lifecycle.Reduce(Phase, new SendState(include), GetState(), Capabilities));
+    }
+
+    public void SendCustom(object? content, List<object?>? buffers = null)
+    {
+        Execute(Lifecycle.Reduce(Phase, new SendCustom(content, buffers), GetState(), Capabilities));
+    }
+
+    public void Close()
+    {
+        Execute(Lifecycle.Reduce(Phase, new Close(), new Dictionary<string, object?>(), Capabilities));
+    }
+
+    public Dictionary<string, object?> Mimebundle(string reprText = "")
+    {
+        return Core.Mimebundle(ModelId, reprText);
+    }
+
+    private void Execute((Phase NewPhase, List<object?> Effects) result)
+    {
+        Phase = result.NewPhase;
+        foreach (var effect in result.Effects)
+            ExecOne(effect);
+    }
+
+    private void ExecOne(object? effect)
+    {
+        switch (effect)
+        {
+            case Send s:
+                Core.TransportSend(Transport, s.MsgType, s.Data, s.Buffers, s.Metadata);
+                if (s.MsgType == "comm_open")
+                {
+                    var cid = Core.CommId(Transport);
+                    if (!string.IsNullOrEmpty(cid))
+                    {
+                        ModelId = cid;
+                        Execute(Lifecycle.Reduce(Phase, new CommIdAssigned(cid), new Dictionary<string, object?>(), Capabilities));
+                    }
+                }
+                break;
+            case Listen:
+                if (!_listening)
+                {
+                    Core.TransportOnMessage(Transport, (data, bufs) => HandleInbound(data, bufs));
+                    _listening = true;
+                }
+                break;
+            case ApplyState a:
+                SetState?.Invoke(a.State);
+                break;
+            case InvokeCustom ic:
+                OnCustom?.Invoke(ic.Content, ic.Buffers);
+                break;
+            case Error err:
+                throw new InvalidOperationException(err.Message);
+        }
+    }
+
+    private void HandleInbound(Dictionary<string, object?> data, List<object?>? buffers)
+    {
+        Execute(Lifecycle.Reduce(Phase, new Inbound(data, buffers), GetState(), Capabilities));
+    }
+}
+
+// ---- protocol core ----
 // kernel/transport code. Builds/parses ipywidgets widget-messaging protocol v2.1.0
 // messages, performs binary-buffer split/merge (v2 nested rules), and serializes widget
 // state to the Widget State JSON schema v2. Certified against ../fixtures/*.json.
@@ -20,6 +285,9 @@ public static class Core
     // Widget State JSON schema version (distinct from the protocol version 2.1.0).
     public const int StateVersionMajor = 2;
     public const int StateVersionMinor = 0;
+
+    public static Dictionary<string, object?> ImmutableFields() =>
+        ImmutableFields(AnywidgetModuleVersion);
 
     private static Dictionary<string, object?> ImmutableFields(string version) => new()
     {
@@ -157,7 +425,7 @@ public static class Core
     // ---- inbound parsing ----
 
     public abstract record InboundMessage;
-    public sealed record Update(object? State, object? BufferPaths) : InboundMessage;
+    public sealed record Update(object? State, List<List<object?>> BufferPaths) : InboundMessage;
     public sealed record RequestState : InboundMessage;
     public sealed record Custom(object? Content) : InboundMessage;
     public sealed record Ignored(string? Method) : InboundMessage;
@@ -169,7 +437,8 @@ public static class Core
         {
             "update" => new Update(
                 data.GetValueOrDefault("state") ?? new Dictionary<string, object?>(),
-                data.GetValueOrDefault("buffer_paths") ?? new List<object?>()),
+                (data.GetValueOrDefault("buffer_paths") as List<object?>
+                    ?? new List<object?>()).Cast<List<object?>>().ToList()),
             "request_state" => new RequestState(),
             "custom" => new Custom(data.GetValueOrDefault("content")),
             // Unknown/missing method is ignored, not thrown (forward-compat, cositos-dow).
@@ -274,4 +543,45 @@ public static class Core
         JsonValueKind.False => false,
         _ => null,
     };
+
+    // ---- transport seam ----
+
+    /// <summary>Whether the transport can receive frontend→kernel messages.</summary>
+    public static bool SupportsReceive(object transport) => false;
+
+    /// <summary>The transport's comm id; empty until opened.</summary>
+    public static string CommId(object transport) => "";
+
+    /// <summary>Build the widget-view mimebundle used for display.</summary>
+    public static Dictionary<string, object?> Mimebundle(string modelId, string reprText = "")
+    {
+        var bundle = new Dictionary<string, object?>
+        {
+            ["application/vnd.jupyter.widget-view+json"] = new Dictionary<string, object?>
+            {
+                ["version_major"] = (long)ProtocolVersionMajor,
+                ["version_minor"] = (long)ProtocolVersionMinor,
+                ["model_id"] = modelId,
+            },
+        };
+        if (!string.IsNullOrEmpty(reprText))
+            bundle["text/plain"] = reprText;
+        return bundle;
+    }
+
+    /// <summary>Send a Jupyter comm message to the frontend.</summary>
+    public static void TransportSend(object transport, string msgType, Dictionary<string, object?> data,
+        List<object?>? buffers = null, Dictionary<string, object?>? metadata = null)
+    {
+        throw new NotSupportedException(
+            "TransportSend is not implemented. Override this method or use a concrete transport.");
+    }
+
+    /// <summary>Register an inbound message callback.</summary>
+    public static void TransportOnMessage(object transport,
+        Action<Dictionary<string, object?>, List<object?>?> callback)
+    {
+        throw new NotSupportedException(
+            "TransportOnMessage is not implemented. Override this method or use a concrete transport.");
+    }
 }

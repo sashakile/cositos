@@ -35,6 +35,9 @@ IJuliaCommTransport() = IJuliaCommTransport(nothing, nothing)
 
 Cositos.ijulia_transport() = IJuliaCommTransport()
 Cositos.supports_receive(::IJuliaCommTransport) = true
+Cositos.supports_request_state(::IJuliaCommTransport) = true
+Cositos.supports_custom(::IJuliaCommTransport) = true
+Cositos.supports_buffers(::IJuliaCommTransport) = true
 Cositos.comm_id(t::IJuliaCommTransport) = t.comm === nothing ? "" : String(t.comm.id)
 
 function Cositos.transport_send(
