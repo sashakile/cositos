@@ -2,7 +2,7 @@ project:
   type: website
   output-dir: _site
   # Vendors front/src/*.js (zero external deps) into docs/vendor/cositos-front/ before
-  # every render, so the OJS tutorial (tutorials/web-ojs.qmd) can `import()` the real
+  # every render, so the OJS tutorial (using/web-ojs.qmd) can `import()` the real
   # @cositos/front runtime client-side. docs/vendor/ is gitignored and regenerated on
   # every build — never edit it by hand. See docs/prepare.sh.
   pre-render: ./prepare.sh
@@ -10,27 +10,32 @@ project:
     - vendor/**
   render:
     - index.qmd
-    - status.md
-    - tutorials/quickstart.qmd
-    - tutorials/authoring-widgets.qmd
-    - tutorials/integrating.qmd
-    - tutorials/save-restore.qmd
-    - tutorials/dashboard.qmd
-    - tutorials/static-export.qmd
-    - tutorials/polyglot-parity.qmd
-    - tutorials/plot-integration.qmd
-    - tutorials/web-ojs.qmd
-    - reference/index.qmd
-    - reference/specs.qmd
-    - reference/api-cheatsheet.qmd
-    - explanation/architecture.qmd
-    - explanation/state-discipline.qmd
-    - widgets.md
-    - widgets-gallery.qmd
-    - pluto.md
-    - porting.md
-    - hooks.md
-    - hosts.md
+    # Using cositos — for notebook authors
+    - using/index.qmd
+    - using/glossary.qmd
+    - using/quickstart.qmd
+    - using/authoring-widgets.qmd
+    - using/integrating.qmd
+    - using/save-restore.qmd
+    - using/dashboard.qmd
+    - using/static-export.qmd
+    - using/plot-integration.qmd
+    - using/web-ojs.qmd
+    - using/api-reference.qmd
+    - using/api-cheatsheet.qmd
+    - using/widgets.md
+    - using/widgets-gallery.qmd
+    - using/hosts.md
+    - using/pluto.md
+    - using/state-discipline.qmd
+    - using/status.md
+    # Extending cositos — for backend porters & contributors
+    - extending/index.qmd
+    - extending/porting.md
+    - extending/specs.qmd
+    - extending/architecture.qmd
+    - extending/polyglot-parity.qmd
+    - extending/hooks.md
     - _internal/bd-sync.md
     - _internal/publish-readiness-review-2026-07-07.md
 
@@ -42,36 +47,47 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: status.md
-        text: Status
-      - text: Tutorials
+      - text: Using cositos
         menu:
-          - tutorials/quickstart.qmd
-          - tutorials/authoring-widgets.qmd
-          - tutorials/integrating.qmd
-          - tutorials/save-restore.qmd
-          - tutorials/dashboard.qmd
-          - tutorials/static-export.qmd
-          - tutorials/polyglot-parity.qmd
-          - tutorials/plot-integration.qmd
-          - tutorials/web-ojs.qmd
-      - text: Reference
+          - text: "Start here (notebook authors)"
+            href: using/index.qmd
+          - text: "Glossary — widget vocabulary"
+            href: using/glossary.qmd
+          - text: "---"
+          - text: "Tutorials"
+          - using/quickstart.qmd
+          - using/authoring-widgets.qmd
+          - using/integrating.qmd
+          - using/save-restore.qmd
+          - using/dashboard.qmd
+          - using/static-export.qmd
+          - using/plot-integration.qmd
+          - using/web-ojs.qmd
+          - text: "---"
+          - text: "Reference"
+          - using/api-reference.qmd
+          - using/api-cheatsheet.qmd
+          - using/widgets-gallery.qmd
+          - using/widgets.md
+          - using/hosts.md
+          - using/status.md
+          - text: "---"
+          - text: "Explanation"
+          - using/state-discipline.qmd
+      - text: Extending cositos
         menu:
-          - reference/index.qmd
-          - reference/specs.qmd
-          - reference/api-cheatsheet.qmd
-          - widgets-gallery.qmd
-          - widgets.md
-          - hosts.md
-      - text: Explanation
-        menu:
-          - explanation/architecture.qmd
-          - explanation/state-discipline.qmd
-      - text: How-to Guides
-        menu:
-          - pluto.md
-          - porting.md
-          - hooks.md
+          - text: "Start here (porters & contributors)"
+            href: extending/index.qmd
+          - text: "---"
+          - text: "How-to"
+          - extending/porting.md
+          - extending/hooks.md
+          - text: "---"
+          - text: "Reference"
+          - extending/specs.qmd
+          - text: "Explanation"
+          - extending/architecture.qmd
+          - extending/polyglot-parity.qmd
 
 format:
   html:

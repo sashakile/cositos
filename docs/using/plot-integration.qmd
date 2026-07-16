@@ -2,17 +2,21 @@
 title: "Integrate a plotting library"
 ---
 
-You already have a chart built with a widget library — Plotly, Altair, bqplot — and you want
-to **save it, or render it as a static page, through cositos**. You do not rebuild the chart.
-Because cositos speaks the ipywidgets Widget-State format, an existing widget tree can be
-*harvested* as-is.
+You already have a chart built with a **widget-based** library — Plotly, Altair, bqplot — and
+you want to **save it, or render it as a static page, through cositos**. You do not rebuild
+the chart. Because cositos speaks the ipywidgets Widget-State format, an existing widget tree
+can be *harvested* (captured as-is into a static [Document](glossary.qmd)).
+
+> **Not matplotlib.** A matplotlib figure is a static image, not a widget, so there is
+> nothing to harvest. Use a widget-based plotting library (Plotly, Altair, bqplot) for this
+> workflow; for matplotlib, save the figure as a PNG/SVG instead.
 
 ## The one-liner
 
 [`ipywidgets.embed.embed_data(views=[w])["manager_state"]`](https://ipywidgets.readthedocs.io/en/stable/examples/Widget%20Low%20Level.html#Embedding-Widgets)
-is, byte for byte, a cositos v2 [`Document`](../reference/specs.qmd#serialization). So the
+is, byte for byte, a cositos v2 [`Document`](../extending/specs.qmd#serialization). So the
 whole "wrap an existing tree" story is a thin wrapper, shipped as
-[`cositos.contrib.harvest`](#about-cositos-contrib):
+[`cositos.contrib.harvest`](#about-cositos.contrib):
 
 ```python
 from cositos.contrib import harvest, harvest_html
@@ -42,7 +46,7 @@ open("plot.html", "w").write(harvest_html(fig, title="my plot"))
 ```
 
 A complete, runnable version is
-[`examples/plots/build.py`](../../../examples/plots/build.py):
+[`examples/plots/build.py`](https://github.com/sashakile/cositos/blob/main/examples/plots/build.py):
 
 ```bash
 uv run --with plotly python examples/plots/build.py
@@ -98,6 +102,6 @@ or *embed without a kernel*. See [save & restore](save-restore.qmd) and
 
 `cositos.contrib` is **optional, Python-only** territory that may depend on the wider widget
 ecosystem (here, `ipywidgets`). Nothing in it is imported by the pure `cositos`
-[core](../explanation/architecture.qmd#the-binding-free-core), so the fixture-certified,
+[core](../extending/architecture.qmd#the-binding-free-core), so the fixture-certified,
 cross-language core stays dependency-free — `harvest` imports `ipywidgets` lazily and raises
 a clear error if it is missing.

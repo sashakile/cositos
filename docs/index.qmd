@@ -3,7 +3,42 @@ title: "cositos"
 ---
 
 **cositos** is a binding-free [anywidget](https://anywidget.dev)-inspired backend core:
-define a widget front end once, drive it from **any** Jupyter kernel language.
+define a widget front end once (a small JavaScript module), drive it from **any** Jupyter
+kernel language — Python, Julia, Clojure, and more.
+
+New to the vocabulary (widget, comm, ESM, trait…)? Start with the
+[**Glossary**](using/glossary.qmd) — every term defined once, in plain language.
+
+## Two doors — pick your path
+
+::: {.grid}
+
+::: {.g-col-6}
+### 🧑‍💻 [Using cositos →](using/index.qmd)
+**You author notebooks** and want interactive widgets you can drive from Python, Julia, R,
+or Clojure — and save, embed, or publish them.
+
+*Assumes:* you know a notebook language and Jupyter. No widget or JavaScript background
+required.
+
+Start: [Quickstart](using/quickstart.qmd) · [Glossary](using/glossary.qmd) ·
+[Widget gallery](using/widgets-gallery.qmd)
+:::
+
+::: {.g-col-6}
+### 🛠️ [Extending cositos →](extending/index.qmd)
+**You build a backend** — porting cositos to a new kernel language, or contributing to the
+project internals.
+
+*Assumes:* you know a language ecosystem and are comfortable with protocols and specs.
+
+Start: [Porting guide](extending/porting.md) · [Architecture](extending/architecture.qmd) ·
+[Specifications](extending/specs.qmd)
+:::
+
+:::
+
+## A live widget, no kernel
 
 This page proves the docs pipeline: the widget below is **rendered statically** — no live
 kernel — from a serialized widget document embedded into the page by `cositos.embed`.
@@ -39,18 +74,11 @@ that was serialized in Python and embedded here. Interaction is client-side (no 
 
 ## Documentation structure
 
-This site is organized into four content types so you can find what you need quickly:
+The site splits by **audience** first, then by [Diátaxis](https://diataxis.fr) content type
+within each:
 
-- **Tutorials** — step-by-step walkthroughs for specific tasks (start here)
-- **How-to Guides** — solutions to specific problems (use when you know what you need)
-- **Reference** — API details, specifications, cheat sheets (use when you need precise information)
-- **Explanation** — conceptual background and design reasoning (read to understand *why*)
-
-## Next steps
-
-- [Quickstart: run your first widget](tutorials/quickstart.qmd) — Python, Julia, or Clojure
-- [Architecture: how cositos works](explanation/architecture.qmd) — the design behind it
-- [State discipline for cositos apps](explanation/state-discipline.qmd) — keep your
-  widgets consistent as the app grows
-- [Widget gallery](widgets-gallery.qmd) — see more widget examples and live demos
-- [Implementation status](status.md) — what languages and hosts are supported today
+- **[Using cositos](using/index.qmd)** — for notebook authors: tutorials, how-to, API
+  reference, and the conceptual guide to keeping widget state consistent.
+- **[Extending cositos](extending/index.qmd)** — for backend porters and contributors: the
+  porting guide, the normative specifications, the architecture, and contributor setup.
+- **[Implementation status](using/status.md)** — what languages and hosts work today.

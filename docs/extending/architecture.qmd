@@ -30,7 +30,7 @@ and portable to any language that can shape the same JSON.
 
 ## The lifecycle reducer
 
-The widget lifecycle — opening a comm, sending state, receiving updates, closing — is
+The widget lifecycle — opening a [comm](../using/glossary.qmd), sending state, receiving updates, closing — is
 encoded as a **pure reducer**, the same pattern found in Redux and Elm. The reducer is a
 single function:
 
@@ -56,14 +56,14 @@ This design gives cositos three guarantees:
    fixture-testable against `fixtures/lifecycle/*.json` (open, close, full-send,
    filtered-send, one-way-open, inbound-update, etc.).
 2. **Cross-language.** Any language port implements the same reducer — there is no shared
-   runtime, only a shared contract. See the [lifecycle spec](../reference/specs.qmd#lifecycle).
+   runtime, only a shared contract. See the [lifecycle spec](specs.qmd#lifecycle).
 3. **Capability-aware.** A broadcast-only kernel (no `supports_receive`) automatically
    suppresses the listener effect; no shell code needs to branch on capabilities.
 
 The imperative shell (`WidgetShell`) that calls `reduce` and walks the effect list is the
 only per-language code in the lifecycle path. It is thin enough that the [porting
-guide](../porting.md) covers it in a few paragraphs. See the [lifecycle-shell
-spec](../reference/specs.qmd#lifecycle-shell) and the [API reference](../reference/index.qmd#lifecycle)
+guide](porting.md) covers it in a few paragraphs. See the [lifecycle-shell
+spec](specs.qmd#lifecycle-shell) and the [API reference](../using/api-reference.qmd#lifecycle)
 for the full event and effect types. Inbound messages arriving before the comm is opened
 (`unopened` phase) are silently dropped — wire `on_message` only after `open()`
 completes.
@@ -108,13 +108,13 @@ False` and the widget degrades gracefully to one-way.
 
 The unit of persistence and static rendering is the **Document**: a serialized,
 JSON-safe snapshot of one or more widget models and their state (see
-[serialization](../reference/specs.qmd#serialization)). It plays the role a virtual DOM
+[serialization](specs.qmd#serialization)). It plays the role a virtual DOM
 plays in a web framework — a **plain-data description of the UI**, decoupled from any
 particular runtime:
 
 - **Live kernel** replays a Document into `comm_open` + `update` messages over a
   `Transport`, and a real frontend renders it.
-- **Static export** ([embed](../reference/specs.qmd#embed)) serializes the same Document
+- **Static export** ([embed](specs.qmd#embed)) serializes the same Document
   into `widget-state+json` that the CDN html-manager renders with **no kernel at all**.
 
 One data structure, two backends — the same reason a virtual DOM can render to the browser
@@ -129,19 +129,19 @@ builders and buffer split reproduce those fixtures byte-for-byte (modulo comm id
 ordering). This is what lets ecosystem experts own their language's bindings without the
 core knowing anything about their language.
 
-The [specifications](../reference/specs.qmd) formalize this: each requirement's scenarios
-are the behaviour a fixture captures, and the [Julia port](../porting.md) certifies against
+The [specifications](specs.qmd) formalize this: each requirement's scenarios
+are the behaviour a fixture captures, and the [Julia port](porting.md) certifies against
 the very same `fixtures/widget-state.json` the Python reference does.
 
 ## See also
 
-- [State discipline for cositos apps](state-discipline.qmd) — once you have widgets
+- [State discipline for cositos apps](../using/state-discipline.qmd) — once you have widgets
   working, keep them consistent as the app grows (MVU, reactive graphs, benchmarked
   wiring styles).
-- [Hosts & channels](../hosts.md) — the frontend-side `Channel` seam (the browser-side
+- [Hosts & channels](../using/hosts.md) — the frontend-side `Channel` seam (the browser-side
   analog of the `Transport` seam). How cositos runs the same widget in Jupyter, Pluto,
   Clay, or a plain browser tab.
-- [Porting guide](../porting.md) — adding a new kernel language.
+- [Porting guide](porting.md) — adding a new kernel language.
 
 ## Why reuse the anywidget frontend verbatim
 

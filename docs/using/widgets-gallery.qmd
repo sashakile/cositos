@@ -22,7 +22,7 @@ no backend (see [`docs/hosts.md`](hosts.md#localchannel--client-only-widgets)) �
 this page doesn't need a running Jupyter kernel to show what clicking the widget does.
 **A real kernel changes only which `Channel` is plugged in** (`CommTransport` for Python,
 `ijulia_transport()` for Julia, …); the ESM and the widget's on-screen behavior are
-identical either way — see [`tutorials/polyglot-parity.qmd`](tutorials/polyglot-parity.qmd)
+identical either way — see [`tutorials/polyglot-parity.qmd`](../extending/polyglot-parity.qmd)
 for the proof that both backends serialize to the same document.
 
 ```{ojs}
@@ -96,7 +96,7 @@ widget  # last line of a cell: renders live
 :::
 
 Clojure (Clay or the clojupyter crack), and the R/C# protocol-core-only status, are
-covered per-language in [`tutorials/quickstart.qmd`](tutorials/quickstart.qmd) — that page
+covered per-language in [`tutorials/quickstart.qmd`](quickstart.qmd) — that page
 walks the *counter* widget end to end for every backend; this page is the *widget
 catalog*, so each entry below only calls out the two live-today backends plus the ESM +
 state you'd plug into them (or into the Clojure/Clay pattern from quickstart).
@@ -327,7 +327,7 @@ sends whatever identity the caller's state carries, so a real widget's own ident
 reaches the wire exactly like an anywidget-authored one would.
 
 The slider and dropdown below are rendered by the real `@jupyter-widgets/html-manager`
-(loaded from the CDN, same as [static export](tutorials/static-export.qmd)) — not by the
+(loaded from the CDN, same as [static export](static-export.qmd)) — not by the
 LocalChannel/OJS demo harness the six widgets above use, because these are real
 ipywidgets controls models, not cositos anywidget models:
 
@@ -380,8 +380,8 @@ state you hand it does.
 ## Next steps
 
 - Full per-language launch walkthrough (all five backends, current live/blocked status):
-  [`tutorials/quickstart.qmd`](tutorials/quickstart.qmd).
+  [`tutorials/quickstart.qmd`](quickstart.qmd).
 - Author a brand-new widget (not one of the six above):
-  [`tutorials/authoring-widgets.qmd`](tutorials/authoring-widgets.qmd).
+  [`tutorials/authoring-widgets.qmd`](authoring-widgets.qmd).
 - Why these six cover the whole ipywidgets surface: [`widgets.md`](widgets.md).
-- The full build-download-restore walkthrough for a dashboard built from the real controls catalog above: [`tutorials/dashboard.qmd`](tutorials/dashboard.qmd).
+- The full build-download-restore walkthrough for a dashboard built from the real controls catalog above: [`tutorials/dashboard.qmd`](dashboard.qmd).

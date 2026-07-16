@@ -1,0 +1,89 @@
+---
+title: "Glossary — widget vocabulary"
+---
+
+> **What this page is:** every load-bearing term in the cositos docs, defined once in plain
+> language. Other pages link here on first use. If a page uses a word you don't recognise,
+> it's probably here.
+
+## The essentials
+
+**Widget** — an interactive UI element (a slider, button, plot…) that lives in a notebook
+and can exchange state between the notebook's language and the browser.
+
+**Kernel** — the notebook's language engine: the process running your Python, Julia, R, or
+Clojure code. The kernel is the *backend* side of a widget.
+
+**Frontend** — the JavaScript running in the browser (JupyterLab, Notebook, or a static
+page) that draws the widget and reacts to clicks. cositos reuses
+[anywidget](https://anywidget.dev)'s frontend, so you write no JavaScript beyond your
+widget's own ESM.
+
+**comm** — short for *communication channel*. The bidirectional message pipe Jupyter opens
+between the kernel and the frontend. When you click a button, a `comm` message carries the
+new state kernel↔browser. The three message types are `comm_open`, `comm_msg`, and
+`comm_close`.
+
+**ESM** — an *ECMAScript module*: a JavaScript file with an `export default`. A widget's ESM
+is the small JS module that draws it — `export default { render({ model, el }) { … } }`. In
+cositos you paste it verbatim (you don't need to write JS to *run* a widget), or author your
+own in the [authoring tutorial](authoring-widgets.qmd).
+
+**anywidget** — an open standard for building widgets from a single ESM module. cositos
+targets anywidget's published frontend (`AnyModel`/`AnyView`), which is why a cositos widget
+renders anywhere anywidget is installed.
+
+## State & model terms
+
+**Model** — the shared state object between kernel and browser. In the ESM you call
+`model.get(key)` / `model.set(key, value)` / `model.save_changes()` to read and push state.
+
+**AnyModel / AnyView** — anywidget's generic frontend model and view. Every plain cositos
+widget declares itself as `AnyModel`; the browser loads that class to render it.
+
+**trait** — a declared, typed field on a widget model (from ipywidgets' *traitlets*).
+"A widget-reference trait" is a field whose value is *another* widget; plain `AnyModel`
+widgets don't declare these, which is why references between them stay literal strings.
+
+**buffer** — a chunk of binary data (e.g. a `float32` array) carried *out-of-band* alongside
+the JSON state, per the widget protocol v2. `remove_buffers` splits them out of the state
+tree; `put_buffers` merges them back.
+
+**\_esm** — the state key holding a widget's ESM source string.
+
+## Lifecycle & architecture terms
+
+**reducer** — a pure function `reduce(phase, event, state, capabilities) → (new_phase,
+effects)` that encodes the widget's open→send→close lifecycle as a deterministic state
+machine (the same idea as Redux/Elm). It performs no I/O; a thin *shell* runs its effects.
+
+**Transport** — the only kernel-facing interface the core depends on: a thin adapter over a
+kernel's comm API (`send`, `on_message`). Each host supplies one.
+
+**Channel** — the frontend-side counterpart to Transport: how the browser side sends/receives
+(e.g. `LocalChannel` for kernel-free demos, `PlutoChannel` for Pluto, `ClayChannel` for Clay).
+
+**mimebundle** — the payload Jupyter asks an object for when displaying it
+(`_repr_mimebundle_`). Rendering a cositos widget returns its view mimebundle.
+
+**Document** — a plain-JSON snapshot of one or more widgets' state (the *Widget State JSON
+schema v2*), produced by `dump_document` and rebuilt by `load_document`.
+
+**MVU** — *Model–View–Update*: an app pattern where all state lives in one model, an
+`update` function is the only thing that changes it, and views are pure projections of it.
+The recommended way to keep a multi-widget cositos app consistent
+(see [state discipline](state-discipline.qmd)).
+
+## Versions & status
+
+**protocol version (`2.1.0`)** — the widget *messaging* protocol cositos speaks on the wire.
+
+**state-format version (`2.0`)** — the *serialization* schema version for a saved `Document`.
+Distinct from the protocol version — a common point of confusion.
+
+**Tier 1** — a kernel with a fully live comm round-trip, verified in CI (Python/ipykernel,
+Julia/IJulia, Clojure/Clay). See [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md)
+for the full tier definitions.
+
+**golden fixtures** — the canonical `fixtures/*.json` files every language port must
+reproduce byte-for-byte; the shared certification target.

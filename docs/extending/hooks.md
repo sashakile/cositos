@@ -42,17 +42,30 @@ the canonical, committed source of truth. On this machine the beads-managed
 
 ### Fresh-clone bootstrap
 
+**External contributor (simplest — you don't use beads):** let lefthook own the hooks
+directly.
+
 ```bash
-mise install                           # pinned node (uv + python come from system/uv)
-mise run setup                         # uv sync + npm install
-bd init                                # re-establishes .beads/hooks + hooksPath
-# then append the two delegation lines (see .beads/hooks/{pre-commit,pre-push})
-#   if command -v lefthook >/dev/null 2>&1; then lefthook run pre-commit || FAILED=1; fi
+mise install            # pinned node (uv + python come from system/uv)
+mise run setup          # uv sync + npm install
+lefthook install --force
+lefthook run pre-commit --all-files   # verify the gates fire (expect all green)
 ```
 
-If you don't use beads, run `lefthook install --force` instead to let lefthook own the
-hooks directly.
+**Maintainer (beads owns `hooksPath`):** beads' hooks must *delegate* to lefthook. This
+snippet is idempotent — it appends the delegation guard only if it's missing, for both
+hooks:
 
-> **Internal reference:** See [`docs/_internal/bd-sync.md`](_internal/bd-sync.md) for
+```bash
+mise install && mise run setup
+bd init                 # re-establishes .beads/hooks + core.hooksPath
+for h in pre-commit pre-push; do
+  line='if command -v lefthook >/dev/null 2>&1; then lefthook run '"$h"' || FAILED=1; fi'
+  grep -qF "lefthook run $h" ".beads/hooks/$h" || echo "$line" >> ".beads/hooks/$h"
+done
+git commit --allow-empty -m "probe hooks" -n && echo "hooks OK"   # confirm they run
+```
+
+> **Internal reference:** See [`docs/_internal/bd-sync.md`](../_internal/bd-sync.md) for
 > details on how beads syncs issue data across machines using Dolt remotes, including
 > setup commands, anti-patterns, and merge conflict resolution.

@@ -82,3 +82,10 @@ See `examples/composition/build.py` for the full recipe.
 references it. In a backend-less static export the `LinkModel` is viewless and
 unreferenced, so it is never created and **link updates do not propagate**. Linking
 widgets requires a live kernel.
+
+## Next steps
+
+- [Save & restore](save-restore.qmd) — persist and reload widget state as JSON.
+- [State discipline](state-discipline.qmd) — compose many widgets through one model
+  (the right way to build an exportable multi-widget UI).
+- [Widget gallery](widgets-gallery.qmd) — more ready-to-embed widgets.

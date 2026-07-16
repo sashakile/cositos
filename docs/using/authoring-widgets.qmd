@@ -3,9 +3,13 @@ title: "Authoring a widget: write ESM once, run it everywhere"
 ---
 
 This page is for **authoring a new widget**, not porting a backend (for that, see
-`porting.md`). The core cositos promise, delivered today: you write one small ESM
-module and it renders unchanged in the browser, in a live Jupyter kernel, and in a
-static export — **no new JavaScript per host**.
+[porting guide](../extending/porting.md)). The core cositos promise, delivered today: you
+write one small [ESM](glossary.qmd) module and it renders unchanged in the browser, in a
+live Jupyter kernel, and in a static export — **no new JavaScript per host**.
+
+> **Unfamiliar terms?** *Model*, *trait*, *reducer*, *AnyModel* are all defined in the
+> [Glossary](glossary.qmd). You need to read/write a little JavaScript to author a widget
+> (the ESM `render` function); using a pre-built widget requires none.
 
 <!-- Repo-relative paths to files outside docs/ are plain text here, not markdown
      links: docs/tutorials/*.qmd renders one directory level deeper than its source,
@@ -46,8 +50,8 @@ The `model` passed into `render` is the same `Model` surface anywidget gives you
 
 ## Where widgets live, and what patterns are already covered
 
-`examples/widgets/*.js` holds six small, render+interaction-tested widgets, one per
-ipywidgets synchronization pattern (two-way state, kernel→view push, dynamic option
+`examples/widgets/*.js` holds seven small, render+interaction-tested widgets covering the
+six ipywidgets synchronization patterns (two-way state, kernel→view push, dynamic option
 lists, custom events). Before writing a new pattern from scratch, check whether yours is
 a variant of one of these — see the category table in `widgets.md`.
 

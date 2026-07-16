@@ -1,7 +1,10 @@
 # embed Specification
 
 ## Purpose
-TBD - created by archiving change embed-static-html. Update Purpose after archive.
+Define how cositos renders a serialized widget-state `Document` into a single,
+self-contained HTML string — embedding the state and loading the stock ipywidgets
+html-manager from a CDN — so a saved UI displays in any browser or static host with no
+live kernel.
 ## Requirements
 ### Requirement: Serialized Documents Render to Self-Contained HTML
 The system SHALL render a widget-state `Document` into a single HTML string that embeds

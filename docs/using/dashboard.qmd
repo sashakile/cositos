@@ -8,8 +8,8 @@ and restore it in a fresh session. It ties together three pieces that each have 
 own deeper docs:
 
 - **The catalog** (`cositos.contrib.controls`): [`docs/widgets.md`'s "Reusing a real
-  ipywidgets control instead of building one"](../widgets.md#reusing-a-real-ipywidgets-control-instead-of-building-one)
-  and the runnable example on [`docs/widgets-gallery.qmd`](../widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required).
+  ipywidgets control instead of building one"](widgets.md#reusing-a-real-ipywidgets-control-instead-of-building-one)
+  and the runnable example on [`docs/widgets-gallery.qmd`](widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required).
 - **The dashboard** (`examples/dashboard/build.py`'s `Dashboard`): a real `IntSlider` +
   `Dropdown` drive a summary view, wired MVU-style through one host Model — no
   `ipywidgets.link`/`jslink`/peer `.observe()`, ever (see the module's own docstring for
@@ -26,10 +26,8 @@ from pathlib import Path
 
 # examples/ isn't an installed package — load its build.py the same way the test suite
 # does (importlib.util.spec_from_file_location), not a plain `import`. Walk up to the
-# repo root the same robust way tutorials/polyglot-parity.qmd does, rather than a
-# fixed-depth `.parent.parent` (fragile to exactly this page's own path depth — see
-# cositos-7co's docs/_site path-depth gotcha for why fixed-depth relative paths in docs/
-# are worth avoiding wherever there's a robust alternative).
+# repo root the same robust way polyglot-parity.qmd does, rather than a
+# fixed-depth `.parent.parent` (fragile to this page's own path depth).
 _root = Path.cwd()
 while not (_root / "mise.toml").exists():
     _root = _root.parent
@@ -45,7 +43,7 @@ print(f"{len(entries)} models: slider, dropdown, summary, download button, + com
 ```
 
 Rendering it (via `embed_snippet`, the same static-render path
-[`docs/widgets-gallery.qmd`](../widgets-gallery.qmd) uses — no kernel needed to *display*
+[`docs/widgets-gallery.qmd`](widgets-gallery.qmd) uses — no kernel needed to *display*
 a built document, only to *dispatch new values into it*):
 
 ```{python}
@@ -122,7 +120,7 @@ HTML(embed_snippet(restored_doc, views=[dashboard.slider_id, dashboard.dropdown_
 - The MUST-NOT gate behind the MVU wiring (no `jslink`/`observe`) is unit- and
   live-kernel-tested in `tests/test_example_dashboard.py` and `tests/test_e2e_dashboard.py`
   — read those for the exact failure mode this design avoids.
-- [`docs/widgets.md`](../widgets.md) for the six build-your-own ipywidgets categories
+- [`docs/widgets.md`](widgets.md) for the six build-your-own ipywidgets categories
   this dashboard's summary/download widgets are built from (plain anywidget ESM, not the
   real-controls catalog).
 - [`docs/tutorials/static-export.qmd`](static-export.qmd) for what a static export can

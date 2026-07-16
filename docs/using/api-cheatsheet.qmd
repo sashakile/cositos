@@ -3,14 +3,14 @@ title: "API cheat sheet: the same operation, five languages"
 ---
 
 Every backend implements the same six operations, verified byte-for-byte against the
-shared golden fixtures (see the [porting guide](../porting.md)). Each is deliberately
+shared golden fixtures (see the [porting guide](../extending/porting.md)). Each is deliberately
 idiomatic to its language — different casing, different mutation convention, different
 return shape — so there is no muscle-memory transfer between backends, only conceptual
 transfer. This page is the lookup table for jumping between them.
 
 For the full API with signatures, defaults, and behaviour, see the
-[API reference](index.qmd). The normative contracts live in the
-[specifications](specs.qmd) (protocol, serialization, embed, lifecycle,
+[API reference](api-reference.qmd). The normative contracts live in the
+[specifications](../extending/specs.qmd) (protocol, serialization, embed, lifecycle,
 lifecycle-shell).
 
 ## Message builders {#message-builders}
@@ -62,3 +62,9 @@ All five satisfy the same law: `load_document(dump_document(x)) == x`, checked a
 | Clojure | `kebab-case` | `cositos.core` namespace |
 | C# | `PascalCase` | `Cositos.Core` static class |
 | R | `snake_case` | top-level (source `core.R` directly; no package namespace yet) |
+
+## Next
+
+- [API reference](api-reference.qmd) — the full Python signatures behind these names.
+- [Porting guide](../extending/porting.md) — implement + certify these operations in a
+  new language.

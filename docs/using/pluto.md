@@ -34,7 +34,7 @@ wrap the SAME `examples/widgets/*.js` this repo already ships and certifies
 ready-to-`@bind` `PlutoWidget` — no hand-written ESM, no state `Dict`, no `PlutoWidget`
 construction. They live in the `Cositos.Pluto` submodule (**not** exported from
 `Cositos` itself — avoids clashing with the unrelated top-level `int_slider`/`dropdown`
-real-controls catalog, cositos-70b.7, and with the `Pluto.jl` tool's own package name),
+real-controls catalog, and with the `Pluto.jl` tool's own package name),
 so reach them via `Cositos.Pluto....` or an explicit `using Cositos.Pluto: ...`:
 
 ```julia
@@ -100,7 +100,7 @@ export default { render({ model, el }) {
 ## Runtime hosting
 
 The generated HTML `import`s `@cositos/front` from `runtime_url`. **You don't need to set
-it.** `PlutoWidget`'s default (cositos-z76.7) resolves automatically to
+it.** `PlutoWidget`'s default resolves automatically to
 [`Cositos.local_front_runtime_url()`](#runtime-hosting) — a self-contained `data:` URI bundling
 `front/src/*.js`, with **no npm publish, CDN, or local server required**, fully offline:
 
@@ -129,7 +129,7 @@ bundle order in `CositosPlutoExt._bundle_front_source`.
 
 - Verified by contract on both sides (JS: `front/test/pluto.test.js`; Julia:
   the Pluto testset in `julia/test/runtests.jl`), **and** live end-to-end against a real
-  Pluto server + browser interaction (`examples/notebooks/pluto_demo.jl`, cositos-z76.7):
+  Pluto server + browser interaction (`examples/notebooks/pluto_demo.jl`):
   the slider, checkbox, and dropdown from the batteries-included gallery all reactively
   updated their bound Julia value from real DOM interaction.
 - Coarse reactive sync only; no `echo_update`, no binary buffers over the bond in v0
@@ -139,7 +139,7 @@ bundle order in `CositosPlutoExt._bundle_front_source`.
 
 - [Hosts & channels](hosts.md) — the full `Channel` contract and all built-in channels
   (Jupyter, Clay, LocalChannel, MemoryChannel).
-- [Architecture](../explanation/architecture.qmd) — how the lifecycle reducer, Transport
+- [Architecture](../extending/architecture.qmd) — how the lifecycle reducer, Transport
   seam, and Document model make cositos portable across languages and environments.
-- [API reference](../reference/index.qmd#lifecycle) — the lifecycle reducer's event and
+- [API reference](api-reference.qmd#lifecycle) — the lifecycle reducer's event and
   effect types.

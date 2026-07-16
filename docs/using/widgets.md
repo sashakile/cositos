@@ -7,11 +7,8 @@ title: "Widgets: covering the ipywidgets surface without cloning the zoo"
 
 A cositos widget is an anywidget-compatible ES module — a small JavaScript file that
 renders a UI element and syncs state over a Jupyter comm channel. This page catalogs the
-ipywidgets categories cositos can express. See [Authoring a widget](tutorials/authoring-widgets.qmd)
+ipywidgets categories cositos can express. See [Authoring a widget](authoring-widgets.qmd)
 for how to write one from scratch, or the [Widget gallery](widgets-gallery.qmd) for live demos.
-
-> **What this page is:** The six ipywidgets categories cositos can express — value
-> types, ESM patterns, and per-language code snippets.
 
 **cositos does not reimplement `@jupyter-widgets/controls`.** ipywidgets ships ~30
 frontend widget classes (`IntSlider`, `Button`, `Dropdown`, …); cloning them verbatim
@@ -30,7 +27,7 @@ ipywidgets category and is render+interaction tested in `front/test/gallery.test
 | Numeric | IntSlider, FloatSlider | `int_slider.js` | `value` two-way |
 | Boolean | Checkbox, ToggleButton | `checkbox.js` | `value` two-way |
 | String | Text, Textarea | `text.js` | `value` two-way |
-| Button/event | Button | `button.js` | `clicks` state + `custom` event |
+| Button/event | Button | `button.js` (and `download_button.js`) | `clicks` state + `custom` event |
 | Selection | Dropdown, Select, RadioButtons | `dropdown.js` | `value` + `options` |
 | Output/display | HTML, Label, Output | `html.js` | `value` (kernel → view) |
 
@@ -65,7 +62,7 @@ ipywidgets one.
 
 See [`docs/widgets-gallery.qmd`](widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required)
 for a runnable example (`int_slider()`, `dropdown()`, `vbox()`) built from
-`cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](tutorials/plot-integration.qmd#about-cositos.contrib),
+`cositos.contrib.controls` — unlike [`cositos.contrib.harvest`](plot-integration.qmd#about-cositos.contrib),
 this one needs neither `ipywidgets` nor `anywidget` installed.
 
-For the full scenario—building a small dashboard from these real controls, downloading its state, and restoring it in a fresh session—see [`tutorials/dashboard.qmd`](tutorials/dashboard.qmd).
+For the full scenario—building a small dashboard from these real controls, downloading its state, and restoring it in a fresh session—see [`tutorials/dashboard.qmd`](dashboard.qmd).

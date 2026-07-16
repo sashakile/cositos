@@ -4,16 +4,28 @@ title: "Quickstart: your first live cositos widget"
 
 > **What this page is:** The shortest path to a live cositos widget in Python, Julia,
 > or Clojure — one code snippet per language, ready to run in your notebook.
+>
+> **New here?** First install the packages and skim the vocabulary:
+>
+> ```bash
+> pip install cositos anywidget
+> ```
+>
+> `cositos` runs in your **kernel** (the notebook's language engine); `anywidget` is the
+> **frontend** (the browser-side JavaScript that draws the widget). You need both for a
+> live widget. Unfamiliar with *ESM*, *comm*, *kernel vs frontend*? See the
+> [Glossary](glossary.qmd) — you don't need to write any JavaScript to run these.
 
 This page answers one question per language: **what is the shortest path to a live
 cositos widget in my kernel, today?** For the full backend-maturity picture (why only
-some languages are listed as "live" below) see the [Implementation status](../status.md)
+some languages are listed as "live" below) see the [Implementation status](status.md)
 page and the tier classification in
 [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md).
 
-Every snippet below renders the *same* counter widget — one anywidget-style ESM file,
-reused verbatim, with **no new JavaScript** regardless of host language. The full
-runnable notebooks these snippets are extracted from live in
+Every snippet below renders the *same* counter widget — one anywidget-style
+[ESM](glossary.qmd) file (a small JavaScript module you paste verbatim), reused with
+**no new JavaScript** regardless of host language. The full runnable notebooks these
+snippets are extracted from live in
 [`examples/notebooks/`](https://github.com/sashakile/cositos/blob/main/examples/notebooks/).
 
 ## Python (quickstart)
@@ -111,9 +123,9 @@ Click **increment**, then read the count back: `state["count"]`.
 Two live paths, deliberately different trade-offs:
 
 - **Clay (recommended)** -- not a Jupyter kernel, but a full-duplex public websocket, no
-  internal APIs. See [`docs/hosts.md`](../hosts.md#clay-claychannel) and
+  internal APIs. See [`docs/hosts.md`](hosts.md#clay-claychannel) and
   `clojure -M:clay-notebook`.
-- **clojupyter, via an internal-API crack** -- confirmed live (Tier 1, `cositos-059.9`),
+- **clojupyter, via an internal-API crack** -- confirmed live (Tier 1),
   but reaches `clojupyter.state/current-context`, an internal, version-coupled
   implementation detail with no buffer or `custom`-message support. Full notebook:
   `examples/notebooks/clojure_counter.ipynb`.
@@ -144,10 +156,10 @@ buffer-split/merge logic is ported and fixture-certified, but there is no live-w
 path yet because the *kernel's* comm support is blocked upstream -- not a gap in
 cositos itself. See [`probe/README.md`](https://github.com/sashakile/cositos/blob/main/probe/README.md) for how each was classified.
 
-| Language | Blocked on | Tracking |
-|---|---|---|
-| R | IRkernel 1.3.2's `comm$open()` throws an internal `send_response` arity error | `cositos-059.4` |
-| C# | .NET Interactive doesn't answer `comm_info_request` -- it uses a bespoke kernel protocol, not the standard ipywidgets comm surface | `cositos-059.6` |
+| Language | Blocked on |
+|---|---|
+| R | IRkernel 1.3.2's `comm$open()` throws an internal `send_response` arity error |
+| C# | .NET Interactive doesn't answer `comm_info_request` -- it uses a bespoke kernel protocol, not the standard ipywidgets comm surface |
 
 If you're evaluating a language for a polyglot team today, treat this table as
 current status, not a roadmap commitment -- each is blocked on an upstream kernel fix,
@@ -155,7 +167,7 @@ not on cositos work.
 
 ## Next steps
 
-- Understand how it works: [architecture](../explanation/architecture.qmd) — the lifecycle
+- Understand how it works: [architecture](../extending/architecture.qmd) — the lifecycle
   reducer, Transport seam, and Document model.
 - Author a new widget's ESM: `tutorials/authoring-widgets.qmd`.
 - Embed a widget into an existing tool (Quarto, JupyterBook, Voila, Clay, …):

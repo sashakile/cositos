@@ -1,7 +1,10 @@
 # serialization Specification
 
 ## Purpose
-TBD - created by archiving change serialize-widget-state. Update Purpose after archive.
+Define how cositos serializes widget state to, and reconstructs it from, the ipywidgets
+Widget State JSON schema v2 (`application/vnd.jupyter.widget-state+json`) — losslessly,
+including binary buffers and inter-widget references — so a whole UI can be saved to plain
+JSON and rebuilt later, and so every language port certifies against the same contract.
 ## Requirements
 ### Requirement: Widget State Round-Trips Through JSON
 The system SHALL serialize widget state to, and reconstruct it from, the ipywidgets Widget

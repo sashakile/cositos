@@ -1,0 +1,47 @@
+---
+title: "Extending cositos"
+---
+
+> **Who this section is for:** engineers **building a backend** — porting cositos to a new
+> Jupyter kernel language, or contributing to the project internals. **We assume** you know
+> a language ecosystem and are comfortable reading protocols and specifications. Unlike the
+> [Using](../using/index.qmd) section, pages here *may* assume the widget vocabulary
+> (comm, ESM, trait, reducer, buffer) — but each is defined once in the
+> [Glossary](../using/glossary.qmd).
+
+## The shape of a port
+
+A cositos backend is three things:
+
+1. A **Transport** adapter over your kernel's comm API.
+2. The **pure protocol core** — message builders + buffer split/merge (~150 lines, fully
+   specified by the golden fixtures in `fixtures/*.json`).
+3. The **lifecycle shell** — a thin bridge that runs the pure lifecycle reducer's effects.
+
+You write **no JavaScript**: you reuse anywidget's published `AnyModel`/`AnyView` frontend.
+
+## Existing reference ports
+
+Before you start, check whether a port already exists — you may only need to finish the
+Transport adapter:
+
+| Language | Status | Source |
+|---|---|---|
+| Python | complete (live) | `src/cositos/` |
+| Julia | complete (live) | `julia/` |
+| Clojure | complete (live, via Clay) | `clojure/` |
+| C# | protocol core complete; live Transport pending | `csharp/Core.cs`, `csharp/README.md` |
+| R | protocol core complete; live blocked upstream | `r/core.R`, `r/README.md` |
+
+## How-to
+
+- [**Porting guide**](porting.md) — implement + certify a backend in a new language.
+- [**Local hooks & gates**](hooks.md) — set up the repo's pre-commit/pre-push checks.
+
+## Reference & explanation
+
+- [**Specifications**](specs.qmd) — the normative contracts (protocol, serialization,
+  embed, lifecycle, lifecycle-shell) the test suite and every port certify against.
+- [**Architecture**](architecture.qmd) — the lifecycle reducer, Transport seam, and
+  Document model, and *why* they are shaped this way.
+- [**Polyglot parity**](polyglot-parity.qmd) — how ports are pinned to identical output.

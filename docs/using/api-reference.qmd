@@ -5,19 +5,22 @@ title: "API reference"
 > **What this page is:** Every public symbol in the cositos Python package — functions,
 > classes, and their signatures — organized by concern.
 
-The public API is everything exported from the top-level `cositos` package. It splits
-into nine concerns: **serialization**, **embedding**, the **`Widget` façade**, the
-**lifecycle reducer**, the **`Transport` seam**, the **protocol core**, **buffers**,
-**reference checking**, and **capabilities**. Every symbol below is
-importable directly, e.g. `from cositos import dump_document`.
+The public API splits into these concerns: **serialization**, **embedding**, the
+**`Widget` façade**, the **lifecycle reducer**, the **`Transport` seam**, the **protocol
+core**, **buffers**, and the **`contrib.controls`** helpers. Most symbols are importable
+directly from the top-level package, e.g. `from cositos import dump_document` — **except the
+lifecycle-reducer symbols** (`reduce`, `Phase`, `Open`, `Send`, …), which live in the
+`cositos.lifecycle` submodule: `from cositos.lifecycle import reduce, Phase, Open`.
+Reference checking (`check_references`) is listed under Serialization; capability flags
+(`TransportCapabilities`) under the Lifecycle reducer.
 
 **Jump to:**
 [Serialization](#serialization) · [Embedding](#embedding) · [Widget](#the-widget-façade) ·
 [Lifecycle reducer](#lifecycle) · [Transport](#the-transport-seam) ·
-[Protocol core](#protocol-core) · [Buffers](#buffers)
+[Protocol core](#protocol-core) · [Buffers](#buffers) · [contrib.controls](#contrib-controls)
 
 The behaviour behind these functions is pinned by the living
-[specifications](specs.qmd) (protocol, serialization, embed, lifecycle,
+[specifications](../extending/specs.qmd) (protocol, serialization, embed, lifecycle,
 lifecycle-shell) — the same contracts the test suite and any cross-language port
 certify against.
 
@@ -25,7 +28,7 @@ certify against.
 
 Persist a widget (or a composed graph of widgets) to plain JSON and rebuild it later.
 Round-trips are lossless, including binary buffers (base64-encoded per the widget
-state-format v2 schema). See the [serialization spec](specs.qmd#serialization).
+state-format v2 schema). See the [serialization spec](../extending/specs.qmd#serialization).
 
 | Function | Signature | Purpose |
 |---|---|---|
@@ -38,6 +41,8 @@ state-format v2 schema). See the [serialization spec](specs.qmd#serialization).
 ```python
 from cositos import dump_document, load_document
 
+# a widget's frontend is an ESM string (see the Glossary); any placeholder works here:
+ESM = "export default { render({ model, el }) { el.textContent = model.get('n'); } }"
 doc = dump_document([("counter", {"_esm": ESM, "n": 3})])
 # doc is a JSON-serializable dict; write it, ship it, reload it:
 entries = load_document(doc)          # [("counter", {"_esm": ..., "n": 3})]
@@ -47,7 +52,7 @@ entries = load_document(doc)          # [("counter", {"_esm": ..., "n": 3})]
 
 Render a serialized `Document` to self-contained HTML — no kernel required. The anywidget
 model/view resolves from a CDN at display time, so no frontend is bundled. See the
-[embed spec](specs.qmd#embed).
+[embed spec](../extending/specs.qmd#embed).
 
 | Function | Signature | Purpose |
 |---|---|---|
@@ -66,7 +71,7 @@ script-escaped so a `</script>` inside widget state can't break out of the page.
 ```python
 from cositos import dump_document, write_html
 
-doc = dump_document([("m", {"_esm": ESM, "n": 3})])
+doc = dump_document([("m", {"_esm": ESM, "n": 3})])  # ESM: the widget's frontend module string
 write_html("out.html", doc)           # open in any browser (needs internet for the CDN)
 ```
 
@@ -101,7 +106,7 @@ Widget(
 I/O, no side effects, no mutable state.
 
 ```python
-from cositos.lifecycle import reduce, Phase, TransportCapabilities
+from cositos.lifecycle import reduce, Phase, Open, TransportCapabilities
 
 state = {"_esm": "export default function render({model, el}) {...}", "value": 0}
 phase, effects = reduce(Phase.UNOPENED, Open(), state, TransportCapabilities())
@@ -167,8 +172,8 @@ class TransportCapabilities:
 - `supports_custom=False` — transports that don't support custom messages; `send_custom`
   produces an `Error` effect.
 
-See the [lifecycle spec](specs.qmd#lifecycle) and the
-[lifecycle-shell spec](specs.qmd#lifecycle-shell) for the full contract.
+See the [lifecycle spec](../extending/specs.qmd#lifecycle) and the
+[lifecycle-shell spec](../extending/specs.qmd#lifecycle-shell) for the full contract.
 
 ## The `Transport` seam
 
@@ -192,7 +197,7 @@ class Transport(Protocol):
 ## Protocol core
 
 Pure message shaping and parsing — the language-neutral heart of the library. See the
-[protocol spec](specs.qmd#protocol).
+[protocol spec](../extending/specs.qmd#protocol).
 
 | Symbol | Signature | Purpose |
 |---|---|---|
@@ -205,7 +210,7 @@ Pure message shaping and parsing — the language-neutral heart of the library. 
 `parse_message` returns one of four typed events: `Update{state, buffer_paths}`,
 `RequestState`, `Custom{content}`, or `Ignored{method}`. An unknown or missing `method`
 yields `Ignored` (it never raises), matching ipywidgets' forward-compatible dispatch — the
-caller no-ops on it (see the [protocol spec](specs.qmd#protocol)).
+caller no-ops on it (see the [protocol spec](../extending/specs.qmd#protocol)).
 
 ## Buffers
 
@@ -216,3 +221,22 @@ protocol v2 nested-buffer rules.
 |---|---|---|
 | `remove_buffers` | `remove_buffers(state) -> tuple[state, buffer_paths, buffers]` | Extract binary values, replacing each with a hole in the state tree. |
 | `put_buffers` | `put_buffers(state, buffer_paths, buffers) -> None` | Inverse; mutates `state` in place. |
+
+## contrib.controls {#contrib-controls}
+
+Helpers that emit **real `@jupyter-widgets/controls` models** (a slider, dropdown, layout
+box) as `ModelEntry` state dicts — so you can use stock ipywidgets controls without
+reimplementing them and with no `ipywidgets` Python package installed. Import from the
+submodule: `from cositos.contrib.controls import int_slider, dropdown, vbox, hbox`.
+Each returns a `list[ModelEntry]` (the control plus any companion models it needs, e.g. a
+layout/style model), ready to pass to `dump_document`.
+
+| Function | Signature | Purpose |
+|---|---|---|
+| `int_slider` | `int_slider(value=0, min=0, max=100, **overrides) -> list[ModelEntry]` | An `IntSlider` control. |
+| `dropdown` | `dropdown(options, value=None, **overrides) -> list[ModelEntry]` | A `Dropdown` control. |
+| `vbox` | `vbox(children, **overrides) -> list[ModelEntry]` | Vertical layout box wrapping child controls. |
+| `hbox` | `hbox(children, **overrides) -> list[ModelEntry]` | Horizontal layout box wrapping child controls. |
+
+See the [widget gallery](widgets-gallery.qmd#real-ipywidgets-controls-no-reimplementation-required)
+for live examples.

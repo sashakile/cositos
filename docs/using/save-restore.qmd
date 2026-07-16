@@ -64,9 +64,9 @@ to turn a saved document into a viewable HTML page.
 ## Download & restore a dashboard's state {#download-restore-a-dashboards-state}
 
 The pattern above generalizes directly to a **real, running dashboard**:
-[`examples/dashboard/build.py`](../../examples/dashboard/build.py)'s `Dashboard`
-(`cositos-70b.4`) carries a `download_button.js` widget
-([`examples/widgets/`](../../examples/widgets/), `cositos-70b.5`) whose `json` state
+[`examples/dashboard/build.py`](https://github.com/sashakile/cositos/blob/main/examples/dashboard/build.py)'s `Dashboard`
+carries a `download_button.js` widget
+([`examples/widgets/`](https://github.com/sashakile/cositos/tree/main/examples/widgets)) whose `json` state
 field is always `dump_document(...)` of the dashboard's current slider/dropdown/summary
 state -- refreshed on every model change the exact same way the summary text is (see the
 module's own docstring for why that MUST be through the shared host Model and never a

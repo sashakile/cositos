@@ -10,10 +10,10 @@ This guide is for someone who knows a language ecosystem (Julia, C#, R, …) and
 `cositos`/anywidget-style backend there. You do **not** write any JavaScript — you reuse
 anywidget's published `AnyModel`/`AnyView` frontend.
 
-Before you start, read the [architecture](explanation/architecture.qmd) page to
+Before you start, read the [architecture](architecture.qmd) page to
 understand the **lifecycle reducer** — the pure state machine that every backend
-implements. The [lifecycle spec](reference/specs.qmd#lifecycle) and
-[lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) are the full normative
+implements. The [lifecycle spec](specs.qmd#lifecycle) and
+[lifecycle-shell spec](specs.qmd#lifecycle-shell) are the full normative
 contracts.
 
 ## What you implement
@@ -26,20 +26,20 @@ Steps 3–4 verify what you built):
    ~150 lines and is fully specified by the golden fixtures.
 3. **The lifecycle shell** — the thin imperative bridge that calls the lifecycle reducer
    and executes the returned effects. This is ~50 lines and is specified by the
-   [lifecycle-shell spec](reference/specs.qmd#lifecycle-shell).
+   [lifecycle-shell spec](specs.qmd#lifecycle-shell).
 
 Everything else (observer autodetection, ESM hot-reload, host-idiomatic state objects)
 is optional ergonomics you can add later.
 
 ## Step 1 — Implement the Transport
 
-Your kernel exposes some comm surface. Map it to:
+Your kernel exposes some [comm](../using/glossary.qmd) surface. Map it to:
 
-| Core needs | Python (`comm`) | Deno | IJulia | dotnet-interactive | clojupyter (crack, see caveat) |
-|---|---|---|---|---|---|
-| open + send | `comm.create_comm` / `comm.send` | `Deno.jupyter.broadcast("comm_open"/"comm_msg", …)` | `Comm(...)` / `send` | `Kernel.SendAsync` | `comm-atom/create-and-insert` + `state-update!` |
-| receive | `comm.on_msg` | (limited) | `comm.on_msg` | comm handler | `comm-atom/watch` |
-| `supports_receive` | `True` | often `False` | `True` | `True` | `True` (state-sync only — no buffers, no `custom`) |
+| Core needs | Python (`comm`) | Deno | IJulia | dotnet-interactive | clojupyter (crack, see caveat) | IRkernel (R, live blocked upstream) |
+|---|---|---|---|---|---|---|
+| open + send | `comm.create_comm` / `comm.send` | `Deno.jupyter.broadcast("comm_open"/"comm_msg", …)` | `Comm(...)` / `send` | `Kernel.SendAsync` | `comm-atom/create-and-insert` + `state-update!` | `comm_manager$new_comm` / `comm$send` |
+| receive | `comm.on_msg` | (limited) | `comm.on_msg` | comm handler | `comm-atom/watch` | `comm$on_msg` |
+| `supports_receive` | `True` | often `False` | `True` | `True` | `True` (state-sync only — no buffers, no `custom`) | n/a — `comm$open()` throws upstream (see [status](../using/status.md)) |
 
 If your kernel is broadcast-only (can't route frontend→kernel replies), set
 `supports_receive = False`; the core degrades to one-way widgets.
@@ -132,19 +132,25 @@ Python; see `src/cositos/lifecycle.py`) is the thin per-language bridge that:
    different comm id than the one the shell passed — the feedback loop ensures the shell
    uses the real id for subsequent mimebundle calls.
 
-See the [lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) for the full
-contract and the [API reference](reference/index.qmd#lifecycle) for the event and
+See the [lifecycle-shell spec](specs.qmd#lifecycle-shell) for the full
+contract and the [API reference](../using/api-reference.qmd#lifecycle) for the event and
 effect type signatures.
 
 ## Reference
 
 - Wire protocol: <https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md>
-- Python reference: `src/cositos/` in this repo.
-- [Architecture & reducer design](explanation/architecture.qmd) — how the lifecycle
+- **Existing reference implementations** — check these before starting; a port may already
+  be done, or you may only need to finish the Transport adapter:
+    - Python (complete, live): `src/cositos/`
+    - Julia (complete, live): [`julia/`](https://github.com/sashakile/cositos/tree/main/julia)
+    - Clojure (complete, live via Clay): [`clojure/`](https://github.com/sashakile/cositos/tree/main/clojure)
+    - C# (protocol core complete; live Transport pending): [`csharp/Core.cs`](https://github.com/sashakile/cositos/blob/main/csharp/Core.cs), [`csharp/README.md`](https://github.com/sashakile/cositos/blob/main/csharp/README.md)
+    - R (protocol core complete; live blocked upstream): [`r/core.R`](https://github.com/sashakile/cositos/blob/main/r/core.R), [`r/README.md`](https://github.com/sashakile/cositos/blob/main/r/README.md)
+- [Architecture & reducer design](architecture.qmd) — how the lifecycle
   reducer, Transport seam, and Document model fit together.
-- [Lifecycle spec](reference/specs.qmd#lifecycle) — the normative reducer contract.
-- [Lifecycle-shell spec](reference/specs.qmd#lifecycle-shell) — the imperative shell
+- [Lifecycle spec](specs.qmd#lifecycle) — the normative reducer contract.
+- [Lifecycle-shell spec](specs.qmd#lifecycle-shell) — the imperative shell
   contract.
-- [API reference](reference/index.qmd) — full API including lifecycle events, effects,
+- [API reference](../using/api-reference.qmd) — full API including lifecycle events, effects,
   and capabilities.
-- Cross-language symbol lookup: `docs/reference/api-cheatsheet.qmd`.
+- Cross-language symbol lookup: [API cheat sheet](../using/api-cheatsheet.qmd).

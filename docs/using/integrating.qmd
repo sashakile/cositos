@@ -4,9 +4,35 @@ title: "Integrating cositos into an existing tool or host"
 
 This page is for **embedding a cositos widget into an environment you didn't build** —
 a Quarto document, a JupyterBook, a Voila app, myBinder, a Clay notebook, a terminal UI
-— as opposed to choosing a kernel *language* (`tutorials/quickstart.qmd`) or *authoring*
-a new widget's ESM (`tutorials/authoring-widgets.qmd`). Those two answer "which language,
-which widget"; this page answers "which environment renders it."
+— as opposed to choosing a kernel *language* ([quickstart](quickstart.qmd)) or *authoring*
+a new widget's ESM ([authoring a widget](authoring-widgets.qmd)). Those two answer "which
+language, which widget"; this page answers "which environment renders it."
+
+## Quickest integration: a static embed (no kernel)
+
+The most portable option works in *any* HTML host (Quarto, JupyterBook, a plain page):
+serialize the widget to a `Document` and drop the embed snippet into the page. This cell
+is runnable as-is:
+
+```{python}
+# | echo: true
+# | output: asis
+from IPython.display import HTML
+from cositos import dump_document, embed_snippet
+
+ESM = """export default { render({ model, el }) {
+  const b = document.createElement("button"); b.textContent = "count = " + model.get("n");
+  b.onclick = () => { model.set("n", model.get("n") + 1); model.save_changes(); };
+  model.on("change:n", () => b.textContent = "count = " + model.get("n"));
+  el.appendChild(b);
+} }"""
+
+doc = dump_document([("counter", {"_esm": ESM, "n": 0})])
+HTML(embed_snippet(doc))   # self-contained widget HTML — paste into any page
+```
+
+The button below is the rendered result. For a *live* (kernel-backed) widget in a specific
+host, pick the right seam — read on.
 
 <!-- Repo-relative paths to files outside docs/ are plain text here, not markdown
      links: docs/tutorials/*.qmd renders one directory level deeper than its source,
@@ -20,7 +46,7 @@ cositos isolates everything environment-specific behind one small seam on each s
   `onMessage(cb)`. Full contract: `hosts.md`.
 - **`Transport`** (host-language backend) — `send(msg_type, content, buffers, metadata)`
   / `on_message(cb)` / `supports_receive`. Full contract: `src/cositos/transport.py`
-  (Python) and the porting guide's Step 1 table (`porting.md`).
+  (Python) and the porting guide's Step 1 table ([porting guide](../extending/porting.md)).
 
 Integrating into a new tool almost always means picking (or writing) one of these, not
 touching the protocol core.

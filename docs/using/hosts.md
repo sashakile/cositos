@@ -4,7 +4,7 @@ title: "Hosts & channels: running cositos widgets anywhere"
 
 > **What this page is:** The frontend-side `Channel` contract and all built-in channels
 > (Jupyter, Pluto, Clay, LocalChannel, MemoryChannel). The backend-side analog is the
-> `Transport` seam documented in the [architecture](explanation/architecture.qmd).
+> `Transport` seam documented in the [architecture](../extending/architecture.qmd).
 
 cositos runs the **same anywidget ESM** in many environments by isolating everything
 environment-specific behind one small seam: the **`Channel`**. The frontend `Model`
@@ -137,3 +137,9 @@ byte-for-byte buffer fidelity; two-widget id routing). Deferred: reconnect/resyn
    `@cositos/front` only if your host also needs to split/merge on its own side.
 5. Certify against the shared golden fixtures in `fixtures/*.json` so every host agrees
    byte-for-byte (see `front/test/` and `clojure/test/` for the pattern).
+
+## See also
+
+- [Architecture](../extending/architecture.qmd) — the Transport/Channel seam in context.
+- [Porting guide](../extending/porting.md) — implementing a backend for a new kernel.
+- [Implementation status](status.md) — which hosts and languages work today.

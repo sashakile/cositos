@@ -64,6 +64,38 @@ cross-part `link`s survive when the app is serialized for static export.
 
 ---
 
+## What MVU looks like in code
+
+The minimal skeleton: **one** state dict, **one** `update` function that is the only thing
+that mutates it, and views that are **pure projections** re-rendered from that state. A
+user action calls `update`, which pushes the new state to the host `Model`:
+
+```python
+# 1. One domain model — the single source of truth.
+state = {"count": 0, "step": 1}
+
+# 2. One update function — the only thing that changes state.
+def update(msg: dict, state: dict) -> dict:
+    if msg["type"] == "increment":
+        return {**state, "count": state["count"] + state["step"]}
+    if msg["type"] == "set_step":
+        return {**state, "step": msg["value"]}
+    return state
+
+# 3. Views are pure projections of state (no view holds its own copy).
+def summary_view(state: dict) -> str:
+    return f"count={state['count']} (step {state['step']})"
+
+# A user action flows one way: event -> update -> new state -> re-projected views.
+state = update({"type": "increment"}, state)   # -> {"count": 1, "step": 1}
+assert summary_view(state) == "count=1 (step 1)"
+```
+
+See the [dashboard tutorial](dashboard.qmd) for this pattern wired to real widgets
+end-to-end.
+
+---
+
 ## The rules
 
 ### Rule 1 — One domain model is the single source of truth
@@ -100,8 +132,8 @@ callbacks between sibling widgets — is precisely the pattern that fails at sca
 1. **It does not serialize.** Across *every* scenario, at *every* scale, `links_kept = 0`.
    Peer `LinkModel`s live outside the container widget tree, so the static-export harvester
    never reaches them. An app saved or embedded to static HTML **silently loses all its
-   cross-part interactivity** — see [static export](../tutorials/static-export.qmd) and the
-   [Document model](architecture.qmd#the-document-is-the-virtual-dom).
+   cross-part interactivity** — see [static export](static-export.qmd) and the
+   [Document model](../extending/architecture.qmd#the-document-is-the-virtual-dom).
 2. **It explodes on cyclic topologies.** Cross-filter big: one user click causes **1700**
    output refreshes and **1700** expensive scans in variant A, versus **100** refreshes and
    a **single** scan in variant B. Peer wiring is `O(views × dims)`; the model projection is
@@ -169,7 +201,7 @@ computation and profiling shows the whole-projection re-render is the bottleneck
 
 ## Why this is a discipline, not a runtime
 
-cositos's core stays [binding-free and pure](architecture.qmd#the-binding-free-core): it does
+cositos's core stays [binding-free and pure](../extending/architecture.qmd#the-binding-free-core): it does
 **not** ship a reactive runtime or an MVU framework. These rules are a *discipline you apply in
 your host language*, not machinery baked into the core. That keeps the fixture-certified core
 small and portable, while giving every app a measured, principled way to stay **acyclic,
@@ -181,7 +213,8 @@ serializable, and cheap** as it grows.
   scenarios, and metric definitions.
 - [`examples/benchmarks/RESULTS.md`](https://github.com/sashakile/cositos/blob/main/examples/benchmarks/RESULTS.md) — the complete
   A/B/C/D results across scenarios and scales.
-- [Architecture](architecture.qmd) — why the Document (not live widget links) is the unit of
+- [Architecture](../extending/architecture.qmd) — why the Document (not live widget links) is the unit of
   persistence.
-- [Static export tutorial](../tutorials/static-export.qmd) — where `links_kept = 0` bites in
+- [Static export tutorial](static-export.qmd) — where `links_kept = 0` bites in
   practice.
+- [Dashboard tutorial](dashboard.qmd) — the MVU pattern above, wired to real widgets.

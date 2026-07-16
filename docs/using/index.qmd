@@ -1,0 +1,45 @@
+---
+title: "Using cositos"
+---
+
+> **Who this section is for:** notebook authors who want to *use* interactive widgets —
+> driven from Python, Julia, R, or Clojure. **We assume** you know a notebook language and
+> have used Jupyter. **We do not assume** you know [anywidget](https://anywidget.dev),
+> ipywidgets, or any JavaScript. New terms are defined in the
+> [**Glossary**](glossary.qmd) and linked on first use.
+
+## Setup
+
+```bash
+pip install cositos anywidget
+```
+
+`cositos` runs in your **kernel** (the notebook's language engine — the thing running your
+Python/Julia). `anywidget` supplies the **frontend** (the JavaScript that renders the
+widget in the browser/JupyterLab). You need both for a *live* widget; for static HTML
+export you need only `cositos`. See the [Glossary](glossary.qmd) for kernel vs frontend.
+
+## Learn by doing (Tutorials)
+
+1. [**Quickstart**](quickstart.qmd) — run your first widget in Python, Julia, or Clojure.
+2. [**Author a widget**](authoring-widgets.qmd) — write your own widget's ESM frontend.
+3. [**Save & restore**](save-restore.qmd) — persist widget state to JSON and reload it.
+4. [**Build a dashboard**](dashboard.qmd) — compose several widgets through one state model.
+5. [**Static HTML export**](static-export.qmd) — ship widgets with no live kernel.
+6. [**Integrate a plotting library**](plot-integration.qmd) — Plotly / Altair / bqplot.
+7. [**On the web (Observable JS)**](web-ojs.qmd) — render widgets fully in the browser.
+8. [**Integrate into a host**](integrating.qmd) — the Transport/Channel seam per environment.
+
+## Look it up (Reference)
+
+- [**API reference**](api-reference.qmd) — every public symbol and signature.
+- [**API cheat sheet**](api-cheatsheet.qmd) — cross-language name lookup.
+- [**Widget gallery**](widgets-gallery.qmd) — live demos + launch snippets.
+- [**Widget categories**](widgets.md) — what kinds of widgets cositos can express.
+- [**Hosts & channels**](hosts.md) — per-host support (Jupyter, Clay, Pluto, …).
+- [**Implementation status**](status.md) — languages and hosts supported today.
+
+## Understand it (Explanation)
+
+- [**State discipline**](state-discipline.qmd) — keeping many widgets consistent as your
+  app grows (read this once your app has more than a handful of widgets).

@@ -15,7 +15,7 @@ the test suite and any cross-language port certify against. They are maintained 
 spec: this page *is* the spec.
 
 Each specification lists **requirements** (normative statements) and **scenarios**
-(Given/When/Then examples that pin the behaviour). The [API reference](index.qmd) links
+(Given/When/Then examples that pin the behaviour). The [API reference](../using/api-reference.qmd) links
 back here from each concern.
 
 ## protocol {#protocol}
@@ -45,7 +45,7 @@ how embedded JSON is script-escaped so widget state can't break out of the page.
 The pure widget lifecycle reducer: a deterministic state machine that encodes the
 open → send → close lifecycle as a pure function. Every cositos backend feeds events
 (Open, SendState, SendCustom, Inbound, Close, CommIdAssigned) through `reduce()` and
-executes the returned effects. See the [API reference](index.qmd#lifecycle) for the
+executes the returned effects. See the [API reference](../using/api-reference.qmd#lifecycle) for the
 event and effect types.
 
 {{< include ../../openspec/specs/lifecycle/spec.md >}}
@@ -54,6 +54,6 @@ event and effect types.
 
 The thin imperative shell that calls the lifecycle reducer and executes the returned
 effects — bridging between the pure reducer and the real transport/kernel APIs. See the
-[API reference](index.qmd#lifecycle) for the shell API and capability types.
+[API reference](../using/api-reference.qmd#lifecycle) for the shell API and capability types.
 
 {{< include ../../openspec/specs/lifecycle-shell/spec.md >}}
