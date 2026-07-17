@@ -194,3 +194,8 @@ These enforce that the charly-vibes tools stay used as the project grows
   blocked upstream (F1); ground against in-project artifacts until that is fixed.
 - **After F1 is fixed (E3):** add `dont verify` (no ungrounded/unverified claims) to
   `mise run verify` and pre-push, mirroring how `pretender`/`ah` are gated.
+
+## Git & Workflow Discipline
+
+- **Never use `git add -A`** — always stage specific files with explicit paths
+- **Per-ticket pipeline**: always follow `TDD → ro5u → fix → commit → next ticket`
