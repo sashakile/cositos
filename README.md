@@ -12,7 +12,7 @@ Try it live on myBinder — opens JupyterLab with a runnable Python widget count
 between a host language's state object and the Jupyter **comm** channel. It speaks the
 [ipywidgets widget messaging protocol](https://github.com/jupyter-widgets/ipywidgets/blob/main/packages/schema/messages.md)
 (v2.1.0) and reuses anywidget's published `AnyModel`/`AnyView` front end verbatim — so
-you write **no new JavaScript** (see `docs/tutorials/authoring-widgets.qmd` to author one).
+you write **no new JavaScript** (see `docs/using/authoring-widgets.qmd` to author one).
 
 ## Why
 
@@ -25,7 +25,7 @@ backend to their language and self-certify against golden messages.
 ## Backend maturity
 
 The protocol *core* ports to a language in ~150 lines and is fixture-certified for all
-five backends below (see `docs/porting.md`). Whether you get **live** widgets also
+five backends below (see `docs/extending/porting.md`). Whether you get **live** widgets also
 depends on the kernel's comm support, which is a separate, per-kernel question — see
 `probe/README.md` for how each was classified.
 
@@ -35,10 +35,10 @@ depends on the kernel's comm support, which is a separate, per-kernel question �
 | Julia | ✅ yes (Tier 1, IJulia) | [`julia/README.md`](julia/README.md) |
 | R | 🚧 protocol core only — blocked upstream (IRkernel comm-open bug) | [`r/README.md`](r/README.md) |
 | C# | 🚧 protocol core only — blocked upstream (.NET Interactive's non-standard protocol) | [`csharp/README.md`](csharp/README.md) |
-| Clojure | ✅ yes (Tier 1 via an internal-API crack, clojupyter) or via Clay (recommended, public API) | [`clojure/README.md`](clojure/README.md), [`docs/hosts.md`](docs/hosts.md#clay-claychannel) |
+| Clojure | ✅ yes (Tier 1 via an internal-API crack, clojupyter) or via Clay (recommended, public API) | [`clojure/README.md`](clojure/README.md), [`docs/using/hosts.md`](docs/using/hosts.md#clay-claychannel) |
 
 Full tier classification and how kernels were tested: [`probe/README.md`](probe/README.md).
-Shortest runnable path per language: [`docs/tutorials/quickstart.qmd`](docs/tutorials/quickstart.qmd).
+Shortest runnable path per language: [`docs/using/quickstart.qmd`](docs/using/quickstart.qmd).
 
 ## Documentation site
 
@@ -52,11 +52,11 @@ mise run docs-preview   # live-reload preview while editing
 ```
 
 Start at [`docs/index.qmd`](docs/index.qmd) (a live-rendered widget) or
-[`docs/status.md`](docs/status.md) for the implementation-status overview (per-language
+[`docs/using/status.md`](docs/using/status.md) for the implementation-status overview (per-language
 and per-host maturity). Read the
-[architecture](docs/explanation/architecture.qmd) page to understand the
+[architecture](docs/extending/architecture.qmd) page to understand the
 **lifecycle reducer** — the pure state machine behind every widget backend. The
-[porting guide](docs/porting.md) is the starting point for adding a new language.
+[porting guide](docs/extending/porting.md) is the starting point for adding a new language.
 The site is not published yet (no hosting decision made) — build it locally.
 
 ## Architecture
@@ -73,7 +73,7 @@ host state ──▶ WidgetShell ──▶ reduce() ──▶ effects[] ──�
   inbound parsing. No kernel code.
 - **Transport is a seam**: each kernel supplies a thin adapter (Python `comm`,
   `Deno.jupyter.broadcast`, IJulia, dotnet-interactive). See
-  `docs/tutorials/integrating.qmd` for which one to use and how to embed a widget into
+  `docs/using/integrating.qmd` for which one to use and how to embed a widget into
   an existing tool (Quarto, JupyterBook, Voila, Clay, …).
 - **Contract is data**: `fixtures/*.json` are the cross-language guarantee.
 
@@ -81,7 +81,7 @@ host state ──▶ WidgetShell ──▶ reduce() ──▶ effects[] ──�
 
 Early. The v0 core (buffers + protocol builders) is implemented and fixture-tested.
 See `.wai/projects/cositos-core/` for the research → design → plan trail and
-`docs/porting.md` for how to add a new-language backend.
+`docs/extending/porting.md` for how to add a new-language backend.
 
 ## Development
 
@@ -94,7 +94,7 @@ mise run verify  # lint + typecheck + coverage (py & js) + complexity + specs
 mise tasks       # list all tasks
 ```
 
-Quality gates run on every commit/push via lefthook — see [docs/hooks.md](docs/hooks.md).
+Quality gates run on every commit/push via lefthook — see [docs/extending/hooks.md](docs/extending/hooks.md).
 
 ## License
 

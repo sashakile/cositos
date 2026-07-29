@@ -13,6 +13,24 @@ language) decides whether cositos widgets can work there. This probe answers, em
 | **2 BROADCAST_ONLY** | `comm_open` observed, but no reply routing | one-way widgets (`supports_receive=false`) |
 | **3 NO_COMM** | no `comm_open` at all | widgets impossible without a kernel patch |
 
+## Known results
+
+| Kernel | Installed / launches | Tier | Notes |
+|--------|----------------------|------|-------|
+| `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
+| `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
+| `.net-csharp` (.NET Interactive) | ✅ | *blocked* | does **not** answer `comm_info_request` — .NET Interactive uses its own bespoke kernel protocol, not the standard ipywidgets comm surface cositos targets. Not usable without a comm shim. |
+| `cositos-clj` (clojupyter) | ✅ | **1** (crack) | **answers `comm_info_request`** and, per the confirmed spike below, reaches **Tier 1 (BIDIRECTIONAL)** via the `current-context` crack — `mise run probe -- cositos-clj --program clojure`. Not a public/upstream API: reaches into an internal, version-coupled namespace (`clojupyter.state/current-context`). The clojupyter-native widget-layer gap (no `widget` ns, private emit fns) is unchanged; see "clojupyter comm surface" below. |
+| `julia-1.12` (IJulia) | ✅ | **1** | full two-way comm via `IJulia.CommManager.Comm` (mutable `on_msg` field + `send_comm`). Kernel-initiated `comm_open` works and frontend→kernel `comm_msg` is echoed back — same round trip as `python3`. Probe program key: `julia` (run `mise run probe -- julia-1.12 --program julia`). Unblocks the Julia notebook (`cositos-059.2`) and IJulia transport adapter (`cositos-z76.6`). |
+
+Kernels are installed and launch; **`python3`, `julia-1.12`, and `cositos-clj` (via the
+current-context crack) support the full widget-comm round trip**. `ir` and `.net-csharp`
+remain blocked upstream for distinct reasons (IRkernel bug; .NET Interactive's non-standard
+protocol) — see the table.
+This is the core finding of the batch: the protocol *cores* port trivially and are all
+fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
+kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
+
 ## Usage
 
 ```bash
@@ -77,24 +95,6 @@ venv's `jupyter_client` discovers them).
     "display_name": "Clojure (cositos)", "language": "clojure"
   }
   ```
-
-## Known results
-
-| Kernel | Installed / launches | Tier | Notes |
-|--------|----------------------|------|-------|
-| `python3` (ipykernel) | ✅ | **1** | certified by `tests/test_kernel_probe.py` |
-| `ir` (IRkernel) | ✅ | *blocked* | comm API exists (`IRkernel:::Comm`), but kernel-initiated `comm$open()` throws an internal `send_response` arity error in IRkernel **1.3.2** (latest CRAN) — widgets need the kernel to open a comm, so R is blocked upstream. Probe program (`ir`) kept to re-test once IRkernel fixes it. |
-| `.net-csharp` (.NET Interactive) | ✅ | *blocked* | does **not** answer `comm_info_request` — .NET Interactive uses its own bespoke kernel protocol, not the standard ipywidgets comm surface cositos targets. Not usable without a comm shim. |
-| `cositos-clj` (clojupyter) | ✅ | **1** (crack) | **answers `comm_info_request`** and, per the confirmed spike below, reaches **Tier 1 (BIDIRECTIONAL)** via the `current-context` crack — `mise run probe -- cositos-clj --program clojure`. Not a public/upstream API: reaches into an internal, version-coupled namespace (`clojupyter.state/current-context`). The clojupyter-native widget-layer gap (no `widget` ns, private emit fns) is unchanged; see "clojupyter comm surface" below. |
-| `julia-1.12` (IJulia) | ✅ | **1** | full two-way comm via `IJulia.CommManager.Comm` (mutable `on_msg` field + `send_comm`). Kernel-initiated `comm_open` works and frontend→kernel `comm_msg` is echoed back — same round trip as `python3`. Probe program key: `julia` (run `mise run probe -- julia-1.12 --program julia`). Unblocks the Julia notebook (`cositos-059.2`) and IJulia transport adapter (`cositos-z76.6`). |
-
-Kernels are installed and launch; **`python3`, `julia-1.12`, and `cositos-clj` (via the
-current-context crack) support the full widget-comm round trip**. `ir` and `.net-csharp`
-remain blocked upstream for distinct reasons (IRkernel bug; .NET Interactive's non-standard
-protocol) — see the table.
-This is the core finding of the batch: the protocol *cores* port trivially and are all
-fixture-certified, but the *kernel comm ecosystem* is the real barrier. Classifying each
-kernel is the first step of the transport tickets `cositos-ex2.5/6/7`.
 
 ## Clojure without a kernel: Clay (the recommended host)
 

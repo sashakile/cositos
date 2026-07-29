@@ -57,18 +57,33 @@ a Jupyter kernel.
 
 ## Step 2 — Reproduce the protocol
 
-Implement, matching `fixtures/*.json` byte-for-byte (modulo comm_id and buffer encoding):
+Implement these five functions, matching `fixtures/*.json` byte-for-byte
+(modulo comm_id and buffer encoding):
 
-- `build_comm_open(state) -> (data, buffers, metadata)` — merge the seven immutable
-  fields (`_model_module="anywidget"`, `AnyModel`/`AnyView`, `_view_count=null`,
-  version), strip buffers, `metadata = {"version": "2.1.0"}`.
-- `build_update(state) -> (data, buffers)` — `{method:"update", state, buffer_paths}`.
-- `build_custom(content)` — `{method:"custom", content}`.
-- `parse_message(data)` — dispatch on `method`: `update` | `request_state` | `custom`;
-  an unknown or missing `method` is *ignored* (return a benign sentinel, never raise) so a
-  newer frontend's messages stay forward-compatible.
-- `remove_buffers` / `put_buffers` — protocol v2 nested-buffer rules: a binary value at
-  a dict key is *removed* and its key path recorded; at a list index it becomes `null`.
+### `build_comm_open(state)` → `(data, buffers, metadata)`
+
+Merge the seven immutable fields (`_model_module="anywidget"`, `AnyModel`/`AnyView`,
+`_view_count=null`, version), strip buffers, and set
+`metadata = {"version": "2.1.0"}`.
+
+### `build_update(state)` → `(data, buffers)`
+
+Produce `{method:"update", state, buffer_paths}`.
+
+### `build_custom(content)` → `data`
+
+Produce `{method:"custom", content}`.
+
+### `parse_message(data)` → `Update | RequestState | Custom | Ignored`
+
+Dispatch on `method`: return the appropriate variant for `update` | `request_state` |
+`custom`. An unknown or missing `method` must be *ignored* (return a benign sentinel,
+never raise) so a newer frontend's messages stay forward-compatible.
+
+### `remove_buffers(state)` / `put_buffers(state, buffers)`
+
+Protocol v2 nested-buffer rules: a binary value at a dict key is *removed* and its key
+path recorded; at a list index it becomes `null`.
 
 ## Step 3 — Certify
 

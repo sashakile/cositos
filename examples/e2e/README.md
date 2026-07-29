@@ -21,7 +21,7 @@ per-language `OK` / `SKIP` / `FAIL` summary:
 `mise run e2e-all` exits non-zero **if and only if at least one language FAILed**. A
 `SKIP` isn't a failure, so a machine missing (say) Julia or .NET still certifies every
 language it *can*. This is deliberately decoupled from the Quarto docs render
-(`docs/tutorials/polyglot-parity.qmd`), which aborts the *whole* site build on any
+(`docs/extending/polyglot-parity.qmd`), which aborts the *whole* site build on any
 divergence. Here, one broken language never masks the others.
 
 ## The contract every language program MUST satisfy

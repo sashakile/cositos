@@ -24,8 +24,9 @@ page and the tier classification in
 
 Every snippet below renders the *same* counter widget — one anywidget-style
 [ESM](glossary.qmd) file (a small JavaScript module you paste verbatim), reused with
-**no new JavaScript** regardless of host language. The full runnable notebooks these
-snippets are extracted from live in
+**no new JavaScript** regardless of host language. (The canonical ESM source is
+[`_counter_esm.js`](_counter_esm.js) — edits should start there.) The full runnable
+notebooks these snippets are extracted from live in
 [`examples/notebooks/`](https://github.com/sashakile/cositos/blob/main/examples/notebooks/).
 
 ## Python (quickstart)
@@ -38,6 +39,7 @@ already-installed anywidget frontend renders it.
 
 ```{python}
 # | eval: false
+# ESM source: `docs/using/_counter_esm.js` (canonical copy)
 ESM = """
 export default {
   render({ model, el }) {
@@ -87,6 +89,7 @@ available; `anywidget` installed in the frontend (same reason as Python, above).
 ```julia
 using Cositos, IJulia
 
+# ESM source: `docs/using/_counter_esm.js` (canonical copy)
 ESM = raw"""
 export default {
   render({ model, el }) {
@@ -136,7 +139,7 @@ Two live paths, deliberately different trade-offs:
 (pom/add-classpath "clojure/dev")   ; cositos.clojupyter-transport ditto
 (require '[cositos.clojupyter-transport :as tx] '[clojupyter.display :as display])
 
-(def esm "export default { render({ model, el }) { /* ... same counter ... */ } }")
+(def esm "export default { render({ model, el }) { /* ... same counter ... */ } }") ; canonical: docs/using/_counter_esm.js
 
 ;; The host owns the state; cositos is the protocol glue (no observer magic).
 (def state (atom {"_esm" esm "count" 0}))
@@ -169,6 +172,6 @@ not on cositos work.
 
 - Understand how it works: [architecture](../extending/architecture.qmd) — the lifecycle
   reducer, Transport seam, and Document model.
-- Author a new widget's ESM: `tutorials/authoring-widgets.qmd`.
+- Author a new widget's ESM: `authoring-widgets.qmd`.
 - Embed a widget into an existing tool (Quarto, JupyterBook, Voila, Clay, …):
-  `tutorials/integrating.qmd`.
+  `integrating.qmd`.

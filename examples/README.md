@@ -1,7 +1,7 @@
 # cositos examples
 
 Runnable demos of cositos widgets across hosts. New to cositos? Start with
-[`docs/tutorials/quickstart.qmd`](../docs/tutorials/quickstart.qmd) for the shortest
+[`docs/using/quickstart.qmd`](../docs/using/quickstart.qmd) for the shortest
 runnable snippet per language before diving into these. See
 `.wai/projects/cositos-core/designs/` for the integration design (live vs. static
 rendering, and how these map to Voila / Quarto / JupyterBook / myBinder).
@@ -80,7 +80,12 @@ reference the anywidget children. `composition/build.py` is the runnable, browse
 recipe. Note: `jslink`/`dlink` (`LinkModel`) does **not** propagate in a backend-less
 static export — linking needs a live kernel.
 
-## Not yet
+## Available Pluto notebook
 
-- **Pluto notebook** uses the Julia `PlutoWidget` host (`CositosPlutoExt`); a runnable
-  Pluto example is not yet checked in.
+- **Pluto** (`notebooks/pluto_demo.jl`) uses the Julia `PlutoWidget` host
+  (`CositosPlutoExt`); a runnable Pluto example is checked in and verified live.
+  See [`docs/using/pluto.md`](../docs/using/pluto.md).
+
+## Not yet available
+
+(No remaining items — see the "Status" column in the main table above.)

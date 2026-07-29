@@ -23,8 +23,10 @@ src/cositos/
   transport.py   Transport protocol (send, on_message, supports_receive)
 fixtures/        golden JSON messages — the cross-language contract
 docs/            Quarto docs site (tutorials, reference, explanation); build: `mise run docs`
-docs/status.md   implementation-status overview (per-language + per-host maturity)
-docs/porting.md  how to certify a new-language backend
+docs/using/status.md   implementation-status overview (per-language + per-host maturity)
+docs/extending/porting.md  how to certify a new-language backend
+probe/                     kernel capability probe results (which kernels support comms)
+coverage-manifest.toml     quality-tool coverage declarations per backend dir
 ```
 
 ## Key facts

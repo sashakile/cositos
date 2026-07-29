@@ -21,15 +21,8 @@ byte-for-byte.
 identities (model_module, model_name, model_module_version for IntSlider, Dropdown, VBox,
 HBox, etc.). Used by the Julia controls extension (`CositosControlsExt`) to build
 truly-identical frontend widgets without re-deriving the ipywidgets identity. Not
-certified by the other backends.
-
-| File | What it certifies |
-|---|---|
-| `comm_open.json` | `build_comm_open(...)` — the anywidget-enriched comm_open message (identity fields, buffer split) |
-| `update.json` | `build_update(...)` — a simple state update without buffers |
-| `update_nested_buffer.json` | `build_update(...)` — a state update with a nested binary buffer (the one ports most often get wrong) |
-| `custom.json` | `build_custom(...)` — a custom message payload |
-| `widget-state.json` | `dump_document(...)` — the full serialization round-trip against the Widget State JSON schema v2 |
+certified by the other backends. (Protocol fixtures are listed in the
+[Protocol fixtures](#protocol-fixtures) section above.)
 
 ## Lifecycle fixtures
 

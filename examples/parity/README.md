@@ -2,7 +2,7 @@
 
 Emits the **same** widget-state `Document` from the Julia port that
 `cositos.dump_document` emits in Python — the runnable core behind the
-[Python / Julia parity](../../docs/tutorials/polyglot-parity.qmd) docs page.
+[Python / Julia parity](../../docs/extending/polyglot-parity.qmd) docs page.
 
 ```bash
 # One-time (resolve deps into this project; uses the mise-pinned Julia):
