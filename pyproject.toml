@@ -1,14 +1,18 @@
 [project]
 name = "cositos"
-version = "0.2.0"
+version = "0.2.1"
 description = "Binding-free anywidget-style backend core for any Jupyter kernel language."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { file = "LICENSE" }
 dependencies = []
 
+[project.license]
+file = "LICENSE"
+
 [project.optional-dependencies]
-comm = ["comm>=0.1"]
+comm = [
+    "comm>=0.1",
+]
 dev = [
     "hypothesis>=6",
     "mypy>=1.19.1",
@@ -29,9 +33,6 @@ export = [
     "nbconvert>=7",
     "nbformat>=5",
 ]
-# JupyterLab must live in the SAME env as the anywidget/ipywidgets labextensions (from
-# `oracle`), else JupyterLab runs from an overlay env that can't discover them and widgets
-# fall back to text/plain (cositos-pvi). Use `--extra oracle --extra notebook` together.
 notebook = [
     "jupyterlab>=4",
 ]
@@ -44,44 +45,69 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cositos"]
-include = ["src/cositos/contrib/data/controls-catalog.json"]
+packages = [
+    "src/cositos",
+]
+include = [
+    "src/cositos/contrib/data/controls-catalog.json",
+]
 
 [tool.ruff]
 line-length = 100
-src = ["src", "tests"]
+src = [
+    "src",
+    "tests",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = ["e2e: end-to-end tests that launch a real Jupyter kernel (slow, opt-in)"]
+testpaths = [
+    "tests",
+]
+markers = [
+    "e2e: end-to-end tests that launch a real Jupyter kernel (slow, opt-in)",
+]
 
 [tool.coverage.run]
-source = ["cositos"]
+source = [
+    "cositos",
+]
 branch = true
 
 [tool.coverage.report]
-exclude_also = ["if TYPE_CHECKING:", "\\.\\.\\."]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "\\.\\.\\.",
+]
 
 [tool.mypy]
-files = ["src"]
+files = [
+    "src",
+]
 python_version = "3.10"
 strict = true
 warn_unused_configs = true
 no_implicit_reexport = false
 
 [[tool.mypy.overrides]]
-# Optional contrib deps carry no usable type information under our 3.10 target:
-# ipywidgets ships no py.typed marker/stubs, and numpy's bundled stubs use 3.12-only
-# `type` statements that mypy rejects at python_version 3.10. contrib/harvest.py is a
-# thin, optional wrapper, so treat these third-party modules as untyped (Any) instead of
-# analyzing their stubs — the first-party 3.10 check is preserved.
-module = ["ipywidgets.*", "numpy.*"]
+module = [
+    "ipywidgets.*",
+    "numpy.*",
+]
 ignore_missing_imports = true
 follow_imports = "skip"
