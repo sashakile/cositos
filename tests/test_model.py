@@ -220,6 +220,38 @@ def test_repr_mimebundle_auto_opens_and_returns_view_bundle():
     assert bundle[WIDGET_VIEW_MIMETYPE]["model_id"] == "m1"
 
 
+def test_repr_mimebundle_syncs_model_id_when_transport_has_comm_id():
+    # Regression (cositos-iz2): after _repr_mimebundle_ auto-opens the shell, the
+    # shell's model_id may be reassigned (e.g. from a server-generated comm_id), but
+    # Widget.model_id must be synchronised so the outer, shell, and bundle IDs match.
+    from cositos.protocol import WIDGET_VIEW_MIMETYPE
+
+    t = CommIdTransport()
+    w = Widget(t, get_state=lambda: {"_esm": "x", "value": 0}, model_id="ignored")
+
+    bundle = w._repr_mimebundle_()
+
+    assert w.model_id == "server-generated-id"
+    assert w._shell.model_id == "server-generated-id"
+    assert bundle[WIDGET_VIEW_MIMETYPE]["model_id"] == "server-generated-id"
+
+
+def test_explicit_open_and_repr_mimebundle_produce_identical_model_id():
+    # Both the explicit open() and the auto-open in _repr_mimebundle_ must produce
+    # the same model_id for a given transport (cositos-iz2).
+    from cositos.protocol import WIDGET_VIEW_MIMETYPE
+
+    t = CommIdTransport()
+    w = Widget(t, get_state=lambda: {"_esm": "x", "value": 0}, model_id="ignored")
+    w.open()
+
+    assert w.model_id == "server-generated-id"
+    assert w._shell.model_id == "server-generated-id"
+
+    bundle = w._repr_mimebundle_()
+    assert bundle[WIDGET_VIEW_MIMETYPE]["model_id"] == "server-generated-id"
+
+
 def test_repr_mimebundle_does_not_reopen_when_already_open():
     w, t, _ = make_widget({"value": 0})
     w.open()

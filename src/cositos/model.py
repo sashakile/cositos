@@ -95,7 +95,12 @@ class Widget:
 
     def _repr_mimebundle_(self, include: Any = None, exclude: Any = None) -> dict[str, Any]:
         """Display hook: rendering the widget opens its comm, then returns the view bundle."""
-        return self._shell._repr_mimebundle_(include, exclude)
+        bundle = self._shell._repr_mimebundle_(include, exclude)
+        # The auto-open above may have assigned a new model_id (e.g. from a
+        # server-generated comm_id). Keep the public Widget.model_id in sync
+        # (cositos-iz2).
+        self.model_id = self._shell.model_id
+        return bundle
 
     def close(self) -> None:
         """Close the comm channel."""
