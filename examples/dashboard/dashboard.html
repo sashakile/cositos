@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>cositos — dashboard (real controls + MVU)</title>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@1/dist/embed-amd.js" crossorigin="anonymous"></script>
+<script type="application/vnd.jupyter.widget-state+json">
+{
+  "version_major": 2,
+  "version_minor": 0,
+  "state": {
+    "45e40e512d224dbdacd729e3d180fa80": {
+      "model_name": "VBoxModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": "VBoxView",
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "VBoxModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0",
+        "children": [
+          "IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95",
+          "IPY_MODEL_8fdf7c8685b049c2ad6d15771bafcd11",
+          "IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-summary",
+          "IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-download"
+        ],
+        "box_style": "",
+        "layout": "IPY_MODEL_45e40e512d224dbdacd729e3d180fa80-layout"
+      }
+    },
+    "45e40e512d224dbdacd729e3d180fa80-layout": {
+      "model_name": "LayoutModel",
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/base",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "LayoutModel",
+        "_model_module": "@jupyter-widgets/base",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "d1b5a7d7e7a7400b9fe55a7aaca64a95": {
+      "model_name": "IntSliderModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": "IntSliderView",
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "IntSliderModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0",
+        "value": 25,
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "orientation": "horizontal",
+        "readout": true,
+        "readout_format": "d",
+        "continuous_update": true,
+        "disabled": false,
+        "behavior": "drag-tap",
+        "description": "",
+        "description_allow_html": false,
+        "style": "IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-style",
+        "layout": "IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-layout"
+      }
+    },
+    "d1b5a7d7e7a7400b9fe55a7aaca64a95-style": {
+      "model_name": "SliderStyleModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "SliderStyleModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "d1b5a7d7e7a7400b9fe55a7aaca64a95-layout": {
+      "model_name": "LayoutModel",
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/base",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "LayoutModel",
+        "_model_module": "@jupyter-widgets/base",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "8fdf7c8685b049c2ad6d15771bafcd11": {
+      "model_name": "DropdownModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": "DropdownView",
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "DropdownModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0",
+        "_options_labels": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "index": 0,
+        "disabled": false,
+        "description": "",
+        "description_allow_html": false,
+        "style": "IPY_MODEL_8fdf7c8685b049c2ad6d15771bafcd11-style",
+        "layout": "IPY_MODEL_8fdf7c8685b049c2ad6d15771bafcd11-layout"
+      }
+    },
+    "8fdf7c8685b049c2ad6d15771bafcd11-style": {
+      "model_name": "DescriptionStyleModel",
+      "model_module": "@jupyter-widgets/controls",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/controls",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "DescriptionStyleModel",
+        "_model_module": "@jupyter-widgets/controls",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "8fdf7c8685b049c2ad6d15771bafcd11-layout": {
+      "model_name": "LayoutModel",
+      "model_module": "@jupyter-widgets/base",
+      "model_module_version": "2.0.0",
+      "state": {
+        "_view_module": "@jupyter-widgets/base",
+        "_view_name": null,
+        "_view_module_version": "2.0.0",
+        "_view_count": null,
+        "_model_name": "LayoutModel",
+        "_model_module": "@jupyter-widgets/base",
+        "_model_module_version": "2.0.0"
+      }
+    },
+    "d1b5a7d7e7a7400b9fe55a7aaca64a95-summary": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_view_module": "anywidget",
+        "_view_name": "AnyView",
+        "_view_module_version": "~0.11.*",
+        "_view_count": null,
+        "_esm": "\nexport default {\n  render({ model, el }) {\n    const paint = () => { el.textContent = model.get(\"text\"); };\n    paint();\n    model.on(\"change:text\", paint);\n  },\n};\n",
+        "text": "value=25, selection=low"
+      }
+    },
+    "d1b5a7d7e7a7400b9fe55a7aaca64a95-download": {
+      "model_name": "AnyModel",
+      "model_module": "anywidget",
+      "model_module_version": "~0.11.*",
+      "state": {
+        "_view_module": "anywidget",
+        "_view_name": "AnyView",
+        "_view_module_version": "~0.11.*",
+        "_view_count": null,
+        "_esm": "// Download-state widget (cositos-70b.5): a plain anywidget button that triggers a REAL\n// browser download of the JSON string pushed into its `json` state field.\n//\n// Same \"host owns state, widget only renders it\" discipline as every other example\n// widget (docs/widgets.md): this widget does no serialization itself. The host is\n// responsible for putting a serialized cositos Document \u2014 typically\n// `json.dumps(dump_document(entries))` \u2014 into `json` before the button becomes\n// clickable; see `examples/dashboard/build.py` for the concrete Python glue.\n//\n// Uses a `data:` URI, not `Blob`/`URL.createObjectURL` (both are mentioned as options in\n// the ticket that added this widget): a data URI needs no cleanup (no revokeObjectURL)\n// and works identically in a real browser and in the jsdom-based gallery test\n// (front/test/gallery.test.js) with no extra polyfill.\nexport default {\n  render({ model, el }) {\n    const button = document.createElement(\"button\");\n    const paint = () => {\n      button.textContent = model.get(\"label\") ?? \"Download state\";\n      button.disabled = !model.get(\"json\");\n    };\n    paint();\n    button.addEventListener(\"click\", () => {\n      const json = model.get(\"json\");\n      if (!json) return; // nothing to download yet\n      const filename = model.get(\"filename\") ?? \"cositos-state.json\";\n      const href = `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;\n      const a = document.createElement(\"a\");\n      a.href = href;\n      a.download = filename;\n      // Not appended to `el`: a detached anchor's .click() still triggers the browser's\n      // native download prompt (per the File API/download attribute), and keeps this\n      // widget's own rendered output to just the button.\n      a.click();\n      // Observable side effect for hosts/tests: the click succeeded and what it saved.\n      model.send({ event: \"download\", filename, href });\n    });\n    model.on(\"change:json\", paint);\n    model.on(\"change:label\", paint);\n    el.appendChild(button);\n    return () => button.remove();\n  },\n};\n",
+        "json": "{\"version_major\": 2, \"version_minor\": 0, \"state\": {\"d1b5a7d7e7a7400b9fe55a7aaca64a95\": {\"model_name\": \"IntSliderModel\", \"model_module\": \"@jupyter-widgets/controls\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"IntSliderModel\", \"_model_module\": \"@jupyter-widgets/controls\", \"_model_module_version\": \"2.0.0\", \"_view_name\": \"IntSliderView\", \"_view_module\": \"@jupyter-widgets/controls\", \"_view_module_version\": \"2.0.0\", \"value\": 25, \"min\": 0, \"max\": 100, \"step\": 1, \"orientation\": \"horizontal\", \"readout\": true, \"readout_format\": \"d\", \"continuous_update\": true, \"disabled\": false, \"behavior\": \"drag-tap\", \"description\": \"\", \"description_allow_html\": false, \"style\": \"IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-style\", \"layout\": \"IPY_MODEL_d1b5a7d7e7a7400b9fe55a7aaca64a95-layout\"}}, \"8fdf7c8685b049c2ad6d15771bafcd11\": {\"model_name\": \"DropdownModel\", \"model_module\": \"@jupyter-widgets/controls\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"DropdownModel\", \"_model_module\": \"@jupyter-widgets/controls\", \"_model_module_version\": \"2.0.0\", \"_view_name\": \"DropdownView\", \"_view_module\": \"@jupyter-widgets/controls\", \"_view_module_version\": \"2.0.0\", \"_options_labels\": [\"low\", \"medium\", \"high\"], \"index\": 0, \"disabled\": false, \"description\": \"\", \"description_allow_html\": false, \"style\": \"IPY_MODEL_8fdf7c8685b049c2ad6d15771bafcd11-style\", \"layout\": \"IPY_MODEL_8fdf7c8685b049c2ad6d15771bafcd11-layout\"}}, \"d1b5a7d7e7a7400b9fe55a7aaca64a95-summary\": {\"model_name\": \"AnyModel\", \"model_module\": \"anywidget\", \"model_module_version\": \"~0.11.*\", \"state\": {\"_esm\": \"\\nexport default {\\n  render({ model, el }) {\\n    const paint = () => { el.textContent = model.get(\\\"text\\\"); };\\n    paint();\\n    model.on(\\\"change:text\\\", paint);\\n  },\\n};\\n\", \"text\": \"value=25, selection=low\"}}, \"d1b5a7d7e7a7400b9fe55a7aaca64a95-style\": {\"model_name\": \"SliderStyleModel\", \"model_module\": \"@jupyter-widgets/controls\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"SliderStyleModel\", \"_model_module\": \"@jupyter-widgets/controls\", \"_model_module_version\": \"2.0.0\", \"_view_name\": null, \"_view_module\": \"@jupyter-widgets/controls\", \"_view_module_version\": \"2.0.0\"}}, \"d1b5a7d7e7a7400b9fe55a7aaca64a95-layout\": {\"model_name\": \"LayoutModel\", \"model_module\": \"@jupyter-widgets/base\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"LayoutModel\", \"_model_module\": \"@jupyter-widgets/base\", \"_model_module_version\": \"2.0.0\", \"_view_name\": null, \"_view_module\": \"@jupyter-widgets/base\", \"_view_module_version\": \"2.0.0\"}}, \"8fdf7c8685b049c2ad6d15771bafcd11-style\": {\"model_name\": \"DescriptionStyleModel\", \"model_module\": \"@jupyter-widgets/controls\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"DescriptionStyleModel\", \"_model_module\": \"@jupyter-widgets/controls\", \"_model_module_version\": \"2.0.0\", \"_view_name\": null, \"_view_module\": \"@jupyter-widgets/controls\", \"_view_module_version\": \"2.0.0\"}}, \"8fdf7c8685b049c2ad6d15771bafcd11-layout\": {\"model_name\": \"LayoutModel\", \"model_module\": \"@jupyter-widgets/base\", \"model_module_version\": \"2.0.0\", \"state\": {\"_model_name\": \"LayoutModel\", \"_model_module\": \"@jupyter-widgets/base\", \"_model_module_version\": \"2.0.0\", \"_view_name\": null, \"_view_module\": \"@jupyter-widgets/base\", \"_view_module_version\": \"2.0.0\"}}}}",
+        "filename": "dashboard-state.json",
+        "label": "Download dashboard state"
+      }
+    }
+  }
+}
+</script>
+<script type="application/vnd.jupyter.widget-view+json">
+{"version_major": 2, "version_minor": 0, "model_id": "45e40e512d224dbdacd729e3d180fa80"}
+</script>
+</body>
+</html>

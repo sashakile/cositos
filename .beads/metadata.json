@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "cositos",
+  "project_id": "4a9c7038-2ac7-4820-807e-3d071422b8f2"
+}
