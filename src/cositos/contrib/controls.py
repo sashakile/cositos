@@ -19,7 +19,8 @@ mints fresh companion-model ids; the catalog's own placeholder strings are never
 real ids — :func:`cositos.serialize.dump_document` rejects duplicate ``model_id``s).
 
 **No ``ipywidgets``/``anywidget`` Python package is required.** This module builds plain
-state dicts from a static JSON catalog (``fixtures/controls-catalog.json``) plus the
+state dicts from a static JSON catalog (``data/controls-catalog.json``, shipped inside the
+wheel as package data — see ``cositos-w9o``) plus the
 stdlib (``json``, ``uuid``) — it never imports either package (see
 ``tests/test_contrib_controls.py::test_module_imports_no_optional_widget_packages`` for
 the automated guard). Manually re-verified 2026-07-09 in a fresh venv with neither
@@ -53,20 +54,17 @@ from __future__ import annotations
 
 import json
 import uuid
-from pathlib import Path
+from importlib.resources import files
 from typing import Any
 
 from cositos.serialize import ModelEntry
 
 __all__ = ["int_slider", "dropdown", "vbox", "hbox"]
 
-_CATALOG_PATH = (
-    Path(__file__).resolve().parent.parent.parent.parent / "fixtures" / "controls-catalog.json"
-)
-
 
 def _load_catalog() -> dict[str, Any]:
-    return json.loads(_CATALOG_PATH.read_text())  # type: ignore[no-any-return]
+    data = (files("cositos.contrib") / "data" / "controls-catalog.json").read_text()
+    return json.loads(data)  # type: ignore[no-any-return]
 
 
 _CATALOG = _load_catalog()

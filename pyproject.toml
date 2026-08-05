@@ -49,6 +49,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cositos"]
+include = ["src/cositos/contrib/data/controls-catalog.json"]
 
 [tool.ruff]
 line-length = 100
