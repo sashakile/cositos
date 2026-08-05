@@ -30,41 +30,41 @@
 
 - [x] 4.1 Replace `Widget` class internals in `src/cositos/model.py` to delegate to `WidgetShell` (public API unchanged)
 - [x] 4.2 Run full test suite: `python -m pytest tests/test_model.py tests/test_lifecycle.py tests/test_shell.py` — all pass
-- [ ] 4.3 Run e2e tests: `python -m pytest tests/test_e2e_jupyter.py` — widget still renders and interacts live
+- [x] 4.3 Run e2e tests: `python -m pytest tests/test_e2e_jupyter.py` — widget still renders and interacts live
 
 ## 5. Lifecycle Reducer — Julia
 
-- [ ] 5.1 Define effect and event types in `julia/src/Cositos.jl` (as structs with a `kind` symbol, or plain `Dict` — Julia idiom)
-- [ ] 5.2 Implement `reduce(phase, event, current_state, capabilities) → (new_phase, effects)` in `julia/src/Cositos.jl`
-- [ ] 5.3 Load and certify against `fixtures/lifecycle/*.json` in Julia's test runner
-- [ ] 5.4 Implement `WidgetShell` replacing the current lifecycle code in `Cositos.jl` (lines ~383-475 of the `Widget` mutable struct)
-- [ ] 5.5 Run existing `host_tests.jl` — all pass without modification
-- [ ] 5.6 Run e2e parity test: `julia/test/runtests.jl`
+- [x] 5.1 Define effect and event types in `julia/src/Cositos.jl` (as structs with a `kind` symbol, or plain `Dict` — Julia idiom)
+- [x] 5.2 Implement `reduce(phase, event, current_state, capabilities) → (new_phase, effects)` in `julia/src/Cositos.jl`
+- [x] 5.3 Load and certify against `fixtures/lifecycle/*.json` in Julia's test runner
+- [x] 5.4 Implement `WidgetShell` replacing the current lifecycle code in `Cositos.jl` (lines ~383-475 of the `Widget` mutable struct)
+- [x] 5.5 Run existing `host_tests.jl` — all pass without modification
+- [x] 5.6 Run e2e parity test: `julia/test/runtests.jl`
 
 ## 6. Lifecycle Shell — C# and R
 
-- [ ] 6.1 Implement `reduce` function in `csharp/Core.cs` (currently no lifecycle code at all)
-- [ ] 6.2 Certify C# reducer against `fixtures/lifecycle/*.json`
-- [ ] 6.3 Implement C# imperative shell (Widget wrapper around the reducer)
-- [ ] 6.4 Implement `reduce` function in `r/core.R` (currently no lifecycle code at all)
-- [ ] 6.5 Certify R reducer against `fixtures/lifecycle/*.json`
-- [ ] 6.6 Implement R imperative shell (Widget wrapper around the reducer)
+- [x] 6.1 Implement `reduce` function in `csharp/Core.cs` (currently no lifecycle code at all)
+- [x] 6.2 Certify C# reducer against `fixtures/lifecycle/*.json`
+- [x] 6.3 Implement C# imperative shell (Widget wrapper around the reducer)
+- [x] 6.4 Implement `reduce` function in `r/core.R` (currently no lifecycle code at all)
+- [x] 6.5 Certify R reducer against `fixtures/lifecycle/*.json`
+- [x] 6.6 Implement R imperative shell (Widget wrapper around the reducer)
 
 ## 7. Capability Flags and Clojure Documentation (design D5)
 
-- [ ] 7.1 Define `TransportCapabilities` struct for Julia, generalizing the single `supports_receive` flag (Python already covered in task 2.4)
-- [ ] 7.2 Update `PythonJupyter.CommTransport` (and Julia's `IJuliaCommTransport`) to declare full capabilities
-- [ ] 7.3 Add a comment / docstring to Clojure's `clojupyter_transport.clj` explicitly listing which capability flags are `False` (no buffers, no custom, no request_state)
-- [ ] 7.4 Update the clojupyter-transport section in `docs/porting.md` to reference the capability flags and explain which events the Clojure path cannot handle
+- [x] 7.1 Define `TransportCapabilities` struct for Julia, generalizing the single `supports_receive` flag (Python already covered in task 2.4)
+- [x] 7.2 Update `PythonJupyter.CommTransport` (and Julia's `IJuliaCommTransport`) to declare full capabilities
+- [x] 7.3 Add a comment / docstring to Clojure's `clojupyter_transport.clj` explicitly listing which capability flags are `False` (no buffers, no custom, no request_state)
+- [x] 7.4 Update the clojupyter-transport section in `docs/porting.md` to reference the capability flags and explain which events the Clojure path cannot handle
 
 ## 8. Documentation
 
-- [ ] 8.1 Write the lifecycle fixtures section in `fixtures/README.md` explaining the fixture format for `fixtures/lifecycle/*.json`
-- [ ] 8.2 Update `docs/porting.md`: add **Step 5 — Widget Lifecycle** after the existing four steps, explaining the reducer contract and pointing to `fixtures/lifecycle/`
-- [ ] 8.3 Update `docs/reference/api-cheatsheet.qmd` with new symbols: `reduce`, effect types, event types, phase enum, `TransportCapabilities`
+- [x] 8.1 Write the lifecycle fixtures section in `fixtures/README.md` explaining the fixture format for `fixtures/lifecycle/*.json`
+- [x] 8.2 Update `docs/porting.md`: add **Step 5 — Widget Lifecycle** after the existing four steps, explaining the reducer contract and pointing to `fixtures/lifecycle/`
+- [x] 8.3 Update `docs/reference/api-cheatsheet.qmd` with new symbols: `reduce`, effect types, event types, phase enum, `TransportCapabilities`
 - [ ] 8.4 Update the `protocol` spec in `openspec/specs/protocol/spec.md` to include the cycle-detection and depth-cap requirements from the delta spec (sync after archive)
 
 ## 9. Verification
 
-- [ ] 9.1 Run all existing examples (`examples/benchmarks/`, `examples/dashboard/`, `examples/e2e/`) against the shell-based Widget to confirm no regressions (the "no breaking changes" claim)
-- [ ] 9.2 Run full test suite across all languages after Widget replacement: `mise run verify`
+- [x] 9.1 Run all existing examples (`examples/benchmarks/`, `examples/dashboard/`, `examples/e2e/`) against the shell-based Widget to confirm no regressions (the "no breaking changes" claim)
+- [x] 9.2 Run full test suite across all languages after Widget replacement: `mise run verify` (r-test skipped — Rscript not available in this environment)

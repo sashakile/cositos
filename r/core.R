@@ -15,6 +15,9 @@ PROTOCOL_VERSION_MAJOR <- 2L
 PROTOCOL_VERSION_MINOR <- 1L
 PROTOCOL_VERSION <- "2.1.0"
 
+TARGET_NAME <- "jupyter.widget"
+WIDGET_VIEW_MIMETYPE <- "application/vnd.jupyter.widget-view+json"
+
 ANYWIDGET_MODULE_VERSION <- "~0.11.*"
 
 # Widget State JSON schema version (distinct from the protocol version 2.1.0).
@@ -375,4 +378,128 @@ reduce <- function(phase, event, current_state, capabilities = .default_capabili
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+# ---- transport interface (generic; host overrides for their transport type) ----
+
+#' Check if the transport can receive inbound messages.
+#' Override this for your transport type.
+#' @param transport A transport object
+#' @return TRUE if the transport supports receiving messages
+supports_receive <- function(transport) {
+  transport$supports_receive %||% FALSE
+}
+
+#' Get the transport's assigned comm id (empty string if not yet assigned).
+#' Override this for your transport type.
+#' @param transport A transport object
+#' @return The comm id string
+comm_id <- function(transport) {
+  transport$comm_id %||% ""
+}
+
+#' Send a message through the transport.
+#' Override this for your transport type.
+#' @param transport A transport object
+#' @param msg_type The message type ("comm_open", "comm_msg", "comm_close")
+#' @param data The message data as a list
+#' @param buffers List of raw vectors
+#' @param metadata Optional metadata list or NULL
+transport_send <- function(transport, msg_type, data, buffers = list(), metadata = NULL) {
+  transport$send(msg_type, data, buffers, metadata)
+}
+
+#' Register an inbound message callback on the transport.
+#' Override this for your transport type.
+#' @param transport A transport object
+#' @param callback A function(data, buffers) called when a message arrives
+transport_on_message <- function(transport, callback) {
+  transport$on_message(callback)
+}
+
+# ---- imperative shell (WidgetShell) ----
+
+#' Create a WidgetShell -- a thin imperative shell around the lifecycle reducer.
+#'
+#' @param transport The transport object (must provide send, on_message, supports_receive, etc.)
+#' @param get_state A function() returning the current state dict
+#' @param set_state A function(dict) to apply inbound state. Optional; NULL means inbound updates are ignored.
+#' @param model_id The initial model id string
+#' @param on_custom A function(content, buffers) for custom messages. Optional.
+#' @param capabilities A list with supports_receive, etc. Optional; inferred from transport if omitted.
+#' @return A list of closure-based shell methods
+WidgetShell <- function(transport, get_state, set_state = NULL, model_id = "", on_custom = NULL, capabilities = NULL) {
+  env <- new.env(parent = emptyenv())
+  env$phase <- .UNOPENED
+  env$model_id <- model_id
+  env$listening <- FALSE
+  env$capabilities <- capabilities %||% make_capabilities(
+    supports_receive = supports_receive(transport),
+    supports_request_state = transport$supports_request_state %||% TRUE,
+    supports_custom = transport$supports_custom %||% TRUE,
+    supports_buffers = transport$supports_buffers %||% TRUE
+  )
+
+  exec_one <- function(effect) {
+    if (identical(effect$kind, "send")) {
+      transport_send(transport, effect$msg_type, effect$data, effect$buffers %||% list(), effect$metadata %||% NULL)
+      if (identical(effect$msg_type, "comm_open")) {
+        cid <- comm_id(transport)
+        if (nzchar(cid)) {
+          env$model_id <- cid
+          execute(reduce(env$phase, make_comm_id_assigned(cid), list(), env$capabilities))
+        }
+      }
+    } else if (identical(effect$kind, "listen")) {
+      if (!env$listening) {
+        transport_on_message(transport, function(data, buffers = list()) {
+          execute(reduce(env$phase, make_inbound(data, buffers), get_state(), env$capabilities))
+        })
+        env$listening <- TRUE
+      }
+    } else if (identical(effect$kind, "apply_state")) {
+      if (!is.null(set_state)) set_state(effect$state)
+    } else if (identical(effect$kind, "invoke_custom")) {
+      if (!is.null(on_custom)) on_custom(effect$content, effect$buffers %||% list())
+    } else if (identical(effect$kind, "error")) {
+      stop(effect$message)
+    }
+  }
+
+  execute <- function(result) {
+    env$phase <- result[[1]]
+    for (effect in result[[2]]) exec_one(effect)
+  }
+
+  list(
+    open = function() {
+      if (env$phase == .OPEN) return(invisible(NULL))
+      execute(reduce(env$phase, make_open(), get_state(), env$capabilities))
+      invisible(NULL)
+    },
+    send_state = function(include = NULL) {
+      execute(reduce(env$phase, make_send_state(include), get_state(), env$capabilities))
+      invisible(NULL)
+    },
+    send_custom = function(content, buffers = list()) {
+      execute(reduce(env$phase, make_send_custom(content, buffers), get_state(), env$capabilities))
+      invisible(NULL)
+    },
+    close = function() {
+      execute(reduce(env$phase, make_close(), list(), env$capabilities))
+      invisible(NULL)
+    },
+    mimebundle = function(repr_text = "") {
+      bundle <- list()
+      bundle[[WIDGET_VIEW_MIMETYPE]] <- list(
+        version_major = PROTOCOL_VERSION_MAJOR,
+        version_minor = PROTOCOL_VERSION_MINOR,
+        model_id = env$model_id
+      )
+      if (nzchar(repr_text)) bundle[["text/plain"]] <- repr_text
+      bundle
+    },
+    model_id = function() env$model_id,
+    phase = function() env$phase
+  )
+}
 

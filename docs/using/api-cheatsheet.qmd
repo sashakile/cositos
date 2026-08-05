@@ -53,6 +53,52 @@ returned value, the input is never changed.
 All five satisfy the same law: `load_document(dump_document(x)) == x`, checked against
 `fixtures/widget-state.json` in every backend's own test suite.
 
+## Lifecycle reducer {#lifecycle-reducer}
+
+Every backend implements the same pure widget lifecycle: a `reduce` function turning
+`(phase, event, state, capabilities)` into `(new_phase, effects[])`. The imperative
+`WidgetShell` wraps it (see the [porting guide](../extending/porting.md#step-5--implement-the-lifecycle-shell)).
+
+| Operation | Python | Julia | Clojure | C# | R |
+|---|---|---|---|---|---|
+| Pure reducer | `reduce(phase, event, state, caps)` → `(phase, effects)` | `reduce(phase, event, state, caps)` → `(phase, effects)` | `(reduce phase event state caps)` → `[phase effects]` | `Core.Reduce(phase, ev, state, caps)` → `(Phase, List<object?>)` | `reduce(phase, event, state, caps)` → `list(phase, effects)` |
+| Imperative shell | `WidgetShell` (`cositos.lifecycle`) | `WidgetShell` (`Cositos`) | — (via `cositos.clay`/`clojupyter-transport`) | `WidgetShell` (`Cositos.Core`) | `WidgetShell` (`core.R`) |
+
+### Phases
+
+| Python | Julia | C# | R |
+|---|---|---|---|
+| `Phase.UNOPENED` / `Phase.OPEN` / `Phase.CLOSED` | `UNOPENED` / `OPEN` / `CLOSED` | `Phase.Unopened` / `Phase.Open` / `Phase.Closed` | `.UNOPENED` / `.OPEN` / `.CLOSED` |
+
+### Events (input)
+
+| Event | Meaning |
+|---|---|
+| `Open` | Host wants to open the comm |
+| `SendState(include)` | Host wants to send an `update` (optionally filtered to `include`d keys) |
+| `SendCustom(content, buffers)` | Host wants to send a `custom` message |
+| `Inbound(message, buffers)` | A message arrived from the transport |
+| `Close` | Host wants to close the comm |
+| `CommIdAssigned(id)` | The transport assigned a comm id after `comm_open` |
+
+### Effects (output)
+
+| Effect | Action the shell must take |
+|---|---|
+| `Send(msg_type, data, buffers, metadata)` | `transport.send(...)` |
+| `Listen()` | `transport.on_message(callback)` |
+| `ApplyState(state)` | host's `set_state(state)` |
+| `InvokeCustom(content, buffers)` | host's custom handler |
+| `Error(message)` | raise an error |
+
+### Capabilities
+
+Each backend declares how much its Transport can carry, defaulting to full support:
+`supports_receive`, `supports_request_state`, `supports_custom`, `supports_buffers`.
+clojupyter's `clojupyter-transport` is the notable exception — it sets `supports_custom`
+and `supports_buffers` to `False` (its `comm-atom` is a state-sync atom, not a generic
+comm), so `send_custom`/buffer-carrying widgets are rejected by the reducer.
+
 ## Naming convention, at a glance
 
 | Language | Casing | Free functions live in |
