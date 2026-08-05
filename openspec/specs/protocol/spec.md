@@ -17,6 +17,24 @@ receive, preserving structure per protocol v2 nested-buffer rules.
 - **THEN** the reconstructed state equals the original state
 - **AND** dict-keyed binaries are removed from state while list-indexed binaries become null
 
+#### Scenario: Cyclic state is rejected with a clear error
+- **GIVEN** a widget state containing a self-referential (cyclic) container
+- **WHEN** `remove_buffers` is called
+- **THEN** it SHALL raise a `ValueError` (or equivalent) naming the path
+- **AND** SHALL NOT recurse infinitely or produce a raw `RecursionError`
+
+#### Scenario: Deeply nested state is capped at a fixed depth
+- **GIVEN** a widget state whose container nesting exceeds `_MAX_DEPTH` (500 levels)
+- **WHEN** `remove_buffers` is called
+- **THEN** it SHALL raise a `ValueError` (or equivalent) naming the path
+- **AND** SHALL NOT consume the C stack to the point of a raw `RecursionError`
+
+#### Scenario: Shared acyclic subtrees are not misidentified as cycles
+- **GIVEN** a widget state where the same container is referenced by two different parent keys (a DAG)
+- **WHEN** `remove_buffers` is called
+- **THEN** it SHALL succeed
+- **AND** SHALL NOT raise a cycle error
+
 ### Requirement: comm_open Carries Immutable anywidget Fields
 The system SHALL include the immutable anywidget model/view fields and protocol version
 metadata in every `comm_open` payload.
