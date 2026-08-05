@@ -1,6 +1,9 @@
 """Tests for binary-buffer split/merge (protocol v2 nested rules)."""
 
 import sys
+import threading
+
+import pytest
 
 from cositos.buffers import put_buffers, remove_buffers
 
@@ -112,15 +115,66 @@ def test_remove_buffers_allows_shared_acyclic_subtrees():
     assert paths == [] and buffers == []
 
 
-def test_remove_buffers_raises_recursion_limit_when_below_needed():
-    # When the interpreter's recursion limit is below what deep nesting needs,
-    # remove_buffers must temporarily raise it (so the _MAX_DEPTH cap trips as a
-    # clear ValueError before a raw RecursionError) and restore it afterwards.
+def test_remove_buffers_never_mutates_the_process_recursion_limit():
+    # Regression (cositos-e53): the old implementation temporarily raised the
+    # process-global recursion limit so deep nesting could trip the _MAX_DEPTH cap as a
+    # clear ValueError. That global mutation lets concurrent callers observe or restore
+    # a stale limit. remove_buffers must never touch it.
     old = sys.getrecursionlimit()
-    sys.setrecursionlimit(800)  # below `needed` (~1204), safely above test stack depth
     try:
         stripped, paths, buffers = remove_buffers({"a": b"x"})
+        assert sys.getrecursionlimit() == old
+        assert stripped == {}
+        assert paths == [["a"]] and buffers == [b"x"]
     finally:
         sys.setrecursionlimit(old)
-    assert stripped == {}
-    assert paths == [["a"]] and buffers == [b"x"]
+
+
+def test_deep_nesting_raises_clear_value_error_with_low_recursion_limit():
+    # Deep nesting must yield the deterministic _MAX_DEPTH ValueError, not a raw
+    # RecursionError, even when the process recursion limit is far below the nesting
+    # depth: the iterative walk consumes no C stack frames, so the depth cap is the only
+    # failure mode (cositos-e53).
+    state: dict = {}
+    node = state
+    for _ in range(2000):
+        child: dict = {}
+        node["n"] = child
+        node = child
+
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(800)  # far below 2000 levels of nesting
+    try:
+        with pytest.raises(ValueError, match="nesting"):
+            remove_buffers(state)
+        assert sys.getrecursionlimit() == 800  # untouched by remove_buffers
+    finally:
+        sys.setrecursionlimit(old)
+
+
+def test_concurrent_remove_buffers_never_alter_the_recursion_limit():
+    # Concurrent extraction must not raise or restore the process-global recursion
+    # limit: one caller's call must not disturb another caller's view of the limit
+    # (cositos-e53).
+    old = sys.getrecursionlimit()
+    failures: list[str] = []
+
+    def worker() -> None:
+        for _ in range(50):
+            if sys.getrecursionlimit() != old:
+                failures.append(f"recursion limit changed to {sys.getrecursionlimit()}")
+                return
+            stripped, paths, buffers = remove_buffers({"x": {"ar": b"AA"}, "y": [b"a", 2]})
+            if sys.getrecursionlimit() != old:
+                failures.append(f"recursion limit changed to {sys.getrecursionlimit()}")
+                return
+            if stripped != {"x": {}, "y": [None, 2]} or len(paths) != 2 or len(buffers) != 2:
+                failures.append(f"bad extraction result: {stripped} {paths} {buffers}")
+                return
+
+    threads = [threading.Thread(target=worker) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not failures, failures

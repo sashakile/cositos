@@ -8,7 +8,6 @@ the state; a path ending in a list index is replaced by ``None`` so positions ar
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Iterable
 from typing import Any
 
@@ -19,11 +18,40 @@ BinaryType = (bytes, bytearray, memoryview)
 _MAX_DEPTH = 500
 
 
+class _Frame:
+    """An explicit stack frame for the iterative tree walk.
+
+    Each frame represents one container being processed. ``parent_key`` is the key in
+    the **parent** container that maps to this frame's state — saved so the child's
+    result can be written back into the parent's clone.
+    """
+
+    __slots__ = ("state", "ancestors", "depth", "iterator", "clone", "parent_key", "path")
+
+    def __init__(
+        self,
+        state: Any,
+        ancestors: tuple[int, ...],
+        depth: int,
+        iterator: Any,
+        clone: Any,
+        parent_key: Any,
+        path: list[Any],
+    ) -> None:
+        self.state = state
+        self.ancestors = ancestors
+        self.depth = depth
+        self.iterator = iterator
+        self.clone = clone
+        self.parent_key = parent_key
+        self.path = path
+
+
 def _items(substate: Any) -> Iterable[tuple[Any, Any]]:
     """Yield ``(key, value)`` pairs for a list (index keys) or dict (str keys)."""
     if isinstance(substate, (list, tuple)):
         return enumerate(substate)
-    return substate.items()  # type: ignore[no-any-return]
+    return iter(substate.items())  # type: ignore[no-any-return]
 
 
 def _clone(substate: Any) -> Any:
@@ -38,31 +66,6 @@ def _extract_binary(clone: Any, key: Any) -> None:
         del clone[key]
 
 
-def _handle_item(
-    substate: Any,
-    clone: Any,
-    key: Any,
-    value: Any,
-    path: list[Any],
-    buffer_paths: list[list[Any]],
-    buffers: list[Any],
-    ancestors: tuple[int, ...],
-    depth: int,
-) -> Any:
-    """Process one ``(key, value)``; return the (possibly newly created) clone."""
-    if isinstance(value, BinaryType):
-        clone = clone if clone is not None else _clone(substate)
-        _extract_binary(clone, key)
-        buffers.append(value)
-        buffer_paths.append([*path, key])
-    elif isinstance(value, (list, tuple, dict)):
-        new_value = _separate(value, [*path, key], buffer_paths, buffers, ancestors, depth + 1)
-        if new_value is not value:
-            clone = clone if clone is not None else _clone(substate)
-            clone[key] = new_value
-    return clone
-
-
 def _separate(
     substate: Any,
     path: list[Any],
@@ -71,14 +74,20 @@ def _separate(
     ancestors: tuple[int, ...] = (),
     depth: int = 0,
 ) -> Any:
-    """Recurse into dicts/lists, extracting binary values. Returns a cloned substate.
+    """Iterative walk of dicts/lists, extracting binary values.
 
-    Clones a container only when it actually changes, mirroring the ipywidgets
-    algorithm so untouched subtrees keep their identity. A container that appears among
-    its own ancestors is a cycle, and nesting beyond :data:`_MAX_DEPTH` is capped — both
-    raise a clear :class:`ValueError` naming the path rather than a ``RecursionError``
-    (cositos-915). Shared but acyclic subtrees (a DAG) are fine: only the current
-    ancestor chain is checked, not every visited node.
+    Returns a cloned substate with binary values removed and their locations recorded in
+    ``buffer_paths``/``buffers``. Clones a container only when it actually changes,
+    mirroring the ipywidgets algorithm so untouched subtrees keep their identity.
+
+    A container that appears among its own ancestors is a cycle, and nesting beyond
+    :data:`_MAX_DEPTH` is capped — both raise a clear :class:`ValueError` naming the path
+    rather than a ``RecursionError`` (cositos-915). Shared but acyclic subtrees (a DAG)
+    are fine: only the current ancestor chain is checked, not every visited node.
+
+    Implemented iteratively (cositos-e53) so the depth cap is the only failure mode: no
+    C stack frames are consumed, so no process-global ``sys.setrecursionlimit``
+    manipulation is needed in :func:`remove_buffers`.
     """
     if not isinstance(substate, (list, tuple, dict)):
         return substate
@@ -88,30 +97,68 @@ def _separate(
         raise ValueError(f"cyclic reference detected in state at path {path}")
     ancestors = (*ancestors, id(substate))
 
-    clone: Any = None
-    for key, value in _items(substate):
-        clone = _handle_item(
-            substate, clone, key, value, path, buffer_paths, buffers, ancestors, depth
-        )
-    return clone if clone is not None else substate
+    # Explicit stack of frames for depth-first traversal.
+    stack = [_Frame(substate, ancestors, depth, _items(substate), None, None, path)]
+
+    while stack:
+        frame = stack[-1]
+
+        # Advance the current frame's iterator.
+        try:
+            key, value = next(frame.iterator)
+        except StopIteration:
+            # Frame complete — pop and return its result.
+            stack.pop()
+            result = frame.clone if frame.clone is not None else frame.state
+
+            if not stack:
+                return result  # Root frame done.
+
+            # Apply the result to the parent frame.
+            parent = stack[-1]
+            if result is not frame.state:
+                if parent.clone is None:
+                    parent.clone = _clone(parent.state)
+                parent.clone[frame.parent_key] = result
+            continue
+
+        if isinstance(value, BinaryType):
+            if frame.clone is None:
+                frame.clone = _clone(frame.state)
+            _extract_binary(frame.clone, key)
+            buffers.append(value)
+            buffer_paths.append([*frame.path, key])
+        elif isinstance(value, (list, tuple, dict)):
+            child_depth = frame.depth + 1
+            if child_depth > _MAX_DEPTH:
+                raise ValueError(f"state nesting exceeds {_MAX_DEPTH} levels at path {frame.path}")
+            if id(value) in frame.ancestors:
+                raise ValueError(f"cyclic reference detected in state at path {frame.path}")
+            child_ancestors = (*frame.ancestors, id(value))
+            stack.append(
+                _Frame(
+                    value,
+                    child_ancestors,
+                    child_depth,
+                    _items(value),
+                    None,
+                    key,
+                    [*frame.path, key],
+                )
+            )
+
+    return substate  # pragma: no cover
 
 
 def remove_buffers(state: Any) -> tuple[Any, list[list[Any]], list[Any]]:
     """Return ``(state_without_buffers, buffer_paths, buffers)``.
 
-    Nesting is capped at :data:`_MAX_DEPTH`; the interpreter recursion limit is
-    temporarily raised so that cap (a clear error) trips before a raw ``RecursionError``.
+    Nesting is capped at :data:`_MAX_DEPTH`; the walk is iterative, so no process-global
+    recursion-limit mutation is needed (cositos-e53).
     """
     buffer_paths: list[list[Any]] = []
     buffers: list[Any] = []
-    needed = (_MAX_DEPTH + 2) * 2 + 200  # ~2 frames per nesting level, plus headroom
-    old_limit = sys.getrecursionlimit()
-    try:
-        if old_limit < needed:
-            sys.setrecursionlimit(needed)
-        stripped = _separate(state, [], buffer_paths, buffers)
-    finally:
-        sys.setrecursionlimit(old_limit)
+    stripped = _separate(state, [], buffer_paths, buffers)
     return stripped, buffer_paths, buffers
 
 
