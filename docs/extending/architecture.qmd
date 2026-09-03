@@ -31,7 +31,11 @@ and portable to any language that can shape the same JSON.
 ## The lifecycle reducer
 
 The widget lifecycle — opening a [comm](../using/glossary.qmd), sending state, receiving updates, closing — is
-encoded as a **pure reducer**, the same pattern found in Redux and Elm. The reducer is a
+encoded as a **pure reducer**, the same pattern found in Redux and Elm and in
+membrane, phronemophobic's functional UI library (["How to build a functional UI
+library from scratch"](https://blog.phronemophobic.com/what-is-a-user-interface.html)).
+Three independent UI traditions converging on one pattern is good evidence that it is
+the right decomposition, not an accident of any one ecosystem. The reducer is a
 single function:
 
 ```
@@ -49,6 +53,25 @@ reduce(phase, event, current_state, capabilities)
 The reducer returns a **new phase** and a list of **effects** — commands that tell the
 imperative shell what to do: send a message to the frontend, register a listener, apply
 an inbound update, raise an error.
+
+Two words are worth keeping crisp here, because they name different layers that are easy
+to conflate:
+
+- **Effects are transport commands.** A cositos reducer effect (`Send`, `Listen`,
+  `ApplyState`, `InvokeCustom`, `Error`) tells the shell what to do to the *transport* —
+  it is deliberately shaped by the messaging protocol, not by your application.
+- **Intents are domain data.** When the user's action means something to your application
+  ("delete this todo", "set this value"), that meaning travels inside the *content* of a
+  `custom` message, interpreted on the kernel side by your handler. The protocol carries
+  intents opaquely; it never interprets them. Widget authors structure these intents by
+  convention — see the [intent-shaped custom messages](../using/authoring-widgets.qmd#intent-shaped-custom-messages)
+  convention in the authoring guide.
+
+This vocabulary (event → intent → effect) follows membrane's definitions: an *event* is
+data representing a user action, an *intent* is data representing what the user wants
+done to application state, and an *effect* is the carrying out of an intent. In cositos,
+the reducer's effects are the transport commands; the carrying-out of domain intents
+happens in your kernel-side effect handler (`on_custom` + your MVU `update`).
 
 This design gives cositos three guarantees:
 
@@ -120,6 +143,21 @@ particular runtime:
 One data structure, two backends — the same reason a virtual DOM can render to the browser
 or to a string. Composition falls out for free: a Document can hold a graph of widgets that
 reference each other, and references survive the round-trip.
+
+The Document is effectively an **intermediate representation (IR)** for widget UIs — the
+same role LLVM IR plays for programs — so Document-format changes can be evaluated with
+the standard IR criteria:
+
+- **Lossless.** A round-trip through the Document preserves all information
+  (`load_document` is the exact inverse of `dump_document`).
+- **Inspectable without the runtime.** The JSON can be walked, measured, and transformed
+  with ordinary data tooling — no kernel, no browser, no frontend required.
+- **Source- and target-independent.** The format doesn't encode assumptions about which
+  language emitted it or which host will render it.
+
+Any proposed change to the Document format should be checked against this list; a change
+that fails one of the three is usually pushing source- or target-specific concerns into
+the shared format.
 
 ## The contract is data, not code
 

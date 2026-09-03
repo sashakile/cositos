@@ -22,6 +22,12 @@ distillation.
 it, and route every cross-part interaction through the model (or a tracked derivation
 graph) — never through widget-to-widget `link`/`observe`.**
 
+These rules are the measured version of a component principle stated theoretically elsewhere —
+membrane's "the parent is in charge" ([Reusable UI
+Components](https://blog.phronemophobic.com/reusable-ui-components.html)): parents decide which
+state is essential and which is incidental, and retain the final word on child intents. The
+benchmarks below are that principle's quantitative case.
+
 Everything below is the evidence for why, and the precise boundaries of when.
 
 ## The four wiring styles, defined

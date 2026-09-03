@@ -48,6 +48,46 @@ The `model` passed into `render` is the same `Model` surface anywidget gives you
 `send(content)` / `request_state()`. This is a fixed contract regardless of host — see
 `hosts.md` for the full `Channel`/`Model` seam that makes that possible.
 
+## Intent-shaped custom messages
+
+When your widget needs the kernel to *do* something to application state (not just hold a
+value), send it through `model.send(content)` — the kernel side receives it in the
+`on_custom` handler. The recommended convention:
+
+- Send a **flat dict keyed on `event`**, matching the style already used by the example
+  widgets (`examples/widgets/button.js` sends `{ event: "click" }`,
+  `examples/widgets/download_button.js` sends `{ event: "download", filename, href }`).
+- When the intent targets a specific piece of domain state, carry the **target** and
+  **value** as plain data:
+
+```js
+model.send({ event: "set", path: ["todos", 2, "done"], value: true });
+```
+
+- On the kernel side, your [MVU](state-discipline.qmd) `update(msg, state)` function
+  applies intents generically — one function interprets every event type:
+
+```python
+def update(msg, state):
+    if msg["event"] == "set":
+        state = set_in(state, msg["path"], msg["value"])  # your path helper
+    return state
+
+# wire it up:
+w = Widget(transport, get_state=lambda: state,
+           on_custom=lambda content, buffers: set_state(update(content, state)))
+```
+
+Why this shape: it keeps intents **reusable** (the same widget works against any model that
+defines `update`) and **decoupled** (the widget says *what* to change, not *where* the state
+lives). This is the authoring-level version of the event → intent → effect vocabulary in
+the [architecture](../extending/architecture.qmd#the-lifecycle-reducer) page.
+
+The convention is **host-side only**: custom message content passes through the protocol
+opaquely in both directions, so it needs no special support from cositos, from the
+frontend, or from the kernel — on a stock anywidget frontend the messages are simply
+delivered verbatim to `msg:custom`.
+
 ## Where widgets live, and what patterns are already covered
 
 `examples/widgets/*.js` holds seven small, render+interaction-tested widgets covering the

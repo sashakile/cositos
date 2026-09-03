@@ -74,6 +74,16 @@ schema v2*), produced by `dump_document` and rebuilt by `load_document`.
 The recommended way to keep a multi-widget cositos app consistent
 (see [state discipline](state-discipline.qmd)).
 
+**intent** — data representing what the user wants done to application state ("delete this
+todo", "set this value"). Distinct from an *event* (the raw user action) and from an
+effect (the carrying-out). In cositos, intents travel inside `custom` message content by
+convention — see [intent-shaped custom messages](authoring-widgets.qmd#intent-shaped-custom-messages)
+and the [architecture vocabulary](../extending/architecture.qmd#the-lifecycle-reducer).
+
+**effect** — in the lifecycle reducer, a transport command the shell executes (`Send`,
+`Listen`, `ApplyState`, `InvokeCustom`, `Error`). Effects tell the shell what to do to the
+*transport*; they deliberately don't encode application meaning — that's the intent's job.
+
 ## Versions & status
 
 **protocol version (`2.1.0`)** — the widget *messaging* protocol cositos speaks on the wire.
