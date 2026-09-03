@@ -6,7 +6,9 @@
 # For local development, install Julia via your package manager of choice.
 # Python is managed by uv (.python-version); uv itself is provided by the system
 # (Homebrew) because its GitHub release assets are blocked in this environment.
-# mise pins node only.
+# Quarto is pinned here to match the version pinned in CI
+# (quarto-dev/quarto-actions/setup@v2, version: 1.10.18 in .github/workflows/).
+"aqua:quarto-dev/quarto-cli" = "1.10.18"
 node = "26"
 
 [env]

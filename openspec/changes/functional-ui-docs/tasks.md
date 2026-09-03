@@ -16,5 +16,5 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Build the docs (`mise run docs`) and check the three pages render without warnings; visually confirm with `mise run qa-docs` — **blocked: quarto not installed on PATH**; structural checks done instead (anchors resolve, headings exist; see change log)
+- [x] 4.1 Build the docs (`mise run docs`) and check the three pages render without warnings; visually confirm with `mise run qa-docs` — done: render passes (27/27 pages), anchors verified in `_site/`; quarto now mise-managed (aqua:quarto-dev/quarto-cli@1.10.18) matching the CI pin
 - [x] 4.2 Cross-check no code/protocol/fixture files changed (`git status` shows docs only)
