@@ -1,0 +1,10 @@
+id = "full-send-state-includes-view-identity"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_send_state_full_includes_anywidget_identity"
+timeout_seconds = 60

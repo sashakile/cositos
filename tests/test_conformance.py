@@ -98,3 +98,12 @@ def test_widget_state_load_reconstructs_entries():
     by_id = dict(loaded)
     assert by_id["box"]["children"] == ["IPY_MODEL_plot"]
     assert _raw(by_id["plot"]["data"]) == _raw(memoryview(array.array("f", [1.5, 2.5, -3.0])))
+
+
+def test_front_end_code_is_preserved_verbatim():
+    # Front-end code (_esm render bodies) must survive dump/load byte-for-byte
+    # (serialization scenario: front-end-code-is-preserved).
+    loaded = dict(load_document(_load("widget-state")))
+    expected = dict(_widget_state_entries())
+    for mid, state in expected.items():
+        assert loaded[mid]["_esm"] == state["_esm"]

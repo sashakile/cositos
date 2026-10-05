@@ -1,0 +1,10 @@
+id = "comm-id-is-reflected-in-model-id-after-assignment"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_comm_id_assigned"
+timeout_seconds = 60

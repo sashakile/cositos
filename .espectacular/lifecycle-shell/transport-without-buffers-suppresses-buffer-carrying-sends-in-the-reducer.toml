@@ -1,0 +1,10 @@
+id = "transport-without-buffers-suppresses-buffer-carrying-sends-in-the-reducer"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_transport_without_buffers_suppresses_buffer_carrying_sends"
+timeout_seconds = 60

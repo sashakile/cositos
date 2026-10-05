@@ -1,0 +1,10 @@
+id = "transport-without-custom-returns-error-effect-on-send-custom"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_send_custom_without_support_errors"
+timeout_seconds = 60

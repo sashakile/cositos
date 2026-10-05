@@ -1,0 +1,14 @@
+id = "one-way-transport-capabilities-suppress-listen-effect-in-the-reducer"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_one_way_open_no_listen"
+timeout_seconds = 60
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_open_skips_on_message_when_transport_cannot_receive"
+timeout_seconds = 60

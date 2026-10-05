@@ -1,0 +1,10 @@
+id = "filtered-send-state-omits-identity-fields"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_filtered_send_state_omits_identity"
+timeout_seconds = 60

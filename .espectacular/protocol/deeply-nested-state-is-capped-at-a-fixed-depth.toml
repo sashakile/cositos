@@ -1,0 +1,14 @@
+id = "deeply-nested-state-is-capped-at-a-fixed-depth"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_buffers.py::test_remove_buffers_caps_deep_nesting"
+timeout_seconds = 60
+
+[[tests.pytest]]
+flags = "tests/test_buffers.py::test_deep_nesting_raises_clear_value_error_with_low_recursion_limit"
+timeout_seconds = 60

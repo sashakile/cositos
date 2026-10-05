@@ -1,0 +1,10 @@
+id = "shell-dispatches-listen-effect-to-transport-on-message"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_jupyter.py::test_on_message_registered_before_open_is_bound_on_open"
+timeout_seconds = 60

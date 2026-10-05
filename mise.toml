@@ -114,6 +114,10 @@ run = "pretender check src front/src"
 description = "Behavioural spec contracts (espectacular)"
 run = "ah check"
 
+[tasks.specodelic]
+description = "Four-layer spec lint gate (specodelic)"
+run = "spk lint openspec"
+
 [tasks.coverage-audit]
 description = "Fail if a backend dir has no declared quality-tool coverage (see F19)"
 run = "python3 scripts/coverage_audit.py"
@@ -206,6 +210,7 @@ depends = [
     "complexity",
     "coverage-audit",
     "specs",
+    "specodelic",
     "claims",
 ]
 

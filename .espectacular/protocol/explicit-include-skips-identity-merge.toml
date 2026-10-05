@@ -1,0 +1,10 @@
+id = "explicit-include-skips-identity-merge"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_send_state_with_include_filters_keys"
+timeout_seconds = 60

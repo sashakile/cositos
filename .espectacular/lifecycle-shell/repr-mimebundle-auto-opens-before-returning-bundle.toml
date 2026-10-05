@@ -1,0 +1,10 @@
+id = "repr-mimebundle-auto-opens-before-returning-bundle"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_repr_mimebundle_auto_opens_and_returns_view_bundle"
+timeout_seconds = 60

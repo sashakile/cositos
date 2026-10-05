@@ -4,6 +4,8 @@ Uses the same FakeTransport and the same assertions to verify that WidgetShell
 produces identical behavior to the existing Widget class.
 """
 
+import inspect
+
 from cositos.lifecycle import WidgetShell
 
 
@@ -237,3 +239,22 @@ def test_open_skips_on_message_when_transport_cannot_receive():
 
     assert t.sent[0][0] == "comm_open"
     assert t.on_message_called is False
+
+
+def test_public_api_signatures_are_unchanged():
+    """WidgetShell replaces the old Widget class: every public method must keep
+    the same parameter names and order (protocol scenario:
+    public-api-signatures-are-unchanged)."""
+    expected = {
+        "open": [],
+        "send_state": ["include"],
+        "send_custom": ["content", "buffers"],
+        "close": [],
+        "mimebundle": ["repr_text"],
+        "_repr_mimebundle_": ["include", "exclude"],
+    }
+    for method, params in expected.items():
+        sig = inspect.signature(getattr(WidgetShell, method))
+        assert list(sig.parameters) == ["self", *params], (
+            f"{method} signature drifted: {sig}"
+        )

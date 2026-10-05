@@ -1,0 +1,10 @@
+id = "shell-handles-comm-id-feedback-loop"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_open_syncs_model_id_from_transport_comm_id"
+timeout_seconds = 60

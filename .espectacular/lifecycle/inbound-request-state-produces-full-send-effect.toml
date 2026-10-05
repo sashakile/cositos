@@ -1,0 +1,10 @@
+id = "inbound-request-state-produces-full-send-effect"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_inbound_request_state_produces_send"
+timeout_seconds = 60

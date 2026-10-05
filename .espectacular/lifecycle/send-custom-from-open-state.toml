@@ -1,0 +1,10 @@
+id = "send-custom-from-open-state"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_send_custom_from_open"
+timeout_seconds = 60

@@ -1,0 +1,10 @@
+id = "shell-dispatches-send-effect-to-transport-send"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_jupyter.py::test_send_state_uses_comm_send"
+timeout_seconds = 60

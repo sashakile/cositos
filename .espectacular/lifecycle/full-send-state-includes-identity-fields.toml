@@ -1,0 +1,10 @@
+id = "full-send-state-includes-identity-fields"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_full_send_state_includes_identity"
+timeout_seconds = 60

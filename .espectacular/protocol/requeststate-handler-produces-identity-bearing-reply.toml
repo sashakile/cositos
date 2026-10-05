@@ -1,0 +1,10 @@
+id = "requeststate-handler-produces-identity-bearing-reply"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_shell.py::test_request_state_includes_anywidget_identity"
+timeout_seconds = 60

@@ -1,0 +1,10 @@
+id = "inbound-update-produces-apply-state-effect"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_inbound_update_produces_apply_state"
+timeout_seconds = 60

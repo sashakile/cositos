@@ -290,3 +290,20 @@ def test_reduce_is_pure():
     phase2, events2 = reduce(Phase.UNOPENED, Open(), {"value": 0}, TransportCapabilities())
     assert phase == phase2
     assert len(events) == len(events2)
+
+
+def test_transport_without_buffers_suppresses_buffer_carrying_sends():
+    """A transport without buffer support must not get buffer-carrying sends
+    (protocol scenario: transport-without-buffers-suppresses-buffer-carrying-sends)."""
+    caps = TransportCapabilities(supports_buffers=False)
+    # Bufferless sends (send_state) are still produced, with empty buffers lists:
+    _phase, effects = reduce(Phase.OPEN, SendState(include=None), {"value": 0}, caps)
+    sends = [e for e in effects if isinstance(e, Send)]
+    assert sends, "expected a send effect for send_state"
+    assert all(send.buffers == [] for send in sends)
+    # Buffer-carrying sends (send_custom) are suppressed entirely — the reducer
+    # returns an error effect instead of a send with buffers:
+    _phase, effects = reduce(
+        Phase.OPEN, SendCustom(content={"kind": "ping"}, buffers=[b"payload"]), {}, caps
+    )
+    assert not [e for e in effects if isinstance(e, Send)]

@@ -1,0 +1,10 @@
+id = "unopened-send-state-produces-error-effect"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.9.2"
+
+[[tests.pytest]]
+flags = "tests/test_lifecycle.py::test_send_state_from_unopened_errors"
+timeout_seconds = 60
