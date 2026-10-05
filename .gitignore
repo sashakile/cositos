@@ -57,3 +57,8 @@ csharp/obj/
 # Jupyter
 .ipynb_checkpoints/
 
+# turu private zone — machine-specific knowledge, never pushed (git history is forever)
+.whisper/private/
+
+# transient bd gate lock
+.beads.gate.lock
