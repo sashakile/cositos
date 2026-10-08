@@ -3,24 +3,24 @@
 
 This repo's `specs/`-style markdown spec files (YAML frontmatter +
 fixed-schema tables) are linted by `spk` (crates.io: specodelic).
-Write specs so `spk lint` passes; embedded format revision: specodelic.md Revision 15
+Write specs so `spk lint` passes; embedded format revision: specodelic.md Revision 18
 
 ### Lint rules (every violation names its `rule_id`)
 
 - `linter.frontmatter_valid` — frontmatter `kind` must be `intent` — the only top-level intent kind
-- `linter.id_matches_file` — frontmatter `id` must equal the filename stem with `-` mapped to `.` (`_` is literal)
+- `linter.id_matches_file` — frontmatter `id` must equal the filename stem with `-` mapped to `.` (`_` is literal); a `spec.md` file derives its expected id from its parent directory (Revision 18)
 - `linter.unique_id` — every row id in a file must be unique across all of the file's tables
 - `linter.guard_required` — every transition must carry a non-null guard (a guard may be prose, or cite an invariant Constraint or a State — target typing is `ref_kind_compatible`'s beat)
 - `linter.model_present` — the Model section must contain both a States list and a Transitions table (empty-but-present beats absent)
 - `linter.ears_syntax` — the intent statement must contain an imperative `SHALL` and match one of the five EARS patterns
 - `linter.no_conjoined_id` — an id must not encode two capabilities joined by `and`/`or`
 - `linter.no_universal_in_id` — an id must not contain a universal token (all/every/any/always/never)
-- `linter.total_refs` — every structured-field [[link]] must resolve to a definition somewhere in the corpus — dual-format `id: spec` files are self-contained: their refs must resolve within the file itself
+- `linter.total_refs` — every structured-field [[link]] must resolve to a definition somewhere in the corpus (Revision 18: all files resolve corpus-wide — the former `id: spec` self-containment retired)
 - `linter.coverage` — every constraint must have a deriving property (`∃ property.derives_from == <constraint>`)
 - `linter.no_orphan_property` — every property must derive from at least one constraint
 - `linter.law_cases` — every law-kind property must enumerate its required cases as **name:** labels in its own predicate — the identity and associativity floor is mandatory, extra named cases are checkable declarations
 - `linter.requirement_drift` — a dual-format file's ## Requirements mirror must hold every delta requirement (ADDED and MODIFIED sections alike) with identical requirement text, compared per requirement so mixed-delta files are satisfiable (blank lines and trailing space ignored)
-- `linter.dual_format_valid` — a file carrying `## ADDED Requirements` must be a dual-format file — declare `id: spec` and pair it with a sibling `## Requirements` section
+- `linter.dual_format_valid` — a file carrying `## ADDED Requirements` must be a dual-format file — pair it with a sibling `## Requirements` section (Revision 18: the id is the naming law's business, not this rule's)
 - `linter.terminal_states_emit` — every failure terminal state must emit exactly one file-owned effect Constraint — a mute failure terminal is a finding (specs/linter-failure_shape.md; timed_out/exploration_only are the stated v1 non-goal)
 - `linter.error_labels_unique` — within one file, no two error Constraints may share a variant head — the label is file-id-namespaced (errors.md error_expr_shape), so collisions are a per-file property
 - `linter.guard_negation_total` — every failure transition must cite exactly the union of its success siblings' citation sets, or be on the recorded carve-out list (orchestrate.md's stage-fail transitions) — a zero-citation failure guard off the list is a finding
